@@ -1,0 +1,27 @@
+<!-- @dsCard group="Type" viewport="700x210" name="Eyebrows & Tracking" subtitle="All caps = tracking 165 (0.165em), always" -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--surface-base); color: var(--text-primary); font-family: var(--font-serif); }
+  .wrap { padding: 26px 28px; display: flex; flex-direction: column; gap: 16px; }
+  .e { text-transform: uppercase; letter-spacing: var(--tracking-caps); }
+  .a { font-size: 15px; color: var(--accent); }
+  .b { font-size: 13px; color: var(--text-primary); }
+  .c { font-size: 11px; color: var(--text-primary); }
+  .note { font-size: 12px; line-height: 1.5; color: var(--text-primary); margin-top: 4px; }
+  .note b { color: var(--accent); font-style: italic; }
+  .note code { letter-spacing: 0; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <span class="e a">Episode 7 · In Therapy</span>
+    <span class="e b">Qatar’s First Narrative Podcast</span>
+    <span class="e c">moremuslim.org</span>
+    <p class="note">Every uppercase run — eyebrows, display headings, buttons, tags, nav, sign-offs — is tracked to <b>165 (0.165em)</b>. Use <code>var(--tracking-caps)</code> or the <code>.more-caps</code> utility; never retrack all-caps to anything else.</p>
+  </div>
+</body>
+</html>

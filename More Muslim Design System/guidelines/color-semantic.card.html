@@ -1,0 +1,24 @@
+<!-- @dsCard group="Colors" viewport="700x200" name="Semantic Roles (Light)" subtitle="Default Ivory Beige editorial context — Oak Brown text, one accent" -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--surface-base); font-family: var(--font-serif); }
+  .wrap { padding: 22px 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px 28px; }
+  .role { display: flex; align-items: center; gap: 12px; }
+  .chip { width: 34px; height: 34px; border-radius: var(--radius-sm); flex: none; }
+  .lbl { font-size: 13px; color: var(--text-primary); }
+  .var { font-size: 11px; color: var(--text-primary); letter-spacing: .04em; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="role"><span class="chip" style="background: var(--surface-base);"></span><div><div class="lbl">Surface base</div><div class="var">--surface-base</div></div></div>
+    <div class="role"><span class="chip" style="background: var(--text-primary);"></span><div><div class="lbl">Text primary</div><div class="var">--text-primary</div></div></div>
+    <div class="role"><span class="chip" style="background: var(--surface-raised);"></span><div><div class="lbl">Surface raised</div><div class="var">--surface-raised</div></div></div>
+    <div class="role"><span class="chip" style="background: var(--accent);"></span><div><div class="lbl">Accent</div><div class="var">--accent · oak (light) / ivory (dark via .more-on-dark) — one per composition</div></div></div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- @template name="Keynote Slide" description="Branded 16:9 statement slide on the star-lattice ground" -->
+<helmet>
+  <script src="./ds-base.js"></script>
+</helmet>
+<div style="min-height:100vh; box-sizing:border-box; display:flex; align-items:flex-start; justify-content:center; padding:48px; background:#0c1019;">
+  <x-import component-from-global-scope="MoreMuslimDesignSystem_019df4.PatternPanel"
+    tile="{{ tile }}"
+    tile-opacity="{{ patternOpacity }}"
+    color="{{ bg }}"
+    radius="0"
+    grain-opacity="0.07"
+    hint-size="1280px,720px"
+    style="width:1280px; height:720px; flex:none; box-shadow:0 30px 80px rgba(0,0,0,0.45); position:relative;">
+    <sc-if value="{{ isDark }}" hint-placeholder-val="{{ true }}">
+      <div style="position:absolute; inset:0; padding:96px; box-sizing:border-box; display:flex; flex-direction:column; font-family:'ABC Marist', serif; color:#F6E1C6;">
+        <h2 style="margin:0; font-weight:400; font-size:52px; letter-spacing:0.02em; line-height:1.125; max-width:20ch; text-wrap:balance;">A narrative audio documentary series that explores the Muslim experience, with all its messiness.</h2>
+        <p style="margin:28px 0 0; font-size:26px; line-height:1.176; letter-spacing:0.21px; max-width:46ch; text-wrap:pretty;">More Muslim is a sound-rich, cinematic narrative podcast. Our first season is a production of Al-Mujadilah Center and Mosque for Women.</p>
+        <div style="margin-top:auto;">
+          <x-import component-from-global-scope="MoreMuslimDesignSystem_019df4.Symbol" size="48" hint-size="48px,48px" style="color:inherit;"></x-import>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isLight }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute; inset:0; padding:96px; box-sizing:border-box; display:flex; flex-direction:column; font-family:'ABC Marist', serif; color:#511C14;">
+        <h2 style="margin:0; font-weight:400; font-size:52px; letter-spacing:0.02em; line-height:1.125; max-width:20ch; text-wrap:balance;">A narrative audio documentary series that explores the Muslim experience, with all its messiness.</h2>
+        <p style="margin:28px 0 0; font-size:26px; line-height:1.176; letter-spacing:0.21px; max-width:46ch; text-wrap:pretty;">More Muslim is a sound-rich, cinematic narrative podcast. Our first season is a production of Al-Mujadilah Center and Mosque for Women.</p>
+        <div style="margin-top:auto;">
+          <x-import component-from-global-scope="MoreMuslimDesignSystem_019df4.Symbol" size="48" hint-size="48px,48px" style="color:inherit;"></x-import>
+        </div>
+      </div>
+    </sc-if>
+  </x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:720},&quot;patternOpacity&quot;:{&quot;editor&quot;:&quot;float&quot;,&quot;default&quot;:0.2,&quot;min&quot;:0,&quot;max&quot;:1,&quot;step&quot;:0.05},&quot;ground&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;night&quot;,&quot;oak&quot;,&quot;beige&quot;,&quot;black&quot;],&quot;default&quot;:&quot;oak&quot;}}">
+class Component extends DCLogic {
+  static GROUNDS = {
+    night: { bg: "#192136", tile: "5C", text: "#F6E1C6" },
+    oak:   { bg: "#511C14", tile: "6B", text: "#F6E1C6" },
+    beige: { bg: "#FBF2E9", tile: "6A", text: "#511C14" },
+    black: { bg: "#000000", tile: null,  text: "#F6E1C6" },
+  };
+
+  renderVals() {
+    const g = Component.GROUNDS[this.props.ground] || Component.GROUNDS.night;
+    return {
+      patternOpacity: this.props.patternOpacity ?? 0.2,
+      bg:     g.bg,
+      tile:   g.tile,
+      isDark: (this.props.ground ?? "night") !== "beige",
+      isLight: (this.props.ground ?? "night") === "beige",
+    };
+  }
+}
+</script>
+</body>
+</html>

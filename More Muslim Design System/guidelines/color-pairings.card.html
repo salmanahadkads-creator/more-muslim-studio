@@ -1,0 +1,32 @@
+<!-- @dsCard group="Colors" viewport="760x360" name="Approved Pairings" subtitle="The ONLY permitted ground × ink combinations — never mix colours outside these seven" -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--more-beige-soft); color: var(--more-oak-brown); font-family: var(--font-serif); }
+  .wrap { padding: 26px 28px; }
+  .note { font-size: 13px; line-height: 1.5; max-width: 64ch; margin: 0 0 20px; color: color-mix(in srgb, var(--more-oak-brown) 72%, transparent); }
+  .note strong { color: var(--more-terracotta); font-style: italic; }
+  .row { display: flex; gap: 12px; }
+  .pair { flex: 1; aspect-ratio: 1 / 1.05; border-radius: var(--radius-sm); display: flex; flex-direction: column; justify-content: space-between; padding: 14px; box-sizing: border-box; }
+  .pair .star { width: 34px; height: 34px; }
+  .pair .lbl { font-size: 10px; letter-spacing: var(--tracking-caps); text-transform: uppercase; line-height: 1.5; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <p class="note">When combining colours, the foreground (ink, text, symbol) and its ground <strong>must</strong> be one of these seven pairs. Never place a colour on a ground outside this list. Use <code>.more-pair-*</code> classes or the <code>--pair-ground</code> / <code>--pair-ink</code> tokens.</p>
+    <div class="row">
+      <div class="pair more-pair-night"><img class="star" src="../assets/logos/symbol-beige.svg"><span class="lbl">Night<br>+ Ivory</span></div>
+      <div class="pair more-pair-oak"><img class="star" src="../assets/logos/symbol-beige.svg"><span class="lbl">Oak<br>+ Ivory</span></div>
+      <div class="pair more-pair-beige" style="border:1px solid var(--border-on-light);"><img class="star" src="../assets/logos/symbol-oak.svg"><span class="lbl">Ivory<br>+ Oak</span></div>
+      <div class="pair more-pair-harvest"><img class="star" src="../assets/logos/symbol-oak.svg"><span class="lbl">Harvest<br>+ Oak</span></div>
+      <div class="pair more-pair-mist"><img class="star" src="../assets/logos/symbol-night.svg"><span class="lbl">Mist<br>+ Night</span></div>
+      <div class="pair more-pair-black-beige"><img class="star" src="../assets/logos/symbol-beige.svg"><span class="lbl">Black<br>+ Beige Soft</span></div>
+      <div class="pair more-pair-black-white"><img class="star" src="../assets/logos/symbol-beige.svg"><span class="lbl">Black<br>+ White</span></div>
+    </div>
+  </div>
+</body>
+</html>

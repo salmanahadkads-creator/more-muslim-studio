@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- @template name="Social Post" description="Branded 1080×1350 Instagram post following social post rules" -->
+<helmet>
+  <script src="./ds-base.js"></script>
+</helmet>
+<div style="display:flex; align-items:flex-start; justify-content:center; padding:48px; background:#0c1019; min-height:100vh; box-sizing:border-box;">
+  <x-import component-from-global-scope="MoreMuslimDesignSystem_019df4.PatternPanel"
+    tile="{{ patternTile }}" color="{{ groundColor }}" tile-opacity="{{ patternOpacity }}" grain-opacity="0.08" radius="0"
+    hint-size="1080px,1350px"
+    style="width:1080px; flex:none; box-shadow:0 30px 80px rgba(0,0,0,0.45);">
+    <div style="width:1080px; height:1350px; box-sizing:border-box; position:relative; display:flex; flex-direction:column; align-items:flex-start; font-family:'ABC Marist', serif; color:#F6E1C7; line-height:1.1;">
+      <div style="position:absolute; top:85px; left:50%; transform:translateX(-50%); font-size:var(--social-text-xs); text-transform:uppercase; letter-spacing:0.165em; white-space:nowrap;">THE TRAVELLING SISTERHOOD</div>
+      <div style="flex:1; display:flex; align-items:center; justify-content:center; padding-left:85px; padding-right:85px; font-size:var(--social-text-s); text-wrap:balance; text-align:left; max-width:910px;">This week on More Muslim, host Sohaira Siddiqui recalls the first time she ran headfirst into that debate, when she decided to tell her parents she wanted to move to Jordan to study Arabic.<br><br>And how that initial conversation at her parents' kitchen table led her to dive deep into centuries of scholarly debate on the topic.</div>
+      <div style="position:absolute; top:1236px; left:50%; transform:translateX(-50%); font-size:var(--social-text-xs); text-transform:uppercase; letter-spacing:0.165em; white-space:nowrap;">MOREMUSLIM.ORG</div>
+    </div>
+  </x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: { &quot;width&quot;: 1080, &quot;height&quot;: 1350 },
+  &quot;ground&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;oak&quot;, &quot;options&quot;: [&quot;oak&quot;, &quot;night&quot;, &quot;beige&quot;, &quot;black&quot;], &quot;tsType&quot;: &quot;string&quot; },
+  &quot;eyebrow&quot;: { &quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;Episode 7&quot;, &quot;tsType&quot;: &quot;string&quot; },
+  &quot;headline&quot;: { &quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;\&quot;It calls her habibti. Gives her Islamic relationship advice.\&quot;&quot;, &quot;tsType&quot;: &quot;string&quot; },
+  &quot;subheading&quot;: { &quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;In Therapy, With SheikhaGPT&quot;, &quot;tsType&quot;: &quot;string&quot; }
+}">
+class Component extends DCLogic {
+  state = {
+    ground: 'oak',
+    eyebrow: 'Episode 7',
+    headline: '"It calls her habibti. Gives her Islamic relationship advice."',
+    subheading: 'In Therapy, With SheikhaGPT'
+  };
+
+  groundPresets = {
+    oak: { color: '#511C14', tile: '6B', opacity: 0.15 },
+    night: { color: '#192136', tile: '5C', opacity: 0.20 },
+    beige: { color: '#FBF2E9', tile: '6A', opacity: 0.10 },
+    black: { color: '#000000', tile: null, opacity: 0 }
+  };
+
+  renderVals() {
+    const preset = this.groundPresets[this.state.ground] || this.groundPresets.oak;
+    return {
+      groundColor: preset.color,
+      patternTile: preset.tile || '6B',
+      patternOpacity: preset.opacity,
+      eyebrow: this.state.eyebrow,
+      headline: this.state.headline,
+      subheading: this.state.subheading
+    };
+  }
+}
+
+</script>
+</body>
+</html>

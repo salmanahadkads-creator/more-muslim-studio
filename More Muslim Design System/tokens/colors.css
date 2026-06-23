@@ -1,0 +1,104 @@
+/* More Muslim — Colour System
+   Source of truth: ZAINA "Brand Elements for More Muslim", 02.2026.
+   Use Hex for web. Two families: warm earth (beige → oak) and cool blue (mist → night). */
+
+:root {
+  /* ---- Base palette (exact brand swatches, named as in the guidelines) ---- */
+  --more-white:            #FFFFFF; /* 1. More White */
+  --more-ivory-beige:      #F6E1C6; /* 2. More Ivory Beige */
+  --more-harvest-yellow:   #E2B16D; /* 3. More Harvest Yellow */
+  --more-terracotta:       #C15A3A; /* 4. More Terracotta Orange */
+  --more-oak-brown:        #511C14; /* 5. More Oak Brown */
+  --more-mist-blue:        #9FBCCC; /* 6. More Mist Blue */
+  --more-coastal-blue:     #6185A3; /* 7. More Coastal Blue */
+  --more-stone-blue:       #3C5065; /* 8. More Stone Blue */
+  --more-night-blue:       #192136; /* 9. More Night Blue */
+  --more-black:            #000000; /* 10. More Black */
+
+  /* ---- Tints / supporting steps (derived, tone-on-tone, for layering) ---- */
+  --more-beige-soft:       #FBF2E9; /* paper / lightest warm surface */
+  --more-beige-deep:       #ECCFA9; /* beige pressed against beige */
+  --more-night-blue-700:   #232D45; /* raised surface on night */
+  --more-night-blue-600:   #2E3A55; /* hairline / border on night */
+  --more-oak-700:          #6A2A1C; /* raised surface on oak */
+
+  /* ---- Semantic aliases ---- */
+  /* Default brand context is LIGHT & editorial: Beige Soft ground, Oak Brown text.
+     Primary plain-design combo: Oak on Ivory Beige · Black on White · Ivory on Oak.
+     For dark-ground contexts apply .more-on-dark to the wrapper. */
+  --surface-base:          var(--more-beige-soft);
+  --surface-raised:        var(--more-white);
+  --surface-overlay:       var(--more-ivory-beige);
+  --surface-inverse:       var(--more-night-blue);
+
+  --text-primary:          var(--more-oak-brown);
+  --text-on-dark:          var(--more-ivory-beige);
+  --text-on-light:         var(--more-oak-brown);       /* legacy alias */
+
+  /* Accent: ONE per composition. Oak Brown on light grounds.
+     On dark grounds use .more-on-dark → --accent becomes Ivory Beige.
+     HARVEST YELLOW (#E2B16D) IS NEVER AN ACCENT, TEXT, OR INK COLOUR.
+     It is ONLY permitted as a background ground (pairing 4: Harvest → Oak).
+     Never set color/fill/stroke to var(--more-harvest-yellow) or #E2B16D. */
+  --accent:                var(--more-oak-brown);
+  /* Named palette refs — NEVER use as ink/text directly: */
+  --accent-warm:           var(--more-terracotta);
+  --accent-cool:           var(--more-mist-blue);
+
+  --border-subtle:         color-mix(in srgb, var(--more-oak-brown) 12%, transparent);
+  --border-strong:         color-mix(in srgb, var(--more-oak-brown) 26%, transparent);
+  --border-on-light:       color-mix(in srgb, var(--more-oak-brown) 18%, transparent);
+  --border-on-dark:        color-mix(in srgb, var(--more-ivory-beige) 18%, transparent);
+
+  --focus-ring:            var(--more-oak-brown);
+}
+
+/* ---- APPROVED COLOUR PAIRINGS — the ONLY permitted ground × ink combinations ----
+   When you combine colours (any foreground on any ground), it MUST be one of
+   these five pairs. Never place a colour on a ground outside this list, and
+   never recolour the ink to anything but the partner shown here.
+     1. Night Blue   ground → Ivory Beige ink
+     2. Oak Brown    ground → Ivory Beige ink
+     3. Ivory Beige  ground → Oak Brown  ink
+     4. Harvest Yellow ground → Oak Brown ink
+     5. Mist Blue    ground → Night Blue ink
+     6. Black        ground → Beige Soft ink
+     7. Black        ground → White ink
+   Each class sets the ground (background) and its single legal ink (color).
+   Apply on a wrapper, then build everything inside with currentColor / --pair-ink. */
+.more-pair-night    { --pair-ground: var(--more-night-blue);     --pair-ink: var(--more-ivory-beige); }
+.more-pair-oak      { --pair-ground: var(--more-oak-brown);      --pair-ink: var(--more-ivory-beige); }
+.more-pair-beige    { --pair-ground: var(--more-ivory-beige);    --pair-ink: var(--more-oak-brown);   }
+.more-pair-harvest  { --pair-ground: var(--more-harvest-yellow); --pair-ink: var(--more-oak-brown);   }
+.more-pair-mist     { --pair-ground: var(--more-mist-blue);      --pair-ink: var(--more-night-blue);  }
+.more-pair-black-beige { --pair-ground: var(--more-black);       --pair-ink: var(--more-beige-soft);  }
+.more-pair-black-white { --pair-ground: var(--more-black);       --pair-ink: var(--more-white);       }
+.more-pair-night, .more-pair-oak, .more-pair-beige, .more-pair-harvest, .more-pair-mist,
+.more-pair-black-beige, .more-pair-black-white {
+  background: var(--pair-ground);
+  color: var(--pair-ink);
+}
+
+/* Dark editorial context. Apply on any wrapper with a dark brand ground. */
+.more-on-dark {
+  --surface-base:    var(--more-night-blue);
+  --surface-raised:  var(--more-night-blue-700);
+  --surface-overlay: var(--more-night-blue-600);
+  --surface-inverse: var(--more-beige-soft);
+  --text-primary:    var(--more-ivory-beige);
+  --accent:          var(--more-ivory-beige); /* Ivory only on dark — never harvest yellow */
+  --border-subtle:   color-mix(in srgb, var(--more-ivory-beige) 16%, transparent);
+  --border-strong:   color-mix(in srgb, var(--more-ivory-beige) 32%, transparent);
+}
+
+/* Explicit light reset (use after .more-on-dark if a child needs to flip back). */
+.more-on-light {
+  --surface-base:    var(--more-beige-soft);
+  --surface-raised:  var(--more-white);
+  --surface-overlay: var(--more-ivory-beige);
+  --surface-inverse: var(--more-night-blue);
+  --text-primary:    var(--more-oak-brown);
+  --accent:          var(--more-oak-brown);
+  --border-subtle:   color-mix(in srgb, var(--more-oak-brown) 12%, transparent);
+  --border-strong:   color-mix(in srgb, var(--more-oak-brown) 26%, transparent);
+}

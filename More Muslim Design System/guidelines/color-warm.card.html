@@ -1,0 +1,26 @@
+<!-- @dsCard group="Colors" viewport="700x200" name="Warm Earth" subtitle="Beige → harvest → terracotta → oak" -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--more-beige-soft); }
+  .row { display: flex; gap: 0; padding: 18px; }
+  .sw { flex: 1; height: 132px; border-radius: var(--radius-sm); display: flex; flex-direction: column; justify-content: flex-end; padding: 12px; box-sizing: border-box; font-family: var(--font-serif); }
+  .sw + .sw { margin-left: 10px; }
+  .name { font-size: 13px; letter-spacing: .02em; }
+  .hex { font-size: 11px; letter-spacing: .08em; opacity: .7; text-transform: uppercase; margin-top: 2px; }
+  .dark { color: var(--more-ivory-beige); }
+  .light { color: var(--more-oak-brown); }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="sw light" style="background: var(--more-ivory-beige); border: 1px solid var(--border-on-light);"><span class="name">Ivory Beige</span><span class="hex">#F6E1C7</span></div>
+    <div class="sw light" style="background: var(--more-harvest-yellow);"><span class="name">Harvest Yellow</span><span class="hex">#E2B16D</span></div>
+    <div class="sw dark" style="background: var(--more-terracotta);"><span class="name">Terracotta</span><span class="hex">#C15A3A</span></div>
+    <div class="sw dark" style="background: var(--more-oak-brown);"><span class="name">Oak Brown</span><span class="hex">#511C13</span></div>
+  </div>
+</body>
+</html>

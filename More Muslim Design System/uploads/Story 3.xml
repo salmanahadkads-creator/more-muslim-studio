@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xmeml version="4">
+  <!-- Exported by Descript -->
+  <sequence id="Story 3">
+    <duration>1786</duration>
+    <name>Story 3</name>
+    <width>2160</width>
+    <height>3840</height>
+    <rate>
+      <timebase>24</timebase>
+      <ntsc>FALSE</ntsc>
+    </rate>
+    <media>
+      <video>
+        <format>
+          <samplecharacteristics>
+            <pixelaspectratio>square</pixelaspectratio>
+            <anamorphic>FALSE</anamorphic>
+            <fielddominance>none</fielddominance>
+            <colordepth>24</colordepth>
+            <width>2160</width>
+            <height>3840</height>
+            <rate>
+              <timebase>24</timebase>
+              <ntsc>FALSE</ntsc>
+            </rate>
+          </samplecharacteristics>
+        </format>
+      </video>
+      <audio>
+        <numOutputChannels>2</numOutputChannels>
+        <format>
+          <samplecharacteristics>
+            <depth>16</depth>
+            <samplerate>48000</samplerate>
+          </samplecharacteristics>
+        </format>
+        <outputs>
+          <group>
+            <index>1</index>
+            <numchannels>1</numchannels>
+            <downmix>0</downmix>
+            <channel>
+              <index>1</index>
+            </channel>
+          </group>
+          <group>
+            <index>2</index>
+            <numchannels>1</numchannels>
+            <downmix>0</downmix>
+            <channel>
+              <index>2</index>
+            </channel>
+          </group>
+        </outputs>
+        <track>
+          <clipitem id="clipitem-1">
+            <name>Story 3_Audio.mp3</name>
+            <enabled>TRUE</enabled>
+            <duration>1745</duration>
+            <start>0</start>
+            <end>1745</end>
+            <in>0</in>
+            <out>1745</out>
+            <filter>
+              <effect>
+                <name>Audio Levels</name>
+                <effectid>audiolevels</effectid>
+                <effectcategory>audiolevels</effectcategory>
+                <effecttype>audiolevels</effecttype>
+                <mediatype>audio</mediatype>
+                <parameter>
+                  <parameterid>level</parameterid>
+                  <name>Level</name>
+                  <value>0.9885530946569386</value>
+                </parameter>
+              </effect>
+            </filter>
+            <file id="file-1">
+              <name>Story 3_Audio.mp3</name>
+              <pathurl>Story 3_Audio.mp3</pathurl>
+              <duration>1764</duration>
+              <width>1280</width>
+              <height>720</height>
+              <rate>
+                <timebase>30</timebase>
+                <ntsc>FALSE</ntsc>
+              </rate>
+              <media>
+                <audio>
+                  <samplecharacteristics>
+                    <depth>16</depth>
+                    <samplerate>48000</samplerate>
+                  </samplecharacteristics>
+                  <channelcount>2</channelcount>
+                </audio>
+              </media>
+            </file>
+            <link>
+              <linkclipref>clipitem-1</linkclipref>
+              <mediatype>audio</mediatype>
+              <trackindex>1</trackindex>
+              <clipindex>1</clipindex>
+              <groupindex>1</groupindex>
+            </link>
+          </clipitem>
+        </track>
+      </audio>
+    </media>
+  </sequence>
+</xmeml>

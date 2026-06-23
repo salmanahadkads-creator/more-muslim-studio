@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- @template name="Caption Story (Audiogram)" description="Word-by-word captioned 9:16 audio story on the brand ground, with speaker colourways and a Now Streaming outro" -->
+<helmet>
+  <script src="./ds-base.js"></script>
+  <style>
+    html, body { margin: 0; height: 100%; background: #0c1019; }
+    * { box-sizing: border-box; }
+  </style>
+</helmet>
+<div style="min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; padding:20px; font-family:'ABC Marist','Iowan Old Style',Georgia,serif;">
+  <div ref="{{ rootRef }}" style="position:relative; width:calc(1080px * var(--s,0.38)); height:calc(1920px * var(--s,0.38)); flex:none; box-shadow:0 30px 80px rgba(0,0,0,0.5);">
+    <div style="position:absolute; top:0; left:0; width:1080px; height:1920px; transform:scale(var(--s,0.38)); transform-origin:top left; overflow:hidden; background:#000; font-family:'ABC Marist','Iowan Old Style',Georgia,serif; line-height:1;">
+      {{ groundEl }}
+      <div style="position:absolute; top:150px; left:0; right:0; text-align:center; font-size:32px; text-transform:uppercase; letter-spacing:0.165em; white-space:nowrap; padding:0 60px; color:var(--ink,#511C14); opacity:var(--chromeOp,1); ">{{ episodeEyebrow }}</div>
+      <div style="position:absolute; left:85px; right:90px; top:660px; bottom:360px; display:flex; flex-direction:column; justify-content:flex-start; align-items:flex-start; pointer-events:none;">{{ captionEl }}</div>
+      <div style="position:absolute; bottom:300px; left:0; right:0; text-align:center; font-size:32px; text-transform:uppercase; letter-spacing:0.165em; white-space:nowrap; color:var(--ink,#511C14); opacity:var(--chromeOp,1); ">MOREMUSLIM.ORG</div>
+      <sc-if value="{{ showGuides }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute; left:0; right:0; top:0; height:120px; background:rgba(225,80,80,0.14); border-bottom:2px dashed rgba(225,80,80,0.5); pointer-events:none;"></div>
+        <div style="position:absolute; left:0; right:0; bottom:0; height:250px; background:rgba(225,80,80,0.14); border-top:2px dashed rgba(225,80,80,0.5); pointer-events:none;"></div>
+        <div style="position:absolute; top:0; bottom:0; right:0; width:130px; background:rgba(225,80,80,0.14); border-left:2px dashed rgba(225,80,80,0.5); pointer-events:none;"></div>
+      </sc-if>
+      <div style="position:absolute; inset:0; opacity:var(--outroOp,0); pointer-events:var(--outroPe,none);">
+        {{ outroGround }}
+        <div style="position:relative; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:0 130px; color:var(--outroInk,#F6E1C6);">
+          <div style="font-size:56px; text-transform:uppercase; letter-spacing:0.165em; line-height:1.16;">{{ outroEpisode }}<br>Now Streaming</div>
+          <div style="margin-top:140px; font-size:48px; max-width:780px; line-height:1.18;">{{ outroLine1 }}</div>
+          <div style="margin-top:90px; font-size:48px; max-width:780px; line-height:1.24;">{{ outroLine2 }}</div>
+          <img src="{{ outroSymbolSrc }}" alt="" style="width:190px; height:190px; margin-top:150px;">
+        </div>
+      </div>
+      {{ coverEl }}
+    </div>
+  </div>
+  <div style="display:flex; align-items:center; gap:14px; width:min(520px,92vw); color:#cdd3e0; font:13px/1.3 -apple-system,BlinkMacSystemFont,sans-serif;">
+    <button onClick="{{ togglePlay }}" style="background:#232d45; color:#e9edf5; border:1px solid #2e3a55; border-radius:6px; padding:7px 12px; cursor:pointer; font:13px -apple-system,BlinkMacSystemFont,sans-serif; white-space:nowrap;">{{ playLabel }}</button>
+    <button onClick="{{ restart }}" style="background:#232d45; color:#e9edf5; border:1px solid #2e3a55; border-radius:6px; padding:7px 12px; cursor:pointer; font:13px -apple-system,BlinkMacSystemFont,sans-serif; white-space:nowrap;">↺ Restart</button>
+    <input type="range" min="0" max="{{ duration }}" step="0.01" value="{{ t }}" onInput="{{ seek }}" style="flex:1; accent-color:#9FBCCC;">
+    <span style="font-variant-numeric:tabular-nums; min-width:90px; text-align:right;">{{ timeLabel }}</span>
+  </div>
+  <audio ref="{{ audioRef }}" src="audio.mp3" preload="auto"></audio>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: { &quot;width&quot;: 1080, &quot;height&quot;: 1920 },
+  &quot;groundMode&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;two&quot;, &quot;options&quot;: [&quot;two&quot;, &quot;single&quot;], &quot;tsType&quot;: &quot;string&quot; },
+  &quot;hostWay&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;beige&quot;, &quot;options&quot;: [&quot;beige&quot;, &quot;oak&quot;, &quot;night&quot;, &quot;mist&quot;, &quot;black&quot;, &quot;therapy&quot;, &quot;cover&quot;], &quot;tsType&quot;: &quot;string&quot; },
+  &quot;guestWay&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;oak&quot;, &quot;options&quot;: [&quot;beige&quot;, &quot;oak&quot;, &quot;night&quot;, &quot;mist&quot;, &quot;black&quot;, &quot;therapy&quot;, &quot;cover&quot;], &quot;tsType&quot;: &quot;string&quot; },
+  &quot;showSpeakerLabel&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot; },
+  &quot;wordMotion&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;fade&quot;, &quot;options&quot;: [&quot;fade&quot;, &quot;cut&quot;], &quot;tsType&quot;: &quot;string&quot; },
+  &quot;captionSize&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;auto&quot;, &quot;options&quot;: [&quot;auto&quot;, &quot;L&quot;, &quot;M&quot;], &quot;tsType&quot;: &quot;string&quot; },
+  &quot;illusTint&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot; },
+  &quot;imgZoom&quot;: { &quot;editor&quot;: &quot;float&quot;, &quot;default&quot;: 1, &quot;min&quot;: 1, &quot;max&quot;: 2, &quot;step&quot;: 0.05, &quot;tsType&quot;: &quot;number&quot; },
+  &quot;imgCropX&quot;: { &quot;editor&quot;: &quot;int&quot;, &quot;default&quot;: 50, &quot;min&quot;: 0, &quot;max&quot;: 100, &quot;tsType&quot;: &quot;number&quot; },
+  &quot;imgCropY&quot;: { &quot;editor&quot;: &quot;int&quot;, &quot;default&quot;: 50, &quot;min&quot;: 0, &quot;max&quot;: 100, &quot;tsType&quot;: &quot;number&quot; },
+  &quot;bgDrift&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot; },
+  &quot;episodeEyebrow&quot;: { &quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;IN THERAPY, WITH SHEIKHAGPT&quot;, &quot;tsType&quot;: &quot;string&quot; },
+  &quot;outroWay&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;night&quot;, &quot;options&quot;: [&quot;night&quot;, &quot;oak&quot;, &quot;beige&quot;, &quot;mist&quot;, &quot;black&quot;, &quot;cover&quot;, &quot;carry&quot;], &quot;tsType&quot;: &quot;string&quot; },
+  &quot;outroEpisode&quot;: { &quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;EPISODE 7&quot;, &quot;tsType&quot;: &quot;string&quot; },
+  &quot;outroLine1&quot;: { &quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;Listen to the full episode at moremuslim.org.&quot;, &quot;tsType&quot;: &quot;string&quot; },
+  &quot;outroLine2&quot;: { &quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;Or search for \&quot;More Muslim\&quot; on Apple Podcasts, Spotify, or wherever you listen to podcasts.&quot;, &quot;tsType&quot;: &quot;string&quot; },
+  &quot;outroDuration&quot;: { &quot;editor&quot;: &quot;int&quot;, &quot;default&quot;: 5, &quot;min&quot;: 2, &quot;max&quot;: 8, &quot;tsType&quot;: &quot;number&quot; },
+  &quot;coverTemplate&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;cover&quot;, &quot;options&quot;: [&quot;cover&quot;, &quot;synopsis&quot;, &quot;none&quot;], &quot;tsType&quot;: &quot;string&quot; },
+  &quot;coverWay&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;cover&quot;, &quot;options&quot;: [&quot;beige&quot;, &quot;oak&quot;, &quot;night&quot;, &quot;mist&quot;, &quot;black&quot;, &quot;therapy&quot;, &quot;cover&quot;], &quot;tsType&quot;: &quot;string&quot; },
+  &quot;coverEyebrow&quot;: { &quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;MORE MUSLIM PRESENTS&quot;, &quot;tsType&quot;: &quot;string&quot; },
+  &quot;coverTitle&quot;: { &quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;In Therapy, With SheikhaGPT&quot;, &quot;tsType&quot;: &quot;string&quot; },
+  &quot;coverEpisode&quot;: { &quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;S1 · E7&quot;, &quot;tsType&quot;: &quot;string&quot; },
+  &quot;coverBody&quot;: { &quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;A patient tells Dr. Rania Awaad she has been using an AI chatbot as a therapist. What that means for faith, healing, and the future of care.&quot;, &quot;tsType&quot;: &quot;string&quot; },
+  &quot;safeGuides&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot; }
+}">
+class Component extends DCLogic {
+  state = { t: 0, duration: 0, playing: false, started: false, scale: 0.38 };
+
+  D = {
+    groundMode: 'two', hostWay: 'beige', guestWay: 'oak',
+    showSpeakerLabel: true, wordMotion: 'fade', captionSize: 'auto',
+    illusTint: true, imgZoom: 1, imgCropX: 50, imgCropY: 50, bgDrift: true,
+    episodeEyebrow: 'IN THERAPY, WITH SHEIKHAGPT',
+    outroWay: 'night', outroEpisode: 'EPISODE 7',
+    outroLine1: 'Listen to the full episode at moremuslim.org.',
+    outroLine2: 'Or search for "More Muslim" on Apple Podcasts, Spotify, or wherever you listen to podcasts.',
+    outroDuration: 5,
+    coverTemplate: 'cover', coverWay: 'cover', coverEyebrow: 'MORE MUSLIM PRESENTS',
+    coverTitle: 'In Therapy, With SheikhaGPT', coverEpisode: 'S1 · E7',
+    coverBody: 'A patient tells Dr. Rania Awaad she has been using an AI chatbot as a therapist. What that means for faith, healing, and the future of care.',
+    safeGuides: false,
+  };
+
+  ways = {
+    beige:   { bg: '#FBF2E9', tile: '6A',  ink: '#511C14', logo: 'oak',   grain: 0.06, tileOpacity: 0.10 },
+    oak:     { bg: '#511C14', tile: '6B',  ink: '#F6E1C6', logo: 'beige', grain: 0.10, tileOpacity: 0.15 },
+    night:   { bg: '#192136', tile: '5C',  ink: '#F6E1C6', logo: 'beige', grain: 0.10, tileOpacity: 0.15 },
+    mist:    { bg: '#9FBCCC', tile: '2B',  ink: '#192136', logo: 'night', grain: 0.07, tileOpacity: 0.10 },
+    black:   { bg: '#000000', tile: null,  ink: '#FBF2E9', logo: 'beige', grain: 0.14, tileOpacity: 0 },
+    therapy: { bg: '#192136', isImage: true, image: '../../assets/imagery/illus-therapy.jpg',   ink: '#F6E1C6', logo: 'beige' },
+    cover:   { bg: '#511C14', isImage: true, image: '../../assets/imagery/cover-sheikhagpt.jpg', ink: '#F6E1C6', logo: 'beige' },
+  };
+
+  SRT = `1
+00:00:00,000 --> 00:00:01,650
+Yassmin Abdel-Magied: Do you remember
+the first time you heard about
+
+2
+00:00:01,650 --> 00:00:03,590
+people using chatbots as therapists?
+
+3
+00:00:03,770 --> 00:00:04,380
+Dr. Rania Awaad: I do.
+
+4
+00:00:04,410 --> 00:00:05,699
+Yeah, it was actually a patient of mine.
+
+5
+00:00:05,760 --> 00:00:08,580
+And she said, in between our
+sessions, um, I talked to a
+
+6
+00:00:08,590 --> 00:00:10,290
+chatbot and I said, come again?
+
+7
+00:00:10,540 --> 00:00:11,389
+Like what, what's going on?
+
+8
+00:00:12,410 --> 00:00:15,779
+Yassmin Abdel-Magied: Dr. Rania Awad
+runs the Muslim mental health and
+
+9
+00:00:15,780 --> 00:00:17,549
+Islamic psychology lab at Stanford.
+
+10
+00:00:17,859 --> 00:00:19,709
+And she's the president of Maristan.
+
+11
+00:00:19,740 --> 00:00:23,380
+Dr. Rania Awaad: Which is a nonprofit
+organization dedicated to educating
+
+12
+00:00:23,450 --> 00:00:27,190
+and clinically serving the Muslim
+mental health needs of our communities.
+
+13
+00:00:27,630 --> 00:00:30,450
+Yassmin Abdel-Magied: And one day, when a
+patient of hers walks in and says they've
+
+14
+00:00:30,450 --> 00:00:33,580
+been using an AI chatbot for therapy.
+
+15
+00:00:33,580 --> 00:00:36,055
+Dr. Rania Awaad: I started wondering:
+is this going to be the end of us?
+
+16
+00:00:37,095 --> 00:00:39,025
+Psychiatrists and psychologists?
+
+17
+00:00:39,905 --> 00:00:40,225
+No!
+
+18
+00:00:40,574 --> 00:00:44,364
+Like, what is the point of all of
+these years of training and, you
+
+19
+00:00:44,364 --> 00:00:47,635
+know, learning how to have that
+therapeutic ear and actually help?
+
+20
+00:00:47,815 --> 00:00:50,705
+13 years of school…
+to be replaced by an AI?
+
+21
+00:00:50,715 --> 00:00:50,885
+No!
+
+22
+00:00:54,425 --> 00:00:57,765
+Yassmin Abdel-Magied: But then something
+made Rania begin to see a world in which
+
+23
+00:00:57,965 --> 00:01:03,595
+AI and Islamic understandings of mental
+health might be able to come together?
+`;
+
+  pick(k) {
+    const v = this.props ? this.props[k] : undefined;
+    return (v === undefined || v === null || v === '') ? this.D[k] : v;
+  }
+
+  // ---------- parsing (mirrors captions.js) ----------
+  ensureParsed() {
+    if (this._parsed) return;
+    const norm = this.SRT.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+    const cues = [];
+    for (const ch of norm.split(/\n\s*\n/)) {
+      const lines = ch.split('\n').filter((l) => l.trim() !== '');
+      if (lines.length < 2) continue;
+      const ti = lines.findIndex((l) => /-->/.test(l));
+      if (ti < 0) continue;
+      const tm = lines[ti].match(/(\d{2}):(\d{2}):(\d{2})[,.](\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2})[,.](\d{3})/);
+      if (!tm) continue;
+      const start = +tm[1] * 3600 + +tm[2] * 60 + +tm[3] + +tm[4] / 1000;
+      const end = +tm[5] * 3600 + +tm[6] * 60 + +tm[7] + +tm[8] / 1000;
+      let txt = lines.slice(ti + 1).join(' ').replace(/\s+/g, ' ').trim();
+      let speaker = null;
+      const sm = txt.match(/^([^:]{1,40}):\s+/);
+      if (sm) {
+        const cand = sm[1].trim();
+        const ws = cand.split(/\s+/);
+        if (ws.length <= 4 && ws.every((w) => /^[A-Z]/.test(w))) { speaker = cand; txt = txt.slice(sm[0].length); }
+      }
+      cues.push({ start, end, text: txt, speaker });
+    }
+    // words
+    let sp = null;
+    const words = [];
+    for (const c of cues) {
+      if (c.speaker) sp = c.speaker;
+      const toks = c.text.split(/\s+/).filter(Boolean);
+      if (!toks.length) continue;
+      const wts = toks.map((t) => t.length + 1);
+      const tot = wts.reduce((a, b) => a + b, 0) || 1;
+      let acc = 0;
+      for (let i = 0; i < toks.length; i++) {
+        const s = c.start + (acc / tot) * (c.end - c.start);
+        acc += wts[i];
+        const e = c.start + (acc / tot) * (c.end - c.start);
+        words.push({ text: toks[i], start: s, end: e, speaker: sp });
+      }
+    }
+    // blocks
+    const blocks = [];
+    let cur = null;
+    for (const w of words) {
+      if (!cur || cur.speaker !== w.speaker) { cur = { speaker: w.speaker, words: [], start: w.start, end: w.end }; blocks.push(cur); }
+      cur.words.push({ text: w.text, start: w.start });
+      cur.end = w.end;
+      if (/[.!?]["')\]]*$/.test(w.text)) cur = null;
+    }
+    const seen = [];
+    for (const b of blocks) if (b.speaker && !seen.includes(b.speaker)) seen.push(b.speaker);
+    this.blocks = blocks;
+    this.speakers = seen;
+    this.host = seen[0];
+    this.guest = seen[1];
+    this.contentEnd = blocks.length ? blocks[blocks.length - 1].end : 0;
+    this._parsed = true;
+  }
+
+  firstName(s) {
+    if (!s) return '';
+    const n = s.replace(/^(dr|mr|mrs|ms|prof|sheikh|sheikha|imam)\.?\s+/i, '');
+    return (n.trim().split(/\s+/)[0] || '').replace(/[^\w'-].*$/, '');
+  }
+
+  // ---------- lifecycle ----------
+  componentDidMount() {
+    this._onResize();
+    window.addEventListener('resize', this._onResize);
+    this._applyVars();
+    this._raf = requestAnimationFrame(this.tick);
+  }
+  componentDidUpdate() { this._applyVars(); }
+  componentWillUnmount() {
+    cancelAnimationFrame(this._raf);
+    window.removeEventListener('resize', this._onResize);
+  }
+
+  rootRef = (el) => { if (el) { this.root = el; this._applyVars(); } };
+  _applyVars() {
+    if (!this.root || !this._vars) return;
+    for (const k in this._vars) this.root.style.setProperty('--' + k, this._vars[k]);
+  }
+
+  _onResize = () => {
+    const w = (window.innerWidth || 800) - 40;
+    const h = (window.innerHeight || 900) - 150;
+    const s = Math.max(0.12, Math.min(w / 1080, h / 1920));
+    if (Math.abs(s - this.state.scale) > 0.002) this.setState({ scale: s });
+  };
+
+  tick = () => {
+    const a = this.audio;
+    if (a) {
+      const dur = this.state.duration || (isFinite(a.duration) ? a.duration : 0);
+      if (!this.state.duration && isFinite(a.duration) && a.duration) this.setState({ duration: a.duration });
+      if (dur) a.volume = 1 - Math.min(1, Math.max(0, (a.currentTime - (dur - 1)) / 1));
+      if (!a.paused) this.setState({ t: a.currentTime, playing: true });
+    }
+    this._raf = requestAnimationFrame(this.tick);
+  };
+
+  audioRef = (el) => {
+    if (!el || el === this.audio) return;
+    this.audio = el;
+    el.addEventListener('loadedmetadata', () => this.setState({ duration: el.duration || 0 }));
+    el.addEventListener('play', () => this.setState({ playing: true, started: true }));
+    el.addEventListener('pause', () => this.setState({ playing: false }));
+    el.addEventListener('ended', () => this.setState({ playing: false, t: el.duration || this.state.t }));
+  };
+
+  togglePlay = () => { const a = this.audio; if (!a) return; if (a.paused) a.play(); else a.pause(); };
+  restart = () => { const a = this.audio; if (!a) return; a.currentTime = 0; a.volume = 1; this.setState({ t: 0, started: true }); a.play(); };
+  seek = (e) => { const a = this.audio; const v = +e.target.value; if (a) a.currentTime = v; this.setState({ t: v, started: true }); };
+
+  // ---------- rendering ----------
+  activeBlock() {
+    const t = this.state.t; const bs = this.blocks || [];
+    let idx = -1;
+    for (let i = 0; i < bs.length; i++) { if (bs[i].start <= t) idx = i; else break; }
+    return idx >= 0 ? bs[idx] : null;
+  }
+
+  capSize(block) {
+    const sz = this.pick('captionSize');
+    if (sz === 'M') return 48;
+    return 69;
+  }
+
+  panel(way) {
+    const h = React.createElement;
+    const w = this.ways[way]; const DS = window.MoreMuslimDesignSystem_019df4 || {};
+    this._pc = this._pc || {};
+    if (w.isImage) {
+      const z = this.pick('imgZoom'), cx = this.pick('imgCropX'), cy = this.pick('imgCropY');
+      const key = `img:${way}:${z}:${cx}:${cy}`;
+      if (this._pc[key]) return this._pc[key];
+      const el = h('img', { src: w.image, alt: '', style: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: `${cx}% ${cy}%`, transform: `scale(${z})`, transformOrigin: `${cx}% ${cy}%` } });
+      this._pc[key] = el; return el;
+    }
+    if (DS.PatternPanel) {
+      const key = `pat:${way}`;
+      if (this._pc[key]) return this._pc[key];
+      const el = h(DS.PatternPanel, { tile: w.tile, color: w.bg, grain: true, grainOpacity: w.grain, tileOpacity: w.tileOpacity, radius: '0', style: { position: 'absolute', inset: 0, height: '100%' } });
+      this._pc[key] = el; return el;
+    }
+    return h('div', { style: { position: 'absolute', inset: 0, background: w.bg } });
+  }
+
+  groundLayer(way, opacity, key) {
+    const h = React.createElement;
+    const w = this.ways[way]; const t = this.state.t;
+    const drift = this.pick('bgDrift');
+    const dx = drift ? Math.sin(t * 0.05) * 14 : 0;
+    const dy = drift ? Math.cos(t * 0.04) * 14 : 0;
+    const inner = h('div', { style: { position: 'absolute', inset: 0, transform: `scale(1.08) translate(${dx}px,${dy}px)`, transformOrigin: 'center', willChange: 'transform' } }, this.panel(way));
+    const tint = (w.isImage && this.pick('illusTint')) ? h('div', { style: { position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(8,10,18,0.42) 0%, rgba(8,10,18,0.30) 42%, rgba(8,10,18,0.66) 100%)' } }) : null;
+    return h('div', { key, style: { position: 'absolute', inset: 0, background: w.bg, opacity } }, inner, tint);
+  }
+
+  buildCaption(ink, labelColor) {
+    const h = React.createElement;
+    const active = this.activeBlock();
+    if (!active) return null;
+    const t = this.state.t; const motion = this.pick('wordMotion'); const size = this.capSize(active);
+    const spans = [];
+    active.words.forEach((w, i) => {
+      const op = motion === 'fade' ? Math.min(1, Math.max(0, (t - w.start) / 0.18)) : (t >= w.start ? 1 : 0);
+      if (op <= 0) return;
+      const ty = motion === 'fade' ? (1 - op) * 10 : 0;
+      spans.push(h('span', { key: i, style: { display: 'inline-block', opacity: op, transform: `translateY(${ty}px)`, marginRight: '0.28em' } }, w.text));
+    });
+    const label = this.pick('showSpeakerLabel')
+      ? h('div', { style: { fontSize: 32, textTransform: 'uppercase', letterSpacing: '0.165em', marginBottom: 28, color: labelColor || ink } }, this.firstName(active.speaker))
+      : null;
+    return h('div', { style: { color: ink } }, label, h('div', { style: { fontSize: size, lineHeight: 1.06, maxWidth: 780 } }, spans));
+  }
+
+  buildCover() {
+    if (this.state.started) return null;
+    const h = React.createElement;
+    const way = this.pick('coverWay'); const w = this.ways[way]; const ink = w.ink;
+    const tpl = this.pick('coverTemplate');
+    const symSrc = `../../assets/logos/symbol-${w.logo}.svg`;
+    const eb = (txt) => h('div', { style: { fontSize: 32, textTransform: 'uppercase', letterSpacing: '0.165em', color: ink } }, txt);
+    let content = null;
+    if (tpl === 'cover') {
+      content = h('div', { style: { position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', padding: '150px 85px 300px', color: ink } },
+        h('div', { style: { textAlign: 'center' } }, eb(this.pick('coverEyebrow'))),
+        h('h1', { style: { margin: '40px auto 0', textAlign: 'center', fontWeight: 400, textTransform: 'uppercase', letterSpacing: '0.165em', fontSize: 77, lineHeight: 1.06, maxWidth: 820 } }, this.pick('coverTitle')),
+        h('div', { style: { marginTop: 'auto', display: 'flex', alignItems: 'center' } },
+          h('img', { src: symSrc, alt: '', style: { width: 180, height: 180, flex: 'none' } }),
+          h('div', { style: { flex: 1, textAlign: 'center', fontSize: 32, textTransform: 'uppercase', letterSpacing: '0.165em', color: ink } }, this.pick('coverEpisode')),
+          h('div', { style: { width: 180, flex: 'none' } })
+        )
+      );
+    } else if (tpl === 'synopsis') {
+      content = h('div', { style: { position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', padding: '150px 85px 300px', color: ink } },
+        h('div', { style: { textAlign: 'center', marginBottom: 64 } }, eb(this.pick('coverEpisode'))),
+        h('div', { style: { flex: 1, display: 'flex', alignItems: 'center' } }, h('p', { style: { margin: 0, fontSize: 56, lineHeight: 1.05, maxWidth: 780, textWrap: 'pretty' } }, this.pick('coverBody'))),
+        h('div', { style: { textAlign: 'center', fontSize: 32, textTransform: 'uppercase', letterSpacing: '0.165em' } }, 'MOREMUSLIM.ORG')
+      );
+    }
+    return h('div', { style: { position: 'absolute', inset: 0 } }, h('div', { style: { position: 'absolute', inset: 0 } }, this.groundLayer(way, 1, 'cover')), content);
+  }
+
+  outroStart() {
+    const dur = this.state.duration || 0;
+    if (!dur) return Infinity;
+    return Math.max((this.contentEnd || 0) + 0.3, dur - this.pick('outroDuration'));
+  }
+
+  fmt(s) {
+    s = Math.max(0, Math.floor(s || 0));
+    const m = Math.floor(s / 60); const ss = String(s % 60).padStart(2, '0');
+    return `${m}:${ss}`;
+  }
+
+  renderVals() {
+    this.ensureParsed();
+    const h = React.createElement;
+    const s = this.state.scale; const t = this.state.t;
+
+    const hostWay = this.pick('hostWay');
+    const guestWay = this.pick('guestWay');
+    const active = this.activeBlock();
+    const inkColor = (this.ways[hostWay] || this.ways.beige).ink;
+    const guestActive = active && this.guest && active.speaker === this.guest;
+    const labelColor = guestActive ? (this.ways[guestWay] || this.ways.oak).bg : inkColor;
+
+    const groundEl = h('div', { style: { position: 'absolute', inset: 0 } }, this.groundLayer(hostWay, 1, 'host'));
+
+    // outro
+    const os = this.outroStart();
+    const oProg = isFinite(os) ? Math.min(1, Math.max(0, (t - os) / 0.6)) : 0;
+    let outroWay = this.pick('outroWay');
+    if (outroWay === 'carry') {
+      const lb = this.blocks && this.blocks[this.blocks.length - 1];
+      outroWay = (lb && this.guest && lb.speaker === this.guest) ? guestWay : hostWay;
+    }
+    const ow = this.ways[outroWay] || this.ways.night;
+    const outroGround = h('div', { style: { position: 'absolute', inset: 0 } }, this.groundLayer(outroWay, 1, 'outroG'));
+
+    const dur = this.state.duration || ((this.contentEnd || 0) + this.pick('outroDuration')) || 1;
+
+    // Live values routed through CSS custom properties (set imperatively via rootRef)
+    // so every template style stays literal and paints immediately.
+    this._vars = {
+      s: s,
+      ink: inkColor,
+      chromeOp: 1 - oProg,
+      outroOp: oProg,
+      outroPe: oProg > 0.5 ? 'auto' : 'none',
+      outroInk: ow.ink,
+    };
+    this._applyVars();
+
+    return {
+      rootRef: this.rootRef,
+      groundEl,
+      captionEl: this.buildCaption(inkColor, labelColor),
+      coverEl: this.buildCover(),
+      episodeEyebrow: this.pick('episodeEyebrow'),
+      showGuides: !!this.pick('safeGuides'),
+      outroGround,
+      outroEpisode: this.pick('outroEpisode'),
+      outroLine1: this.pick('outroLine1'),
+      outroLine2: this.pick('outroLine2'),
+      outroSymbolSrc: `../../assets/logos/symbol-${ow.logo}.svg`,
+      // controls
+      togglePlay: this.togglePlay,
+      restart: this.restart,
+      seek: this.seek,
+      audioRef: this.audioRef,
+      duration: dur,
+      t: t,
+      playLabel: this.state.playing ? '❚❚ Pause' : '▶ Play',
+      timeLabel: `${this.fmt(t)} / ${this.fmt(dur)}`,
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>More Muslim · Partnership Pitch</title>
+
+<link rel="stylesheet" href="_ds/more-muslim-design-system-019df483-9218-7d48-bcf7-386ea1ff3758/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/more-muslim-design-system-019df483-9218-7d48-bcf7-386ea1ff3758/tokens/colors.css">
+<link rel="stylesheet" href="_ds/more-muslim-design-system-019df483-9218-7d48-bcf7-386ea1ff3758/tokens/typography.css">
+<link rel="stylesheet" href="_ds/more-muslim-design-system-019df483-9218-7d48-bcf7-386ea1ff3758/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/more-muslim-design-system-019df483-9218-7d48-bcf7-386ea1ff3758/tokens/base.css">
+
+<style>
+/* ════════════════════════════════════════════════════
+   TOKENS — edit here to retheme the whole deck
+════════════════════════════════════════════════════ */
+:root {
+  --pad-x: 130px;
+  --pad-y: 95px;
+  --caps:  0.165em;
+  --pat-opacity: 0.10;   /* PPTX: 10% — raise to 0.25+ for more visible pattern */
+
+  /* palette */
+  --c-ivory:  #F6E1C6;
+  --c-oak:    #511C14;
+  --c-gold:   #DAB377;   /* closer ground */
+  --c-harvest:#E2B16D;
+  --c-terra:  #C15A3A;
+  --c-black:  #000000;
+  --c-gray:   #808080;   /* callout / press dividers */
+
+  /* type scale (1920×1080 canvas) */
+  --t-display: 68px;
+  --t-title:   55px;
+  --t-h2:      38px;
+  --t-body:    32px;
+  --t-eyebrow: 24px;
+  --t-small:   22px;
+  --t-stat:    85px;
+
+  /* PPTX heading text-box constraint: 608pt × 245pt = 810 × 327px */
+  --heading-w:    810px;
+  --heading-w-lg: 1440px;  /* 1080pt — for longer statement headings */
+  --heading-h: 327px;
+}
+
+html, body { margin: 0; padding: 0; background: #0d1119; }
+deck-stage:not(:defined) { visibility: hidden; }
+* { -webkit-font-smoothing: antialiased; box-sizing: border-box; }
+em { font-style: italic; }
+
+/* ── Slide base ── */
+.slide {
+  height: 100%; width: 100%;
+  padding: var(--pad-y) var(--pad-x);
+  display: flex; flex-direction: column;
+  overflow: hidden; position: relative;
+  font-family: var(--font-serif); font-weight: 400;
+}
+.slide > * { position: relative; z-index: 2; }
+
+/* ── Grounds ── */
+.g-oak   { background: var(--c-oak);   color: var(--c-ivory); }
+.g-ivory { background: var(--c-ivory); color: var(--c-oak);   }
+.g-black { background: var(--c-black); color: var(--c-ivory); }
+.g-gold  { background: var(--c-gold);  color: var(--c-oak);   }
+
+/* ── Pattern overlay ── */
+.pat::before {
+  content: ""; position: absolute; inset: 0; z-index: 0;
+  background-size: cover; background-position: center top;
+  background-repeat: no-repeat;
+  pointer-events: none; opacity: var(--pat-opacity);
+}
+.pat-6b::before { background-image: url("assets/patterns/pattern-6b.png"); }
+.pat-5a::before { background-image: url("assets/patterns/pattern-5a.png"); }
+.pat-4c::before { background-image: url("assets/patterns/pattern-4c.png"); }
+.pat-1a::before {
+  background-image: url("assets/patterns/pattern-1a.png");
+  background-position: center bottom;
+  opacity: calc(var(--pat-opacity) * 1.5);
+}
+
+/* ── Symbol foot (bottom-right, every slide except cover) ── */
+.sym-foot {
+  position: absolute; right: var(--pad-x); bottom: 50px;
+  width: 139px; height: 139px; opacity: 0.68; z-index: 3;
+}
+
+/* ── Type primitives ── */
+.eyebrow {
+  font-size: var(--t-eyebrow); text-transform: uppercase;
+  letter-spacing: var(--caps); line-height: 1.2; margin: 0; opacity: 0.9;
+}
+.eyebrow.dim { opacity: 0.52; }
+.display {
+  font-size: var(--t-display); text-transform: uppercase;
+  letter-spacing: var(--caps); line-height: 1.04; margin: 0;
+}
+.title {
+  font-size: var(--t-title); text-transform: uppercase;
+  letter-spacing: var(--caps); line-height: 1.06; margin: 0;
+}
+.h2    { font-size: var(--t-h2);    line-height: 1.14; margin: 0; }
+.body  { font-size: var(--t-body);  line-height: 1.44; margin: 0; text-wrap: pretty; }
+.small { font-size: var(--t-small); line-height: 1.4;  margin: 0; }
+.stat-fig {
+  font-size: var(--t-stat); line-height: 0.96;
+  letter-spacing: -0.025em; margin: 0;
+}
+.stat-cap {
+  font-size: 24px; line-height: 1.38; margin-top: 14px;
+  opacity: 0.82; max-width: 18ch; text-wrap: pretty;
+}
+
+/* ── Layout helpers ── */
+.stack    { display: flex; flex-direction: column; }
+.row      { display: flex; }
+.grow     { flex: 1; }
+.between  { justify-content: space-between; }
+.center-y { align-items: center; }
+.mt-auto  { margin-top: auto; }
+.grid-2   { display: grid; grid-template-columns: repeat(2, 1fr); }
+.grid-3   { display: grid; grid-template-columns: repeat(3, 1fr); }
+.grid-4   { display: grid; grid-template-columns: repeat(4, 1fr); }
+
+/* ── Rules ── */
+.rule { height: 1px; width: 100%; border: 0; margin: 0; }
+.on-oak  .rule { background: var(--c-ivory); opacity: 0.16; }
+.on-ivory .rule { background: var(--c-oak); opacity: 0.16; }
+.rule-gray { background: var(--c-gray); opacity: 0.55; border: 0; height: 1px; width: 100%; margin: 0; }
+.n-index { font-size: 24px; letter-spacing: var(--caps); text-transform: uppercase; opacity: 0.48; margin: 0; }
+
+/* ── Chips ── */
+.chip {
+  display: inline-flex; align-items: center;
+  font-size: 24px; letter-spacing: var(--caps); text-transform: uppercase;
+  padding: 8px 18px; border-radius: 3px; align-self: flex-start;
+}
+/* filled ivory (on dark grounds) */
+.chip-fi { background: var(--c-ivory); color: var(--c-oak); }
+/* filled oak (on light grounds) */
+.chip-fo { background: var(--c-oak); color: var(--c-ivory); }
+
+/* ── Excerpt play chip (episode slides) ── */
+.excerpt-chip {
+  display: inline-flex; align-items: center; gap: 12px;
+  background: var(--c-ivory); border-radius: 4px;
+  padding: 9px 16px 9px 9px; align-self: flex-start;
+}
+.excerpt-icon {
+  width: 34px; height: 34px; border-radius: 2px;
+  background: var(--c-oak); flex: 0 0 auto;
+  display: grid; place-items: center;
+}
+.excerpt-label {
+  font-size: 24px; letter-spacing: var(--caps);
+  text-transform: uppercase; color: var(--c-oak);
+}
+
+/* ── Episode photo panel (full-height, black ground) ── */
+.ep-photo {
+  background: rgba(246,225,198,0.06);
+  border: 1px solid rgba(246,225,198,0.10);
+  display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+}
+.ep-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ep-photo-placeholder {
+  font-size: 24px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: rgba(246,225,198,0.22); text-align: center; font-family: var(--font-serif);
+}
+
+/* ── Team grid (3-col × 2-row hairline ruled) ── */
+.team-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid rgba(81,28,20,0.18);
+  border-left: 1px solid rgba(81,28,20,0.18);
+}
+.team-cell {
+  border-right: 1px solid rgba(81,28,20,0.18);
+  border-bottom: 1px solid rgba(81,28,20,0.18);
+  padding: 30px 38px 34px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.t-role { font-size: 24px; letter-spacing: var(--caps); text-transform: uppercase; opacity: 0.52; margin: 0; }
+.t-name { font-size: 29px; line-height: 1.1; margin: 0 0 3px; }
+.t-ped  { font-size: 24px; line-height: 1.44; opacity: 0.82; margin: 0; text-wrap: pretty; }
+.team-inner-rule { height: 1px; background: rgba(81,28,20,0.14); margin: 14px 0; }
+
+/* ── Logo wall (no grid borders, free items) ── */
+.logo-wall {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  row-gap: 8px;
+}
+.logo-wall span {
+  display: flex; align-items: center; justify-content: center;
+  padding: 12px 20px; min-height: 60px;
+}
+.logo-wall span svg { height: 34px; width: auto; max-width: 88%; }
+.logo-wall span img { height: 34px; width: auto; max-width: 88%; object-fit: contain; }
+
+/* ── Destination board ── */
+.board { display: flex; flex-direction: column; }
+.board-row {
+  display: grid; grid-template-columns: 1.1fr 0.42fr 1.5fr 0.5fr;
+  align-items: center; gap: 20px;
+  padding: 17px 0; border-bottom: 1px solid rgba(246,225,198,0.18);
+}
+.board-row.head {
+  opacity: 0.50; font-size: 24px; letter-spacing: var(--caps);
+  text-transform: uppercase; padding-bottom: 10px;
+}
+.b-city { font-size: 32px; }
+.b-code { font-size: 24px; letter-spacing: var(--caps); opacity: 0.58; }
+.b-ep   { font-size: var(--t-body); font-style: italic; }
+.b-num  { font-size: 24px; letter-spacing: var(--caps); opacity: 0.58; text-align: right; }
+
+/* ── Gray-rule callout (Who's Listening right column) ── */
+.gray-callout { display: flex; flex-direction: column; gap: 16px; }
+.gray-callout-text {
+  font-size: 35px; font-style: italic; line-height: 1.18;
+  opacity: 0.92; max-width: 26ch;
+}
+
+/* ── Press quotes ── */
+.press-quote {
+  font-size: var(--t-body); font-style: italic; line-height: 1.38; max-width: 27ch; text-wrap: pretty;
+}
+.press-attr {
+  font-size: 24px; letter-spacing: var(--caps); text-transform: uppercase;
+  opacity: 0.50; margin: 0;
+}
+
+/* ── "Featured in" ruled table ── */
+.feat-table {
+  display: flex; border-top: 1px solid rgba(81,28,20,0.18);
+  border-left: 1px solid rgba(81,28,20,0.18);
+}
+.feat-cell {
+  border-right: 1px solid rgba(81,28,20,0.18);
+  border-bottom: 1px solid rgba(81,28,20,0.18);
+  padding: 14px 32px;
+  font-size: 24px; letter-spacing: 0.1em; text-transform: uppercase;
+  opacity: 0.72;
+}
+
+/* ── Entrance animation ── */
+@media (prefers-reduced-motion: no-preference) {
+  [data-deck-active] .reveal                { animation: fadeUp 0.56s cubic-bezier(.22,.84,.36,1) both; }
+  [data-deck-active] .reveal:nth-child(2)   { animation-delay: .07s; }
+  [data-deck-active] .reveal:nth-child(3)   { animation-delay: .14s; }
+  [data-deck-active] .reveal:nth-child(4)   { animation-delay: .21s; }
+  [data-deck-active] .reveal:nth-child(5)   { animation-delay: .28s; }
+  [data-deck-active] .reveal:nth-child(6)   { animation-delay: .35s; }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+</style>
+</head>
+<body>
+<deck-stage width="1920" height="1080">
+
+<!-- ═══════════════════════════════════════════
+     01 · COVER
+     Edit: logo + "PARTNERSHIP PROPOSAL" title + partner chips
+═══════════════════════════════════════════ -->
+<section class="slide g-oak pat pat-6b" data-screen-label="01 Cover">
+
+  <!-- Logo — top left -->
+  <img class="reveal"
+       src="assets/logos/logo-horizontal-beige.svg"
+       alt="More Muslim"
+       style="width: 600px; max-width: 52%; margin-bottom: auto;">
+
+  <!-- Main title — bottom left -->
+  <div class="stack reveal" style="gap: 20px; margin-top: auto;">
+    <p class="display" style="font-size: 60px; max-width: 18ch;">Partnership Proposal</p>
+    <div class="row" style="gap: 14px; flex-wrap: wrap;">
+      <!-- EDIT: partner chip(s) -->
+      <span class="chip chip-fi"><br><br><span class="t-partner">Qatar Airways</span></span>
+    </div>
+  </div>
+
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     02 · WHAT IS MORE MUSLIM?
+     Edit: body copy / tagline
+═══════════════════════════════════════════ -->
+<section class="slide g-ivory pat pat-5a on-ivory" data-screen-label="02 The Show">
+
+  <p class="eyebrow reveal">The Show</p>
+
+  <div class="grow stack" style="justify-content: center; gap: 32px; max-width: 900px;">
+    <h2 class="title reveal" style="width: var(--heading-w); max-width: 100%;">What is More Muslim?</h2>
+    <p class="body reveal" style="font-size: var(--t-body); opacity: 0.88; max-width: 44ch;">
+      A narrative audio documentary series that explores the Muslim experience, with all its messiness.
+    </p>
+    <p class="body reveal" style="font-size: var(--t-body); opacity: 0.78; max-width: 48ch;">
+      Each episode is a transhistorical journey into one aspect of the Muslim experience, reported across continents, edited from Doha, and powered by the Al-Mujadilah Center and Mosque for Women.
+    </p>
+  </div>
+
+  <img class="sym-foot" src="assets/logos/symbol-oak.svg" alt="">
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     03 · MADE IN QATAR
+     Edit: headline + body
+═══════════════════════════════════════════ -->
+<section class="slide g-ivory pat pat-5a on-ivory" data-screen-label="03 Made in Qatar">
+
+  <p class="eyebrow reveal">The Show</p>
+
+  <div class="grow stack" style="justify-content: center; gap: 32px; max-width: 960px;">
+    <h2 class="title reveal" style="width: var(--heading-w-lg); max-width: 100%; line-height: 1.1;">
+      One of the first narrative documentary podcasts made in Qatar.
+    </h2>
+    <p class="body reveal" style="font-size: var(--t-body); opacity: 0.82; max-width: 50ch;">
+      With the show, we're bringing the quality and calibre of storytelling audiences love from public radio shows like <em>Radiolab</em>, <em>Planet Money</em>, and <em>This American Life</em> to tell stories from Muslim communities around the world.
+    </p>
+    <p class="body reveal" style="font-size: var(--t-body); opacity: 0.70; max-width: 50ch;">
+      Editorially led from Doha, we work with reporting from correspondents across multiple continents, already competing in the same category as the world's leading narrative podcasts.
+    </p>
+  </div>
+
+  <img class="sym-foot" src="assets/logos/symbol-oak.svg" alt="">
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     04 · WHY NOW
+     Edit: headline + 3 points
+═══════════════════════════════════════════ -->
+<section class="slide g-oak pat pat-6b on-oak" data-screen-label="04 Why Now">
+
+  <p class="eyebrow reveal">Why This, Why Now</p>
+
+  <div class="grow stack" style="justify-content: center; gap: 48px;">
+    <h2 class="display reveal" style="width: var(--heading-w-lg); max-width: 100%; font-size: 62px;">
+      Prestige narrative audio is the next frontier for podcasts, and no one is making it from here.
+    </h2>
+
+    <div class="grid-3 reveal" style="gap: 52px; max-width: 1540px;">
+      <div class="stack" style="gap: 12px;">
+        <p class="n-index">01</p>
+        <p class="body" style="font-size: var(--t-body);">The podcasts market has become saturated with chat shows in recent years, especially in the Middle East, but few in the entire region are making hand-crafted, cinematic, expertly edited and sound designed stories the way we are.</p>
+      </div>
+      <div class="stack" style="gap: 12px;">
+        <p class="n-index">02</p>
+        <p class="body" style="font-size: var(--t-body);">We focus on telling stories from Muslim communities around the world in a way that doesn't oversimplify or stereotype, but instead provide a shared ground for people to understand what being Muslim is really like.</p>
+      </div>
+      <div class="stack" style="gap: 12px;">
+        <p class="n-index">03</p>
+        <p class="body" style="font-size: var(--t-body);">We have put together a team of journalists that is truly international and have worked in some of the biggest news organizations in the world.</p>
+      </div>
+    </div>
+  </div>
+
+  <img class="sym-foot" src="assets/logos/symbol-beige.svg" alt="">
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     05 · A MUSLIM LENS ON UNIVERSAL QUESTIONS
+     Edit: headline + body
+═══════════════════════════════════════════ -->
+<section class="slide g-oak pat pat-6b on-oak" data-screen-label="05 Universal Stories">
+
+  <p class="eyebrow reveal">What These Stories Are About</p>
+
+  <div class="grow stack" style="justify-content: center; gap: 36px;">
+    <h2 class="title reveal" style="font-size: 65px; width: var(--heading-w); max-width: 100%;">
+      A Muslim lens on universal questions.
+    </h2>
+    <p class="body reveal" style="max-width: 52ch; font-size: var(--t-body); opacity: 0.88;">
+      More Muslim is documentary journalism that appeals to a much broader audience beyond Muslims. The subjects are the ones every modern listener is already thinking about. Technology and mental health, memory and belonging, home and displacement, heard through the lives of Muslims around the world.
+    </p>
+  </div>
+
+  <img class="sym-foot" src="assets/logos/symbol-beige.svg" alt="">
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     06 · EPISODE 06 — CAPE MALAY
+     Edit: episode number, title, body, pull-quote,
+           excerpt label, photo (replace .ep-photo content)
+═══════════════════════════════════════════ -->
+<section class="slide g-black pat pat-4c" data-screen-label="06 Episode Cape Malay"
+         style="padding: 0; flex-direction: row;">
+
+  <!-- Content left -->
+  <div class="stack" style="flex: 0 0 57%; padding: var(--pad-y) var(--pad-x); gap: 22px; justify-content: center;">
+    <p class="eyebrow reveal">Episode 06</p>
+    <h2 class="title reveal" style="font-size: 55px; width: var(--heading-w); max-width: 100%;">Cape Malay</h2>
+    <p class="body reveal" style="font-size: var(--t-body); opacity: 0.88; max-width: 40ch; text-wrap: pretty;">
+      Growing up, Aina had heard about the transatlantic slave trade. But on a reporting trip she was shocked to learn that Dutch colonisers were also deporting and enslaving Muslims from Indonesia, shipping them thousands of miles to South Africa. Reporter Aina J. Khan takes us to Cape Town and tells the story of what they built there.
+    </p>
+    <p class="body reveal" style="font-size: var(--t-body); opacity: 0.68; max-width: 40ch; text-wrap: pretty;">
+      How the Cape Malay used their faith to survive 400 years of slavery, colonialism, and apartheid. And why gentrification may be what finally breaks them.
+    </p>
+
+    <!-- Excerpt chip — EDIT: label if needed -->
+    <div class="excerpt-chip reveal" style="margin-top: 8px;">
+      <div class="excerpt-icon">
+        <svg width="14" height="16" viewBox="0 0 14 16" fill="var(--c-ivory)">
+          <path d="M2 1.5l10 6.5-10 6.5V1.5z"/>
+        </svg>
+      </div>
+      <span class="excerpt-label">Excerpt · The Destination Tie-in</span>
+    </div>
+  </div>
+
+  <!-- Photo right -->
+  <div class="ep-photo" style="flex: 1; position: relative; z-index: 2; align-self: stretch;">
+    <img src="assets/imagery/cape-malay-social.jpg" alt="Cape Malay" style="width: 100%; height: 100%; object-fit: cover; object-position: center center; display: block;">
+  </div>
+
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     07 · EPISODE 07 — IN THERAPY WITH SHEIKHAGPT
+     Edit: episode number, title, body, excerpt label, photo
+═══════════════════════════════════════════ -->
+<section class="slide g-black pat pat-4c" data-screen-label="07 Episode SheikhaGPT"
+         style="padding: 0; flex-direction: row;">
+
+  <!-- Photo left -->
+  <div class="ep-photo" style="flex: 0 0 40%; position: relative; z-index: 2; align-self: stretch;">
+    <img src="assets/imagery/sheikhagpt-social.jpg" alt="In Therapy With SheikhaGPT" style="width: 100%; height: 100%; object-fit: cover; object-position: center center; display: block;">
+  </div>
+
+  <!-- Content right -->
+  <div class="stack" style="flex: 1; padding: var(--pad-y) var(--pad-x); gap: 22px; justify-content: center;">
+    <p class="eyebrow reveal">Episode 07</p>
+    <h2 class="title reveal" style="font-size: 53px; width: var(--heading-w); max-width: 100%;">In Therapy, With SheikhAGPT</h2>
+    <p class="body reveal" style="font-size: var(--t-body); opacity: 0.88; max-width: 40ch; text-wrap: pretty;">
+      When reporter Yassmin Abdel-Magied's friend tells her she's been using ChatGPT as a therapist, Yassmin doesn't know what to think. The chatbot calls her friend "habibti." Gives her Islamic relationship advice. It's helping her reconnect with her faith in ways no human in her life has been able to. But it's also a product built by a tech company with no foundations in Islamic psychology.
+    </p>
+
+    <!-- Excerpt chip -->
+    <div class="excerpt-chip reveal" style="margin-top: 8px;">
+      <div class="excerpt-icon">
+        <svg width="14" height="16" viewBox="0 0 14 16" fill="var(--c-ivory)">
+          <path d="M2 1.5l10 6.5-10 6.5V1.5z"/>
+        </svg>
+      </div>
+      <span class="excerpt-label">Excerpt</span>
+    </div>
+  </div>
+
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     08 · WHO'S LISTENING
+     Edit: headline, body, callout quote
+═══════════════════════════════════════════ -->
+<section class="slide g-oak pat pat-6b on-oak" data-screen-label="08 Whos Listening">
+
+  <p class="eyebrow reveal">Who's Listening</p>
+
+  <div class="grow row reveal" style="gap: 80px; align-items: center; margin-top: 40px;">
+
+    <!-- Left: main body -->
+    <div class="stack" style="flex: 1.2; gap: 26px;">
+      <h2 class="display reveal" style="font-size: 57px; width: var(--heading-w); max-width: 100%;">
+        The curious, mobile, globally-minded listener.
+      </h2>
+      <p class="body" style="font-size: var(--t-body); opacity: 0.86; max-width: 44ch;">
+        More Muslim's audience skews 22 to 45, university-educated, urban and culturally engaged. The same person who reads long-form, travels often, and chooses <em>Radiolab</em> over the algorithm. They listen on the move: commuting, in transit, in the air.
+      </p>
+      <p class="body" style="font-size: var(--t-body); opacity: 0.86; max-width: 44ch;">
+        It is a young, international, predominantly female audience that crosses cultures rather than staying inside one. Reached across 143 countries inside the first three months.
+      </p>
+    </div>
+
+    <!-- Right: gray-ruled callout — EDIT: quote text -->
+    <div class="gray-callout" style="flex: 0 0 34%;">
+      <hr class="rule-gray">
+      <p class="gray-callout-text">
+        <!-- EDIT: tailor this line to the partner context -->
+        "The kind of passenger who often flies through Doha on a layover."
+      </p>
+      <hr class="rule-gray">
+    </div>
+
+  </div>
+
+  <img class="sym-foot" src="assets/logos/symbol-beige.svg" alt="">
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     09 · BY THE NUMBERS
+     Edit: stat figures + captions
+═══════════════════════════════════════════ -->
+<section class="slide g-oak pat pat-6b on-oak" data-screen-label="09 By the Numbers">
+
+  <p class="eyebrow reveal">By the Numbers</p>
+
+  <div class="grow stack" style="justify-content: center; gap: 52px;">
+    <p class="body reveal" style="max-width: 36ch; opacity: 0.88;">
+      In its first three months, the show quickly found a global, premium audience, primarily through word-of-mouth.
+    </p>
+
+    <div class="grid-3 reveal" style="gap: 56px; max-width: 1480px;">
+      <!-- Stat 1 — EDIT -->
+      <div class="stack">
+        <span class="stat-fig">40k+</span>
+        <span class="stat-cap">Downloads across 143 countries in the opening three months.</span>
+      </div>
+      <!-- Stat 2 — EDIT -->
+      <div class="stack">
+        <span class="stat-fig">#4</span>
+        <span class="stat-cap">Qatar is the show's fourth-largest market globally, and the GCC keeps growing.</span>
+      </div>
+      <!-- Stat 3 — EDIT -->
+      <div class="stack">
+        <span class="stat-fig">22–45</span>
+        <span class="stat-cap">The core listener: university-educated, urban, culturally engaged.</span>
+      </div>
+    </div>
+  </div>
+
+  <img class="sym-foot" src="assets/logos/symbol-beige.svg" alt="">
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     10 · THE TEAM
+     Edit: team members — 3-col × 2-row grid
+     Middle-bottom cell holds two producers stacked
+═══════════════════════════════════════════ -->
+<section class="slide g-ivory pat pat-5a on-ivory" data-screen-label="10 The Team">
+
+  <p class="eyebrow reveal" style="margin-bottom: 24px;">The Team</p>
+
+  <div class="team-grid reveal grow">
+
+    <!-- Row 1 -->
+    <div class="team-cell">
+      <p class="t-role">Host</p>
+      <p class="t-name">Dr. Sohaira Siddiqui</p>
+      <p class="t-ped">Executive Director, Al-Mujadilah; Professor of Islamic Studies, Georgetown. Named one of the 500 Most Influential Muslims, 2026.</p>
+    </div>
+    <div class="team-cell">
+      <p class="t-role">Executive Producer &amp; Managing Editor</p>
+      <p class="t-name">Salman Ahad Khan</p>
+      <p class="t-ped"><em>The Experiment</em> (The Atlantic / WNYC), Reveal, <em>Revisionist History</em>, <em>More Perfect</em>. Gold for Best Documentary, Signal Awards 2024.</p>
+    </div>
+    <div class="team-cell">
+      <p class="t-role">Consulting Editor</p>
+      <p class="t-name">Sarah Qari</p>
+      <p class="t-ped"><em>Radiolab</em>, <em>More Perfect</em>, <em>On the Media</em>. Lead producer on <em>The Other Latif</em>, a duPont–Columbia winner.</p>
+    </div>
+
+    <!-- Row 2 -->
+    <div class="team-cell">
+      <p class="t-role">Technical Director</p>
+      <p class="t-name">Alexander Overington</p>
+      <p class="t-ped"><em>Radiolab</em>, <em>The Daily</em> (NYT), <em>More Perfect</em>. Webby Award for Best Sound Design.</p>
+    </div>
+    <!-- Middle bottom: two producers stacked -->
+    <div class="team-cell">
+      <p class="t-role">Producer</p>
+      <p class="t-name">Taqwa Sadiq</p>
+      <p class="t-ped">BBC Radio 4 and BBC Sounds. Best New Producer, Audio Production Awards 2024.</p>
+      <div class="team-inner-rule"></div>
+      <p class="t-role">Producer</p>
+      <p class="t-name">Tanita Rahmani</p>
+      <p class="t-ped">Campside Media, <em>Snap Judgment</em>. Shortlisted for Best Short Documentary at IDFA.</p>
+    </div>
+    <div class="team-cell">
+      <p class="t-role">Fact Checker</p>
+      <p class="t-name">Heba Elorbany</p>
+      <p class="t-ped">Former Executive Producer of Audio, Los Angeles Times. Tribeca-premiered documentary filmmaker.</p>
+    </div>
+
+  </div>
+
+  <img class="sym-foot" src="assets/logos/symbol-oak.svg" alt="">
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     11 · WHERE THE TEAM HAS WORKED
+     Edit: logo items + award chips
+     Add real logo <img> tags inside logo-wall spans
+═══════════════════════════════════════════ -->
+<section class="slide g-oak pat pat-6b on-oak" data-screen-label="11 Where Worked">
+
+  <p class="eyebrow reveal">Where the Team Has Worked</p>
+
+  <div class="grow stack" style="justify-content: center; gap: 36px;">
+
+    <!-- Logo wall — EDIT: swap SVG text for real logo <img> tags as available -->
+    <div class="logo-wall reveal">
+      <span><svg viewBox="0 0 290 48" fill="var(--c-ivory)" xmlns="http://www.w3.org/2000/svg"><text x="145" y="34" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="24" letter-spacing="0.4">The New York Times</text></svg></span>
+      <span><svg viewBox="0 0 200 48" fill="var(--c-ivory)" xmlns="http://www.w3.org/2000/svg"><text x="100" y="35" text-anchor="middle" font-family="'Helvetica Neue',sans-serif" font-size="30" letter-spacing="-0.5">Radiolab</text></svg></span>
+      <span><svg viewBox="0 0 280 48" fill="var(--c-ivory)" xmlns="http://www.w3.org/2000/svg"><text x="140" y="33" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="24" letter-spacing="3">THE ATLANTIC</text></svg></span>
+      <span><svg viewBox="0 0 100 48" fill="var(--c-ivory)" xmlns="http://www.w3.org/2000/svg"><text x="50" y="38" text-anchor="middle" font-family="'Helvetica Neue',sans-serif" font-size="38" font-weight="bold">NPR</text></svg></span>
+
+      <span><svg viewBox="0 0 175 48" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="52" height="48" fill="var(--c-ivory)"/><text x="26" y="36" text-anchor="middle" font-family="Arial,sans-serif" font-size="34" font-weight="bold" fill="var(--c-oak)">B</text><rect x="62" y="0" width="52" height="48" fill="var(--c-ivory)"/><text x="88" y="36" text-anchor="middle" font-family="Arial,sans-serif" font-size="34" font-weight="bold" fill="var(--c-oak)">B</text><rect x="123" y="0" width="52" height="48" fill="var(--c-ivory)"/><text x="149" y="36" text-anchor="middle" font-family="Arial,sans-serif" font-size="34" font-weight="bold" fill="var(--c-oak)">C</text></svg></span>
+      <span><svg viewBox="0 0 240 48" fill="var(--c-ivory)" xmlns="http://www.w3.org/2000/svg"><text x="120" y="34" text-anchor="middle" font-family="'Helvetica Neue',sans-serif" font-size="26" font-weight="bold">Al Jazeera</text></svg></span>
+      <span><svg viewBox="0 0 230 48" fill="var(--c-ivory)" xmlns="http://www.w3.org/2000/svg"><text x="115" y="34" text-anchor="middle" font-family="'Helvetica Neue',sans-serif" font-size="26" font-weight="bold" letter-spacing="5">WNYC</text></svg></span>
+      <span><svg viewBox="0 0 165 48" fill="var(--c-ivory)" xmlns="http://www.w3.org/2000/svg"><text x="82" y="35" text-anchor="middle" font-family="'Helvetica Neue',sans-serif" font-size="30" font-weight="bold">Reveal</text></svg></span>
+
+      <span><svg viewBox="0 0 255 48" fill="var(--c-ivory)" xmlns="http://www.w3.org/2000/svg"><text x="127" y="33" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="25">The Guardian</text></svg></span>
+      <span><svg viewBox="0 0 110 48" fill="var(--c-ivory)" xmlns="http://www.w3.org/2000/svg"><text x="55" y="38" text-anchor="middle" font-family="'Helvetica Neue',sans-serif" font-size="40" font-weight="bold">CNN</text></svg></span>
+      <span><svg viewBox="0 0 280 48" fill="var(--c-ivory)" xmlns="http://www.w3.org/2000/svg"><text x="140" y="33" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="25" font-style="italic">The Economist</text></svg></span>
+      <span><svg viewBox="0 0 270 48" fill="var(--c-ivory)" xmlns="http://www.w3.org/2000/svg"><text x="135" y="33" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="25" letter-spacing="1">Foreign Policy</text></svg></span>
+
+      <span><svg viewBox="0 0 310 48" fill="var(--c-ivory)" xmlns="http://www.w3.org/2000/svg"><text x="155" y="33" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="24">Los Angeles Times</text></svg></span>
+      <span><svg viewBox="0 0 248 48" fill="var(--c-ivory)" xmlns="http://www.w3.org/2000/svg"><text x="124" y="33" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="25" letter-spacing="0.5">Georgetown</text></svg></span>
+      <span><svg viewBox="0 0 242 48" fill="var(--c-ivory)" xmlns="http://www.w3.org/2000/svg"><text x="121" y="33" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="25" letter-spacing="0.5">Cambridge</text></svg></span>
+      <span><svg viewBox="0 0 228 48" fill="var(--c-ivory)" xmlns="http://www.w3.org/2000/svg"><text x="114" y="33" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="26" letter-spacing="0.5">Princeton</text></svg></span>
+    </div>
+
+    <!-- Awards — filled ivory chips -->
+    <div class="reveal stack" style="gap: 14px;">
+      <p class="eyebrow dim">Honoured</p>
+      <div class="row" style="gap: 12px; flex-wrap: wrap;">
+        <span class="chip chip-fi">Signal Awards · Gold</span>
+        <span class="chip chip-fi">Peabody Award</span>
+        <span class="chip chip-fi">Webby Award</span>
+        <span class="chip chip-fi">duPont–Columbia</span>
+        <span class="chip chip-fi">British Podcast Awards</span>
+        <span class="chip chip-fi">Audio Production Awards</span>
+      </div>
+    </div>
+  </div>
+
+  <img class="sym-foot" src="assets/logos/symbol-beige.svg" alt="">
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     12 · WHAT THEY'RE SAYING
+     Edit: quotes, attributions, feature chips, featured-in cells
+═══════════════════════════════════════════ -->
+<section class="slide g-ivory pat pat-5a on-ivory" data-screen-label="12 Press Acclaim">
+
+  <p class="eyebrow reveal">What They're Saying</p>
+
+  <div class="grow stack" style="justify-content: center; gap: 22px;">
+
+    <!-- Hero quote -->
+    <div class="stack reveal" style="gap: 10px;">
+      <p style="font-size: 52px; font-style: italic; line-height: 1.08; margin: 0; max-width: 34ch; text-wrap: pretty;">
+        "More Muslim is, first and foremost, a masterpiece of audio as a distinct form."
+      </p>
+      <p class="eyebrow dim">Kasurian</p>
+    </div>
+
+    <hr class="rule-gray" style="max-width: 420px; align-self: flex-start;">
+
+    <!-- Three quote columns -->
+    <div class="grid-3 reveal" style="gap: 48px; max-width: 1600px; align-items: flex-start;">
+      <div class="stack" style="gap: 12px;">
+        <p class="press-quote">"There's a kind of story I go back to again and again: a producer picks up a mic and wills something into existence. That's Salman."</p>
+        <p class="press-attr">Rob Rosenthal · Transom Sound School</p>
+      </div>
+      <div class="stack" style="gap: 12px;">
+        <p class="press-quote">"It represents the peak of what audio as a form can be — for anyone interested in tightly told stories that leave you with an expanded sense of the world."</p>
+        <p class="press-attr">Kasurian</p>
+      </div>
+      <!-- Third quote: Audience review — EDIT as needed -->
+      <div class="stack" style="gap: 12px;">
+        <p class="press-quote">"More Muslim is unlike anything else in my podcast feed. It's cinematic, deeply reported, and beautifully produced. The kind of storytelling that makes you feel seen."</p>
+        <p class="press-attr">Audience Review · Apple Podcasts</p>
+      </div>
+    </div>
+
+    <!-- Feature chips + "Featured in" -->
+    <div class="reveal stack" style="gap: 14px;">
+      <div class="row" style="gap: 12px;">
+        <span class="chip chip-fo">NPR 1A · Syndicated to 340+ Stations</span>
+        <span class="chip chip-fo">Apple Podcasts · New &amp; Noteworthy</span>
+      </div>
+      <div class="stack" style="gap: 8px;">
+        <p class="eyebrow dim">Featured in</p>
+        <div class="feat-table">
+          <span class="feat-cell">NPR 1A</span>
+          <span class="feat-cell">Transom</span>
+          <span class="feat-cell">Apple Podcasts</span>
+          <span class="feat-cell">Kasurian</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <img class="sym-foot" src="assets/logos/symbol-oak.svg" alt="">
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     13 · WAYS TO PARTNER
+     Edit: 6 partnership options (no card borders — just numbered text)
+     EDIT: adapt options to the partner
+═══════════════════════════════════════════ -->
+<section class="slide g-oak pat pat-6b on-oak" data-screen-label="13 Ways to Partner">
+
+  <p class="eyebrow reveal">Ways to Partner</p>
+
+  <div class="grow grid-3 reveal" style="gap: 0 56px; align-content: center; margin-top: 32px; max-width: 1560px;">
+
+    <!-- EDIT: 6 partnership options -->
+    <div class="stack" style="gap: 12px; padding-bottom: 44px;">
+      <p class="n-index">01</p>
+      <p class="h2" style="font-size: 30px;">Oryx One in-flight</p>
+      <p class="body" style="font-size: var(--t-body); opacity: 0.82;">Full episodes or a curated Season One selection on the seatback platform.</p>
+    </div>
+    <div class="stack" style="gap: 12px; padding-bottom: 44px;">
+      <p class="n-index">02</p>
+      <p class="h2" style="font-size: 30px;">Lounge &amp; pre-boarding</p>
+      <p class="body" style="font-size: var(--t-body); opacity: 0.82;">Ambient audio programming in the lounges and at the gate at Hamad International.</p>
+    </div>
+    <div class="stack" style="gap: 12px; padding-bottom: 44px;">
+      <p class="n-index">03</p>
+      <p class="h2" style="font-size: 30px;">Oryx magazine &amp; digital</p>
+      <p class="body" style="font-size: var(--t-body); opacity: 0.82;">Co-branded features tied to episode destinations across print and digital channels.</p>
+    </div>
+
+    <div class="stack" style="gap: 12px;">
+      <p class="n-index">04</p>
+      <p class="h2" style="font-size: 30px;">QR activations</p>
+      <p class="body" style="font-size: var(--t-body); opacity: 0.82;">Lounges, gates and boarding materials linking straight to the show.</p>
+    </div>
+    <div class="stack" style="gap: 12px;">
+      <p class="n-index">05</p>
+      <p class="h2" style="font-size: 30px;">Destination pairings</p>
+      <p class="body" style="font-size: var(--t-body); opacity: 0.82;">Match the episode to the route. The city in the story is the city on the ticket.</p>
+    </div>
+    <div class="stack" style="gap: 12px;">
+      <p class="n-index">06</p>
+      <p class="h2" style="font-size: 30px;">Season Two &amp; live</p>
+      <p class="body" style="font-size: var(--t-body); opacity: 0.82;">Joint branding around the next launch, or a live listening event at Hamad.</p>
+    </div>
+
+  </div>
+
+  <img class="sym-foot" src="assets/logos/symbol-beige.svg" alt="">
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     14 · DESTINATION PAIRINGS
+     Edit: intro sentence, 4 route rows (city / code / episode / ep number)
+     Note: "VIA [CHANNEL]" adapts via Tweaks partner-channel field
+═══════════════════════════════════════════ -->
+<section class="slide g-oak pat pat-6b on-oak" data-screen-label="14 Destination Pairings">
+
+  <div class="row reveal" style="gap: 28px; align-items: baseline;">
+    <p class="eyebrow">Destination Pairings</p>
+    <p class="eyebrow dim">via <span class="t-channel">Oryx One</span></p>
+  </div>
+
+  <div class="grow stack" style="justify-content: center; gap: 20px; max-width: 1620px;">
+    <p class="body reveal" style="font-size: var(--t-body); max-width: 46ch; opacity: 0.86;">
+      For certain flights, we can provide episode pairings for passengers to share some interesting stories from those locations.
+    </p>
+
+    <div class="board reveal">
+      <!-- Header -->
+      <div class="board-row head">
+        <span>Destination</span><span>Code</span><span>Now Playing</span><span style="text-align:right;">Episode</span>
+      </div>
+      <!-- EDIT: route rows -->
+      <div class="board-row">
+        <span class="b-city">Cape Town</span>
+        <span class="b-code">CPT</span>
+        <span class="b-ep">Cape Malay</span>
+        <span class="b-num">S1 · E06</span>
+      </div>
+      <div class="board-row">
+        <span class="b-city">San Francisco</span>
+        <span class="b-code">SFO</span>
+        <span class="b-ep">In Therapy, with SheikhAGPT</span>
+        <span class="b-num">S1 · E07</span>
+      </div>
+      <div class="board-row">
+        <span class="b-city">Riyadh</span>
+        <span class="b-code">RUH</span>
+        <span class="b-ep">The Secret Translators</span>
+        <span class="b-num">S1 · E03</span>
+      </div>
+      <div class="board-row">
+        <span class="b-city">Tokyo</span>
+        <span class="b-code">NRT</span>
+        <span class="b-ep">A More Muslim Japan</span>
+        <span class="b-num">S1 · E09</span>
+      </div>
+    </div>
+  </div>
+
+  <img class="sym-foot" src="assets/logos/symbol-beige.svg" alt="">
+</section>
+
+<!-- ═══════════════════════════════════════════
+     16 · ALL EPISODES: SEASON ONE
+═══════════════════════════════════════════ -->
+<section class="slide g-ivory" data-screen-label="16 All Episodes">
+  <div class="grow stack" style="justify-content: center; gap: 40px;">
+    <div style="display: flex; align-items: baseline; gap: 24px;">
+      <p class="eyebrow reveal" style="margin: 0;">Season One</p>
+      <h2 class="display reveal" style="margin: 0; font-size: 56px;">All Episodes</h2>
+    </div>
+    <div class="reveal" style="display: flex; flex-direction: column; gap: 16px; width: 100%;">
+      <!-- Row 1: 5 images -->
+      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px;">
+        <img src="assets/episode-thumbnails/ep1.jpg" alt="Side Entrances" style="width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; display: block;">
+        <img src="assets/episode-thumbnails/ep2.jpg" alt="The Nikkah Loophole" style="width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; display: block;">
+        <img src="assets/episode-thumbnails/ep3.jpg" alt="The Secret Translators" style="width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; display: block;">
+        <img src="assets/episode-thumbnails/ep4.jpg" alt="A Recitation Revolution" style="width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; display: block;">
+        <img src="assets/episode-thumbnails/ep5.jpg" alt="Hanabneehu" style="width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; display: block;">
+      </div>
+      <!-- Row 2: 4 images centered -->
+      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px;">
+        <img src="assets/episode-thumbnails/ep6.jpg" alt="Cape Malay" style="width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; display: block;">
+        <img src="assets/episode-thumbnails/ep7.jpg" alt="In Therapy With SheikhaGPT" style="width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; display: block;">
+        <img src="assets/episode-thumbnails/ep8.jpg" alt="The Travelling Sisterhood" style="width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; display: block;">
+        <img src="assets/episode-thumbnails/ep9.jpg" alt="A More Muslim Japan" style="width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; display: block;">
+        <div style="visibility: hidden; aspect-ratio: 1;"></div>
+      </div>
+    </div>
+  </div>
+
+  <img class="sym-foot" src="assets/logos/symbol-oak.svg" alt="">
+</section>
+
+<!-- ═══════════════════════════════════════════
+     18 · CLOSER
+     Edit: contact name, title, email, logo
+     Gold ground + 1A pattern
+═══════════════════════════════════════════ -->
+<section class="slide g-gold pat pat-1a" data-screen-label="17 Closer"
+         style="justify-content: flex-end;">
+
+  <!-- Logo — bottom left -->
+  <img class="reveal"
+       src="assets/logos/logo-horizontal-oak-dark.svg"
+       alt="More Muslim"
+       style="width: 480px; max-width: 42%; margin-bottom: 40px;">
+
+  <!-- Contact row — EDIT -->
+  <div class="row reveal between center-y"
+       style="border-top: 1px solid rgba(81,28,20,0.20); padding-top: 24px; gap: 32px;">
+    <p style="font-size: 30px; margin: 0; font-family: var(--font-serif);">Salman Ahad Khan</p>
+    <p style="font-size: 24px; margin: 0; opacity: 0.70; font-family: var(--font-serif);">Executive Producer &amp; Managing Editor</p>
+    <p style="font-size: 24px; margin: 0; letter-spacing: 0.03em; font-family: var(--font-serif);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f281939e9f939cb29f9d80979f87819e9b9fdc9d8095">[email&#160;protected]</a></p>
+
+  </div>
+
+</section>
+
+</deck-stage>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="deck-stage.js"></script>
+
+<!-- ─── Tweaks Panel ─── -->
+<div id="mm-tweaks-root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel">
+const TEMPLATE_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "partner": "Qatar Airways",
+  "channel": "Oryx One",
+  "patOpacity": 10,
+  "bodySize": 28
+}/*EDITMODE-END*/;
+
+function PitchTweaks() {
+  const [t, setTweak] = useTweaks(TEMPLATE_DEFAULTS);
+
+  React.useEffect(() => {
+    // Update partner name spans
+    document.querySelectorAll('.t-partner').forEach(el => { el.textContent = t.partner; });
+    document.querySelectorAll('.t-channel').forEach(el => { el.textContent = t.channel; });
+    // Update CSS variables
+    const r = document.documentElement;
+    r.style.setProperty('--pat-opacity', (t.patOpacity / 100).toFixed(2));
+    r.style.setProperty('--t-body', t.bodySize + 'px');
+  }, [t.partner, t.channel, t.patOpacity, t.bodySize]);
+
+  return (
+    <TweaksPanel title="Pitch Template">
+      <TweakSection label="Partner" />
+      <TweakText  label="Partner name"    value={t.partner}    onChange={v => setTweak('partner', v)} />
+      <TweakText  label="Partner channel" value={t.channel}    onChange={v => setTweak('channel', v)} />
+      <TweakSection label="Appearance" />
+      <TweakSlider label="Pattern opacity" value={t.patOpacity} min={0} max={40} step={5} unit="%"
+                   onChange={v => setTweak('patOpacity', v)} />
+      <TweakSlider label="Body text size"  value={t.bodySize}  min={22} max={36} step={1} unit="px"
+                   onChange={v => setTweak('bodySize', v)} />
+    </TweaksPanel>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('mm-tweaks-root')).render(
+  React.createElement(PitchTweaks)
+);
+</script>
+
+<template id="__bundler_thumbnail">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+    <rect width="100" height="100" fill="#511C14"/>
+    <g fill="#F6E1C6" opacity="0.9">
+      <path d="M50 28l5.5 7.5L64 34l-3.5 9 7 5.5-9 1.5L58 59l-8-5.5-8 5.5-.5-9-9-1.5 7-5.5L36 34l8.5 1.5z"/>
+    </g>
+  </svg>
+</template>
+
+</body>
+</html>

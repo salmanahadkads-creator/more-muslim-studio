@@ -1,0 +1,43 @@
+/* More Muslim — Base element defaults & a few reusable brand utilities.
+   Kept minimal: sets the typographic ground so specimens & components inherit it. */
+
+body {
+  font-family: var(--font-body);
+  font-weight: var(--weight-regular);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--text-primary);
+  background: var(--surface-base);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Display / heading rhythm — uppercase, wide-tracked, light */
+.more-display {
+  font-family: var(--font-display);
+  font-size: var(--text-4xl);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  font-weight: var(--weight-regular);
+}
+
+.more-eyebrow {
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+/* Apply to ANY uppercase run — sets the canonical 0.165em all-caps tracking. */
+.more-caps {
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+}
+
+.more-prose {
+  max-width: var(--container-prose);
+  line-height: var(--leading-relaxed);
+  text-wrap: pretty;
+}
+
+.more-italic { font-style: italic; }

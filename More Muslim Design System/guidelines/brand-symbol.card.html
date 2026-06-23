@@ -1,0 +1,28 @@
+<!-- @dsCard group="Brand" viewport="760x260" name="Symbol & Colourways" subtitle="Standard size: 187 × 187 px — use on its own, not paired with wordmark" -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--more-beige-soft); font-family: var(--font-serif); }
+  .row { display: flex; gap: 12px; padding: 20px 24px; }
+  .tile { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .bg { border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; width: 140px; height: 140px; }
+  .bg img { width: 187px; max-width: 80%; height: auto; }
+  .lbl { font-size: 11px; letter-spacing: var(--tracking-caps); text-transform: uppercase; color: color-mix(in srgb, var(--more-oak-brown) 55%, transparent); text-align: center; }
+  .note { font-size: 12px; color: color-mix(in srgb, var(--more-oak-brown) 60%, transparent); padding: 0 24px 16px; line-height: 1.5; }
+  .note b { color: var(--more-oak-brown); }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="tile"><div class="bg" style="background:var(--more-night-blue);"><img src="../assets/logos/symbol-beige.svg" alt="symbol"></div><span class="lbl">Night</span></div>
+    <div class="tile"><div class="bg" style="background:var(--more-oak-brown);"><img src="../assets/logos/symbol-beige.svg" alt="symbol"></div><span class="lbl">Oak</span></div>
+    <div class="tile"><div class="bg" style="background:var(--more-ivory-beige);border:1px solid var(--border-on-light);"><img src="../assets/logos/symbol-oak.svg" alt="symbol"></div><span class="lbl">Ivory</span></div>
+    <div class="tile"><div class="bg" style="background:var(--more-harvest-yellow);"><img src="../assets/logos/symbol-oak.svg" alt="symbol"></div><span class="lbl">Harvest</span></div>
+    <div class="tile"><div class="bg" style="background:var(--more-mist-blue);"><img src="../assets/logos/symbol-night.svg" alt="symbol"></div><span class="lbl">Mist</span></div>
+  </div>
+  <p class="note">Standard size <b>187 × 187 px</b>. Use the symbol on its own — do not pair with the wordmark (that is the horizontal lockup's job). Always match the approved colour pairing for the ground.</p>
+</body>
+</html>

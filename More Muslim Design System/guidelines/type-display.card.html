@@ -1,0 +1,27 @@
+<!-- @dsCard group="Type" viewport="760x440" name="Display Scale" subtitle="The four official heading sizes — Large 76/80, Medium 60/66, Small 50/55, XS 32/36 (pt)" -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--surface-base); color: var(--text-primary); font-family: var(--font-serif); }
+  .wrap { padding: 28px 30px; display: flex; flex-direction: column; gap: 20px; }
+  .r { display: flex; align-items: baseline; gap: 20px; }
+  .tok { font-size: 11px; letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--text-primary); width: 150px; flex: none; line-height: 1.4; }
+  .s { text-transform: uppercase; letter-spacing: var(--tracking-caps); }
+  .lg { font-size: var(--text-display-lg); line-height: var(--leading-display-lg); }
+  .md { font-size: var(--text-display-md); line-height: var(--leading-display-md); }
+  .sm { font-size: var(--text-display-sm); line-height: var(--leading-display-sm); }
+  .xs { font-size: var(--text-display-xs); line-height: var(--leading-display-xs); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="r"><span class="tok">Large<br>76 / 80 pt</span><span class="s lg">In Therapy</span></div>
+    <div class="r"><span class="tok">Medium<br>60 / 66 pt</span><span class="s md">In Therapy</span></div>
+    <div class="r"><span class="tok">Small<br>50 / 55 pt</span><span class="s sm">In Therapy</span></div>
+    <div class="r"><span class="tok">Extra Small<br>32 / 36 pt</span><span class="s xs">In Therapy</span></div>
+  </div>
+</body>
+</html>

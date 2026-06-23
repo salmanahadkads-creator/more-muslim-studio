@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>More Muslim — Audiogram Player</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0c1019; height: 100vh; overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; }
+</style>
+</head>
+<body>
+<div id="root" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel">
+/* More Muslim — Audiogram Player
+   Embedded in social-studio as iframe; also opens standalone for screen recording.
+   Config + transport arrive via postMessage from the studio. Falls back to localStorage. */
+
+const IS_IFRAME = window.self !== window.top;
+
+const DEFAULT_SRT = `1
+00:00:00,000 --> 00:00:01,650
+Yassmin Abdel-Magied: Do you remember the first time you heard about
+
+2
+00:00:01,650 --> 00:00:03,590
+people using chatbots as therapists?
+
+3
+00:00:03,770 --> 00:00:04,380
+Dr. Rania Awaad: I do.
+
+4
+00:00:04,410 --> 00:00:05,699
+Yeah, it was actually a patient of mine.
+
+5
+00:00:05,760 --> 00:00:08,580
+And she said, in between our sessions,
+I talked to a chatbot.
+
+6
+00:00:08,590 --> 00:00:10,290
+And I said, come again?`;
+
+const DEFAULT_CFG = {
+  hostWay:'beige', guestWay:'oak',
+  episodeEyebrow:'IN THERAPY, WITH SHEIKHAGPT',
+  outroWay:'night', outroDuration:5,
+  outroEpisode:'EPISODE 7',
+  outroLine1:'Listen to the full episode at moremuslim.org.',
+  outroLine2:'Or search for \u201CMore Muslim\u201D on Apple Podcasts, Spotify, or wherever you listen to podcasts.',
+  coverTemplate:'cover', coverWay:'cover',
+  coverEyebrow:'MORE MUSLIM PRESENTS',
+  coverTitle:'In Therapy, With SheikhaGPT', coverEpisode:'S1 \u00b7 E7',
+  coverBody:'A patient tells Dr. Rania Awaad she has been using an AI chatbot as a therapist.',
+  wordMotion:'fade', captionSize:'L',
+  showSpeakerLabel:true, bgDrift:true, illusTint:true,
+  imgZoom:1, imgCropX:50, imgCropY:50,
+  srt:DEFAULT_SRT, audioSrc:null,
+};
+
+function loadCfg() {
+  try { const s = localStorage.getItem('mm-audiogram-cfg'); return s ? { ...DEFAULT_CFG, ...JSON.parse(s) } : DEFAULT_CFG; }
+  catch { return DEFAULT_CFG; }
+}
+function calcScale() {
+  const pad = IS_IFRAME ? 0 : 20, bot = IS_IFRAME ? 0 : 70;
+  return Math.max(0.10, Math.min((window.innerWidth - pad*2) / 1080, (window.innerHeight - pad*2 - bot) / 1920));
+}
+
+class AudiogramPlayer extends React.Component {
+  state = { t:0, duration:0, playing:false, started:false, scale:calcScale(), cfg:loadCfg() };
+
+  ways = {
+    beige:   { bg:'#FBF2E9', tile:'6A', ink:'#511C14', logo:'oak',   grain:0.06, tileOpacity:0.10 },
+    oak:     { bg:'#511C14', tile:'6B', ink:'#F6E1C6', logo:'beige', grain:0.10, tileOpacity:0.15 },
+    night:   { bg:'#192136', tile:'5C', ink:'#F6E1C6', logo:'beige', grain:0.10, tileOpacity:0.15 },
+    mist:    { bg:'#9FBCCC', tile:'2B', ink:'#192136', logo:'night', grain:0.07, tileOpacity:0.10 },
+    black:   { bg:'#000000', tile:null, ink:'#FBF2E9', logo:'beige', grain:0.14, tileOpacity:0 },
+    therapy: { bg:'#192136', isImage:true, image:'../../assets/imagery/illus-therapy.jpg',    ink:'#F6E1C6', logo:'beige' },
+    cover:   { bg:'#511C14', isImage:true, image:'../../assets/imagery/cover-sheikhagpt.jpg', ink:'#F6E1C6', logo:'beige' },
+  };
+
+  ensureParsed() {
+    const srt = this.state.cfg.srt || '';
+    if (this._parsed && this._srtKey === srt) return;
+    this._srtKey = srt; this._parsed = false;
+    const norm = srt.replace(/\r\n/g,'\n').replace(/\r/g,'\n').trim();
+    const cues = [];
+    for (const ch of norm.split(/\n\s*\n/)) {
+      const lines = ch.split('\n').filter(l => l.trim());
+      if (lines.length < 2) continue;
+      const ti = lines.findIndex(l => /-->/.test(l));
+      if (ti < 0) continue;
+      const tm = lines[ti].match(/(\d{2}):(\d{2}):(\d{2})[,.](\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2})[,.](\d{3})/);
+      if (!tm) continue;
+      const start = +tm[1]*3600 + +tm[2]*60 + +tm[3] + +tm[4]/1000;
+      const end   = +tm[5]*3600 + +tm[6]*60 + +tm[7] + +tm[8]/1000;
+      let txt = lines.slice(ti+1).join(' ').replace(/\s+/g,' ').trim();
+      let speaker = null;
+      const sm = txt.match(/^([^:]{1,40}):\s+/);
+      if (sm) { const cand=sm[1].trim(), ws=cand.split(/\s+/); if (ws.length<=4 && ws.every(w=>/^[A-Z]/.test(w))) { speaker=cand; txt=txt.slice(sm[0].length); } }
+      cues.push({ start, end, text:txt, speaker });
+    }
+    let sp=null; const words=[];
+    for (const c of cues) {
+      if (c.speaker) sp=c.speaker;
+      const toks=c.text.split(/\s+/).filter(Boolean), wts=toks.map(t=>t.length+1), tot=wts.reduce((a,b)=>a+b,0)||1;
+      let acc=0;
+      for (let i=0; i<toks.length; i++) {
+        const s=c.start+(acc/tot)*(c.end-c.start); acc+=wts[i];
+        words.push({ text:toks[i], start:s, end:c.start+(acc/tot)*(c.end-c.start), speaker:sp });
+      }
+    }
+    const blocks=[]; let cur=null;
+    for (const w of words) {
+      if (!cur||cur.speaker!==w.speaker) { cur={ speaker:w.speaker, words:[], start:w.start, end:w.end }; blocks.push(cur); }
+      cur.words.push({ text:w.text, start:w.start }); cur.end=w.end;
+      if (/[.!?]["')\]]*$/.test(w.text)) cur=null;
+    }
+    const seen=[]; for (const b of blocks) if (b.speaker&&!seen.includes(b.speaker)) seen.push(b.speaker);
+    this.blocks=blocks; this.host=seen[0]; this.guest=seen[1];
+    this.contentEnd=blocks.length ? blocks[blocks.length-1].end : 0;
+    this._parsed=true;
+  }
+
+  firstName(s) {
+    if (!s) return '';
+    return (s.replace(/^(dr|mr|mrs|ms|prof|sheikh|sheikha|imam)\.?\s+/i,'').trim().split(/\s+/)[0]||'').replace(/[^\w'-].*$/,'');
+  }
+
+  componentDidMount() {
+    this._onResize(); window.addEventListener('resize', this._onResize);
+    this._raf = requestAnimationFrame(this.tick);
+    window.addEventListener('message', this._onMessage);
+    window.addEventListener('storage', this._onStorage);
+  }
+  componentWillUnmount() {
+    cancelAnimationFrame(this._raf);
+    window.removeEventListener('resize', this._onResize);
+    window.removeEventListener('message', this._onMessage);
+    window.removeEventListener('storage', this._onStorage);
+  }
+
+  _onResize = () => { const s=calcScale(); if (Math.abs(s-this.state.scale)>0.002) this.setState({scale:s}); };
+
+  _onMessage = (e) => {
+    if (!e.data) return; const m=e.data;
+    if      (m.type==='audiogram-config')  { const {type,...p}=m; this._patch(p); }
+    else if (m.type==='audiogram-play')    { this.audio?.play(); }
+    else if (m.type==='audiogram-pause')   { this.audio?.pause(); }
+    else if (m.type==='audiogram-restart') { if(this.audio){this.audio.currentTime=0;this.audio.volume=1;this.audio.play();} this.setState({t:0,started:true}); }
+    else if (m.type==='audiogram-seek')    { if(this.audio) this.audio.currentTime=m.time; this.setState({t:m.time,started:true}); }
+  };
+
+  _onStorage = (e) => {
+    if (e.key==='mm-audiogram-cfg') try { this._patch(JSON.parse(e.newValue||'{}')); } catch {}
+  };
+
+  _patch(patch) {
+    const prev=this.state.cfg;
+    this.setState(s=>({cfg:{...s.cfg,...patch}}), ()=>{
+      if (patch.srt && patch.srt!==prev.srt) this._parsed=false;
+      if (patch.audioSrc && patch.audioSrc!==prev.audioSrc && this.audio) {
+        this.audio.src=patch.audioSrc; this.audio.load();
+        this.setState({t:0,duration:0,started:false,playing:false});
+      }
+    });
+  }
+
+  tick = () => {
+    const a=this.audio;
+    if (a && !a.paused) {
+      const dur=isFinite(a.duration)?a.duration:0;
+      if (!this.state.duration&&dur) this.setState({duration:dur});
+      if (dur) a.volume=1-Math.min(1,Math.max(0,(a.currentTime-(dur-1))));
+      this.setState({t:a.currentTime});
+      if (IS_IFRAME) window.parent.postMessage({type:'audiogram-time',t:a.currentTime,duration:dur,playing:true},'*');
+    }
+    this._raf=requestAnimationFrame(this.tick);
+  };
+
+  audioRef = (el) => {
+    if (!el||el===this.audio) return; this.audio=el;
+    el.addEventListener('loadedmetadata', ()=>this.setState({duration:el.duration||0}));
+    el.addEventListener('play', ()=>{ this.setState({playing:true,started:true}); if(IS_IFRAME) window.parent.postMessage({type:'audiogram-time',t:el.currentTime,duration:el.duration||0,playing:true},'*'); });
+    el.addEventListener('pause', ()=>{ this.setState({playing:false}); if(IS_IFRAME) window.parent.postMessage({type:'audiogram-time',t:el.currentTime,duration:el.duration||0,playing:false},'*'); });
+    el.addEventListener('ended', ()=>this.setState({playing:false}));
+  };
+
+  rootRef = (el) => { this.root=el; this._applyVars(); };
+  _applyVars() { if (!this.root||!this._vars) return; for (const k in this._vars) this.root.style.setProperty('--'+k, String(this._vars[k])); }
+
+  activeBlock() {
+    const t=this.state.t, bs=this.blocks||[]; let idx=-1;
+    for (let i=0;i<bs.length;i++) { if(bs[i].start<=t) idx=i; else break; }
+    return idx>=0?bs[idx]:null;
+  }
+
+  panel(way) {
+    const w=this.ways[way], DS=window.MoreMuslimDesignSystem_019df4||{};
+    this._pc=this._pc||{};
+    if (w.isImage) {
+      const {imgZoom:z,imgCropX:cx,imgCropY:cy}=this.state.cfg, key=`img:${way}:${z}:${cx}:${cy}`;
+      if (!this._pc[key]) this._pc[key]=<img src={w.image} alt="" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',objectPosition:`${cx}% ${cy}%`,transform:`scale(${z})`,transformOrigin:`${cx}% ${cy}%`}} />;
+      return this._pc[key];
+    }
+    if (DS.PatternPanel) {
+      const key=`pat:${way}`;
+      if (!this._pc[key]) { const PP=DS.PatternPanel; this._pc[key]=<PP tile={w.tile} color={w.bg} grain grainOpacity={w.grain} tileOpacity={w.tileOpacity} radius="0" style={{position:'absolute',inset:0,height:'100%'}} />; }
+      return this._pc[key];
+    }
+    return <div style={{position:'absolute',inset:0,background:w.bg}} />;
+  }
+
+  groundLayer(way, opacity, key) {
+    const w=this.ways[way], t=this.state.t, drift=this.state.cfg.bgDrift;
+    const dx=drift?Math.sin(t*0.05)*14:0, dy=drift?Math.cos(t*0.04)*14:0;
+    return (
+      <div key={key} style={{position:'absolute',inset:0,background:w.bg,opacity}}>
+        <div style={{position:'absolute',inset:0,transform:`scale(1.08) translate(${dx}px,${dy}px)`,transformOrigin:'center',willChange:'transform'}}>
+          {this.panel(way)}
+        </div>
+        {w.isImage && this.state.cfg.illusTint && <div style={{position:'absolute',inset:0,background:'linear-gradient(180deg,rgba(8,10,18,0.42) 0%,rgba(8,10,18,0.30) 42%,rgba(8,10,18,0.66) 100%)'}} />}
+      </div>
+    );
+  }
+
+  buildCaption(ink, labelColor) {
+    const active=this.activeBlock(); if (!active) return null;
+    const {t,cfg}=this.state, motion=cfg.wordMotion, size=cfg.captionSize==='M'?48:69;
+    const spans=[];
+    active.words.forEach((w,i)=>{
+      const op=motion==='fade'?Math.min(1,Math.max(0,(t-w.start)/0.18)):(t>=w.start?1:0);
+      if (op<=0) return;
+      spans.push(<span key={i} style={{display:'inline-block',opacity:op,transform:`translateY(${(1-op)*10}px)`,marginRight:'0.28em'}}>{w.text}</span>);
+    });
+    return (
+      <div style={{color:ink}}>
+        {cfg.showSpeakerLabel && <div style={{fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',marginBottom:28,color:labelColor||ink}}>{this.firstName(active.speaker)}</div>}
+        <div style={{fontSize:size,lineHeight:1.06,maxWidth:780}}>{spans}</div>
+      </div>
+    );
+  }
+
+  buildCover() {
+    if (this.state.started) return null;
+    const {cfg}=this.state, way=cfg.coverWay, w=this.ways[way], ink=w.ink;
+    const symSrc=`../../assets/logos/symbol-${w.logo}.svg`;
+    const eb=(txt)=><div style={{fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',color:ink}}>{txt}</div>;
+    let content=null;
+    if (cfg.coverTemplate==='cover') {
+      content=(
+        <div style={{position:'relative',height:'100%',display:'flex',flexDirection:'column',padding:'150px 85px 300px',color:ink}}>
+          <div style={{textAlign:'center'}}>{eb(cfg.coverEyebrow)}</div>
+          <h1 style={{margin:'40px auto 0',textAlign:'center',fontWeight:400,textTransform:'uppercase',letterSpacing:'0.165em',fontSize:77,lineHeight:1.06,maxWidth:820}}>{cfg.coverTitle}</h1>
+          <div style={{marginTop:'auto',display:'flex',alignItems:'center'}}>
+            <img src={symSrc} alt="" style={{width:180,height:180,flex:'none'}} />
+            <div style={{flex:1,textAlign:'center',fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',color:ink}}>{cfg.coverEpisode}</div>
+            <div style={{width:180,flex:'none'}} />
+          </div>
+        </div>
+      );
+    } else if (cfg.coverTemplate==='synopsis') {
+      content=(
+        <div style={{position:'relative',height:'100%',display:'flex',flexDirection:'column',padding:'150px 85px 300px',color:ink}}>
+          <div style={{textAlign:'center',marginBottom:64}}>{eb(cfg.coverEpisode)}</div>
+          <div style={{flex:1,display:'flex',alignItems:'center'}}><p style={{margin:0,fontSize:56,lineHeight:1.05,maxWidth:780}}>{cfg.coverBody}</p></div>
+          <div style={{textAlign:'center',fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em'}}>MOREMUSLIM.ORG</div>
+        </div>
+      );
+    }
+    if (!content) return null;
+    return (
+      <div style={{position:'absolute',inset:0}}>
+        <div style={{position:'absolute',inset:0}}>{this.groundLayer(way,1,'cover')}</div>
+        {content}
+      </div>
+    );
+  }
+
+  outroStart() {
+    const dur=this.state.duration||0; if (!dur) return Infinity;
+    return Math.max((this.contentEnd||0)+0.3, dur-(this.state.cfg.outroDuration||5));
+  }
+  fmt(s) { s=Math.max(0,Math.floor(s||0)); return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; }
+  togglePlay=()=>{ const a=this.audio; if(!a) return; if(a.paused) a.play(); else a.pause(); };
+  restart=()=>{ const a=this.audio; if(!a) return; a.currentTime=0; a.volume=1; a.play(); this.setState({t:0,started:true}); };
+  seek=(e)=>{ const v=+e.target.value; if(this.audio) this.audio.currentTime=v; this.setState({t:v,started:true}); };
+
+  render() {
+    this.ensureParsed();
+    const {cfg,t,scale,playing}=this.state;
+    const active=this.activeBlock();
+    const inkColor=(this.ways[cfg.hostWay]||this.ways.beige).ink;
+    const guestActive=active&&this.guest&&active.speaker===this.guest;
+    const labelColor=guestActive?(this.ways[cfg.guestWay]||this.ways.oak).bg:inkColor;
+
+    const os=this.outroStart();
+    const oProg=isFinite(os)?Math.min(1,Math.max(0,(t-os)/0.6)):0;
+    let outroWay=cfg.outroWay;
+    if (outroWay==='carry') { const lb=this.blocks&&this.blocks[this.blocks.length-1]; outroWay=(lb&&this.guest&&lb.speaker===this.guest)?cfg.guestWay:cfg.hostWay; }
+    const ow=this.ways[outroWay]||this.ways.night;
+    const symSrc=`../../assets/logos/symbol-${ow.logo}.svg`;
+    const dur=this.state.duration||((this.contentEnd||0)+cfg.outroDuration)||1;
+
+    this._vars={s:scale,ink:inkColor,chromeOp:1-oProg,outroOp:oProg,outroPe:oProg>0.5?'auto':'none',outroInk:ow.ink};
+    this._applyVars();
+
+    return (
+      <div style={{width:'100%',height:'100%',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:IS_IFRAME?0:14,padding:IS_IFRAME?0:20,fontFamily:"'ABC Marist','Iowan Old Style',Georgia,serif"}}>
+        <div ref={this.rootRef} style={{position:'relative',width:1080*scale,height:1920*scale,flexShrink:0,boxShadow:'0 20px 60px rgba(0,0,0,0.5)'}}>
+          <div style={{position:'absolute',top:0,left:0,width:1080,height:1920,transform:`scale(${scale})`,transformOrigin:'top left',overflow:'hidden',background:'#000',fontFamily:"'ABC Marist','Iowan Old Style',Georgia,serif",lineHeight:1}}>
+            <div style={{position:'absolute',inset:0}}>{this.groundLayer(cfg.hostWay,1,'host')}</div>
+            <div style={{position:'absolute',top:150,left:0,right:0,textAlign:'center',fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',whiteSpace:'nowrap',padding:'0 60px',color:'var(--ink,#511C14)',opacity:'var(--chromeOp,1)'}}>{cfg.episodeEyebrow}</div>
+            <div style={{position:'absolute',left:85,right:90,top:660,bottom:360,display:'flex',flexDirection:'column',justifyContent:'flex-start',alignItems:'flex-start',pointerEvents:'none'}}>
+              {this.buildCaption(inkColor,labelColor)}
+            </div>
+            <div style={{position:'absolute',bottom:300,left:0,right:0,textAlign:'center',fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',whiteSpace:'nowrap',color:'var(--ink,#511C14)',opacity:'var(--chromeOp,1)'}}>MOREMUSLIM.ORG</div>
+            <div style={{position:'absolute',inset:0,opacity:'var(--outroOp,0)',pointerEvents:'var(--outroPe,none)'}}>
+              <div style={{position:'absolute',inset:0}}>{this.groundLayer(outroWay,1,'outroG')}</div>
+              <div style={{position:'relative',height:'100%',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',padding:'0 130px',color:'var(--outroInk,#F6E1C6)'}}>
+                <div style={{fontSize:56,textTransform:'uppercase',letterSpacing:'0.165em',lineHeight:1.16}}>{cfg.outroEpisode}<br/>Now Streaming</div>
+                <div style={{marginTop:140,fontSize:48,maxWidth:780,lineHeight:1.18}}>{cfg.outroLine1}</div>
+                <div style={{marginTop:90,fontSize:48,maxWidth:780,lineHeight:1.24}}>{cfg.outroLine2}</div>
+                <img src={symSrc} alt="" style={{width:190,height:190,marginTop:150}} />
+              </div>
+            </div>
+            {this.buildCover()}
+          </div>
+        </div>
+        {!IS_IFRAME && (
+          <div style={{display:'flex',alignItems:'center',gap:12,color:'#cdd3e0',font:'13px/1.3 -apple-system,sans-serif',width:Math.min(520,1080*scale)}}>
+            <button onClick={this.togglePlay} style={{background:'#232d45',color:'#e9edf5',border:'1px solid #2e3a55',borderRadius:6,padding:'7px 12px',cursor:'pointer',font:'13px -apple-system,sans-serif',whiteSpace:'nowrap'}}>{playing?'❚❚ Pause':'▶ Play'}</button>
+            <button onClick={this.restart} style={{background:'#232d45',color:'#e9edf5',border:'1px solid #2e3a55',borderRadius:6,padding:'7px 12px',cursor:'pointer',font:'13px -apple-system,sans-serif'}}>↺ Restart</button>
+            <input type="range" min={0} max={dur} step={0.01} value={t} onInput={this.seek} style={{flex:1,accentColor:'#9FBCCC'}} />
+            <span style={{fontVariantNumeric:'tabular-nums',minWidth:80,textAlign:'right'}}>{this.fmt(t)} / {this.fmt(dur)}</span>
+          </div>
+        )}
+        <audio ref={this.audioRef} src={cfg.audioSrc||undefined} preload="auto" />
+      </div>
+    );
+  }
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<AudiogramPlayer />);
+</script>
+</body>
+</html>

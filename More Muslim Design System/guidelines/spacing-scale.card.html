@@ -1,0 +1,26 @@
+<!-- @dsCard group="Spacing" viewport="700x170" name="Spacing Scale" subtitle="4px base · 4 → 128" -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--more-beige-soft); color: var(--more-oak-brown); font-family: var(--font-serif); }
+  .wrap { padding: 24px 28px; display: flex; align-items: flex-end; gap: 14px; }
+  .col { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .bar { background: var(--more-terracotta); border-radius: 2px; width: 100%; }
+  .col span { font-size: 11px; letter-spacing: .04em; color: color-mix(in srgb, var(--more-oak-brown) 60%, transparent); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="col" style="width:16px"><div class="bar" style="height:8px"></div><span>2</span></div>
+    <div class="col" style="width:16px"><div class="bar" style="height:16px"></div><span>4</span></div>
+    <div class="col" style="width:20px"><div class="bar" style="height:24px"></div><span>5</span></div>
+    <div class="col" style="width:28px"><div class="bar" style="height:32px"></div><span>6</span></div>
+    <div class="col" style="width:36px"><div class="bar" style="height:48px"></div><span>7</span></div>
+    <div class="col" style="width:48px"><div class="bar" style="height:64px"></div><span>8</span></div>
+    <div class="col" style="width:72px"><div class="bar" style="height:96px"></div><span>9</span></div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>More Muslim — Partner Logos</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #f4f4f2; font-family: 'Helvetica Neue', Helvetica, sans-serif; padding: 48px; }
+  h1 { font-size: 13px; font-weight: 500; color: #999; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 40px; }
+  .section { margin-bottom: 40px; }
+  .section-title { font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #bbb; margin-bottom: 16px; }
+  .grid { display: flex; flex-wrap: wrap; gap: 12px; }
+  .card {
+    background: #fff;
+    border-radius: 6px;
+    padding: 24px 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-width: 140px;
+    min-height: 90px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .card img {
+    max-width: 120px;
+    max-height: 44px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    filter: grayscale(1) contrast(1.1);
+    transition: filter .2s;
+  }
+  .card:hover img { filter: none; }
+  .card .label { font-size: 9px; color: #ccc; letter-spacing: .1em; text-transform: uppercase; }
+  .card.broken img { display: none; }
+  .card.broken::after { content: attr(data-name); font-size: 11px; font-weight: 600; color: #bbb; }
+</style>
+</head>
+<body>
+<h1>More Muslim — Media &amp; Academic Partners</h1>
+
+<div class="section">
+  <div class="section-title">Media</div>
+  <div class="grid">
+
+    <div class="card" data-name="New York Times">
+      <img src="https://logo.clearbit.com/nytimes.com" alt="The New York Times"
+           onerror="this.parentElement.classList.add('broken')">
+      <span class="label">New York Times</span>
+    </div>
+
+    <div class="card" data-name="NPR">
+      <img src="https://logo.clearbit.com/npr.org" alt="NPR"
+           onerror="this.parentElement.classList.add('broken')">
+      <span class="label">NPR</span>
+    </div>
+
+    <div class="card" data-name="Al Jazeera">
+      <img src="https://logo.clearbit.com/aljazeera.com" alt="Al Jazeera"
+           onerror="this.parentElement.classList.add('broken')">
+      <span class="label">Al Jazeera</span>
+    </div>
+
+    <div class="card" data-name="WNYC">
+      <img src="https://logo.clearbit.com/wnyc.org" alt="WNYC"
+           onerror="this.parentElement.classList.add('broken')">
+      <span class="label">WNYC</span>
+    </div>
+
+    <div class="card" data-name="Reveal">
+      <img src="https://logo.clearbit.com/revealnews.org" alt="Reveal"
+           onerror="this.parentElement.classList.add('broken')">
+      <span class="label">Reveal</span>
+    </div>
+
+    <div class="card" data-name="The Guardian">
+      <img src="https://logo.clearbit.com/theguardian.com" alt="The Guardian"
+           onerror="this.parentElement.classList.add('broken')">
+      <span class="label">The Guardian</span>
+    </div>
+
+    <div class="card" data-name="CNN">
+      <img src="https://logo.clearbit.com/cnn.com" alt="CNN"
+           onerror="this.parentElement.classList.add('broken')">
+      <span class="label">CNN</span>
+    </div>
+
+    <div class="card" data-name="The Economist">
+      <img src="https://logo.clearbit.com/economist.com" alt="The Economist"
+           onerror="this.parentElement.classList.add('broken')">
+      <span class="label">The Economist</span>
+    </div>
+
+    <div class="card" data-name="Foreign Policy">
+      <img src="https://logo.clearbit.com/foreignpolicy.com" alt="Foreign Policy"
+           onerror="this.parentElement.classList.add('broken')">
+      <span class="label">Foreign Policy</span>
+    </div>
+
+    <div class="card" data-name="Los Angeles Times">
+      <img src="https://logo.clearbit.com/latimes.com" alt="Los Angeles Times"
+           onerror="this.parentElement.classList.add('broken')">
+      <span class="label">Los Angeles Times</span>
+    </div>
+
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Academic</div>
+  <div class="grid">
+
+    <div class="card" data-name="Georgetown">
+      <img src="https://logo.clearbit.com/georgetown.edu" alt="Georgetown University"
+           onerror="this.parentElement.classList.add('broken')">
+      <span class="label">Georgetown</span>
+    </div>
+
+    <div class="card" data-name="Cambridge">
+      <img src="https://logo.clearbit.com/cam.ac.uk" alt="University of Cambridge"
+           onerror="this.parentElement.classList.add('broken')">
+      <span class="label">Cambridge</span>
+    </div>
+
+    <div class="card" data-name="Princeton">
+      <img src="https://logo.clearbit.com/princeton.edu" alt="Princeton University"
+           onerror="this.parentElement.classList.add('broken')">
+      <span class="label">Princeton</span>
+    </div>
+
+  </div>
+</div>
+
+<p style="font-size:10px;color:#ccc;margin-top:32px;">
+  Logos served via Clearbit Logo API (logo.clearbit.com) — real logos pulled from official company websites. Requires internet connection to display.
+</p>
+</body>
+</html>

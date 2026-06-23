@@ -1,0 +1,372 @@
+<!-- @dsCard group="Social" viewport="1280x800" name="Content Wizard" subtitle="Episode setup flow for the social studio" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>More Muslim — Create</title>
+<link rel="stylesheet" href="../../styles.css">
+<style>
+@font-face { font-family:'ABCDiatype'; src:url('../../uploads/ABCDiatype-Regular-Trial.otf') format('opentype'); font-weight:400; }
+@font-face { font-family:'ABCDiatype'; src:url('../../uploads/ABCDiatype-Medium-Trial.otf') format('opentype'); font-weight:500; }
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+html, body { height:100%; font-family:var(--font-serif); }
+body { background:rgba(246,225,198,0.4); color:#511C14; }
+#root { min-height:100vh; display:flex; flex-direction:column; }
+.progress-bar { position:fixed; top:0; left:0; height:1px; background:#511C14; transition:width 0.45s ease; z-index:100; }
+.header { display:flex; align-items:center; justify-content:space-between; padding:28px 48px; border-bottom:1px solid rgba(81,28,20,0.1); }
+.header img { height:auto; max-height:28px; width:240px; display:block; }
+.skip-link { font-family:'ABCDiatype'; font-size:13px; letter-spacing:0.165em; text-transform:uppercase; color:#511C14; text-decoration:none; transition:opacity 0.15s; }
+.skip-link:hover { opacity:0.6; }
+.step { flex:1; display:flex; flex-direction:column; padding:52px 48px 80px; max-width:980px; margin:0 auto; width:100%; }
+.step-q { font-size:clamp(38px,5.5vw,62px); font-weight:400; line-height:1.04; margin-bottom:48px; }
+/* Episode grid — 1px separator pattern like overview */
+.ep-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:rgba(81,28,20,0.1); }
+.ep-card { aspect-ratio:1; cursor:pointer; position:relative; overflow:hidden; background:rgba(246,225,198,0.22); transition:opacity 0.12s; }
+.ep-card img { width:100%; height:100%; object-fit:cover; display:block; }
+.ep-card.on { outline:2px solid #511C14; outline-offset:-2px; }
+.ep-num { position:absolute; bottom:8px; left:10px; font-family:'ABCDiatype'; font-size:11px; letter-spacing:0.165em; text-transform:uppercase; color:#F6E1C6; text-shadow:0 1px 4px rgba(0,0,0,0.6); }
+.ep-selected { font-size:20px; margin-top:20px; line-height:1.3; }
+/* Format grid — like overview card grid */
+.format-grid { display:grid; grid-template-columns:1fr 1fr; gap:1px; background:rgba(81,28,20,0.1); }
+.format-opt { padding:40px 32px; cursor:pointer; background:rgba(246,225,198,0.22); transition:background 0.15s; text-align:left; color:#511C14; font-family:var(--font-serif); border:none; }
+.format-opt:hover { background:rgba(255,255,255,0.65); }
+.format-opt.on { background:rgba(255,255,255,0.65); outline:2px solid #511C14; outline-offset:-2px; }
+.format-name { font-size:clamp(22px,3.2vw,36px); line-height:1.1; margin-bottom:12px; display:block; }
+.format-desc { font-family:'ABCDiatype'; font-size:16px; line-height:1.55; display:block; }
+/* Layout grid */
+.layout-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:1px; background:rgba(81,28,20,0.1); margin-bottom:16px; }
+.layout-opt { cursor:pointer; background:rgba(246,225,198,0.22); overflow:hidden; transition:background 0.15s; border:none; }
+.layout-opt svg { display:block; width:100%; height:auto; }
+.layout-opt:hover { background:rgba(255,255,255,0.65); }
+.layout-opt.on { background:rgba(255,255,255,0.65); outline:2px solid #511C14; outline-offset:-2px; }
+.layout-label { font-family:'ABCDiatype'; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; text-align:center; padding:6px 4px; }
+.layout-opt.on .layout-label { background:#511C14; color:#F6E1C6; }
+.layout-desc { font-family:'ABCDiatype'; font-size:16px; line-height:1.5; }
+/* Background toggle — section header style */
+.bg-toggle { display:flex; gap:0; margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid rgba(81,28,20,0.12); }
+.bg-tab { padding:0 0 16px; margin-right:36px; font-family:'ABCDiatype'; font-size:16px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; border:none; border-bottom:2px solid transparent; background:transparent; color:#511C14; transition:border-color 0.15s; margin-bottom:-17px; }
+.bg-tab.on { border-bottom-color:#511C14; }
+/* Colorway grid */
+.cw-grid { display:flex; flex-direction:column; gap:1px; background:rgba(81,28,20,0.1); }
+.cw-opt { display:flex; align-items:center; gap:20px; padding:16px 20px; cursor:pointer; background:rgba(246,225,198,0.22); transition:background 0.12s; border:none; }
+.cw-opt:hover { opacity:0.85; }
+.cw-opt.on { outline:3px solid white; outline-offset:-3px; }
+.cw-opt.on::after { content:'✓'; margin-left:auto; font-family:'ABCDiatype'; font-size:16px; }
+.cw-swatch { width:36px; height:36px; flex:none; opacity:0.25; }
+.cw-name { font-size:20px; font-family:'ABCDiatype',sans-serif; }
+/* Illustration grid */
+.img-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:rgba(81,28,20,0.1); }
+.img-opt { aspect-ratio:1; cursor:pointer; position:relative; overflow:hidden; }
+.img-opt img { width:100%; height:100%; object-fit:cover; display:block; }
+.img-opt.on { outline:2px solid #511C14; outline-offset:-2px; }
+.img-opt-label { position:absolute; bottom:0; left:0; right:0; padding:5px 8px; background:rgba(0,0,0,0.45); font-family:'ABCDiatype'; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:#F6E1C6; }
+/* Audio */
+.drop-zone { padding:48px 32px; border:1px dashed rgba(81,28,20,0.25); text-align:center; cursor:pointer; margin-bottom:32px; transition:all 0.15s; }
+.drop-zone:hover, .drop-zone.drag { border-color:#511C14; background:rgba(81,28,20,0.04); }
+.drop-zone.loaded { border-style:solid; border-color:#511C14; }
+.drop-primary { font-size:22px; margin-bottom:8px; }
+.drop-secondary { font-family:'ABCDiatype'; font-size:16px; }
+/* Caption options — like overview type scale rows */
+.caption-opts { display:flex; flex-direction:column; gap:0; }
+.caption-opt { display:flex; align-items:center; gap:18px; padding:18px 0; cursor:pointer; border-bottom:1px solid rgba(81,28,20,0.1); }
+.caption-opt:last-child { border-bottom:none; }
+.cap-dot { width:16px; height:16px; border-radius:50%; border:1px solid rgba(81,28,20,0.3); flex:none; transition:all 0.15s; }
+.caption-opt.on .cap-dot { background:#511C14; border-color:#511C14; }
+.cap-label { font-size:22px; }
+.cap-sub { font-family:'ABCDiatype'; font-size:16px; margin-top:3px; }
+.srt-area { width:100%; background:rgba(81,28,20,0.04); border:1px solid rgba(81,28,20,0.2); color:#511C14; font-family:ui-monospace,monospace; font-size:13px; padding:12px; resize:vertical; outline:none; min-height:120px; margin-top:14px; line-height:1.55; }
+/* Summary — like overview section rows */
+.summary { display:flex; flex-direction:column; gap:0; margin-bottom:48px; border-top:1px solid rgba(81,28,20,0.1); }
+.sum-row { display:flex; gap:24px; padding:20px 0; border-bottom:1px solid rgba(81,28,20,0.1); }
+.sum-key { font-family:'ABCDiatype'; font-size:13px; letter-spacing:0.165em; text-transform:uppercase; min-width:120px; flex:none; padding-top:5px; }
+.sum-val { font-size:24px; line-height:1.3; }
+.sum-note { font-family:'ABCDiatype'; font-size:16px; margin-top:5px; }
+/* Navigation */
+.nav { display:flex; align-items:center; justify-content:space-between; padding-top:40px; }
+.back-btn { background:transparent; border:none; color:#511C14; font-family:'ABCDiatype'; font-size:16px; cursor:pointer; padding:0; letter-spacing:0.04em; transition:opacity 0.15s; }
+.next-btn { background:#511C14; color:#F6E1C6; border:none; padding:16px 40px; font-family:'ABCDiatype'; font-size:13px; letter-spacing:0.165em; text-transform:uppercase; cursor:pointer; transition:background 0.15s; }
+.next-btn:hover:not(:disabled) { background:#3a100a; }
+.next-btn:disabled { opacity:0.28; cursor:default; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel">
+// In the bundle social-studio.html is at root; in source it's 2 levels deep
+const IS_BUNDLE = !window.location.pathname.includes('/ui_kits/social/');
+const IMGS  = IS_BUNDLE ? 'assets/imagery/' : '../../assets/imagery/';
+const LOGOS = IS_BUNDLE ? 'assets/logos/'   : '../../assets/logos/';
+
+const EPISODES = [
+  { e:'1', title:'Side Entrances',              img:`${IMGS}illus-ep1.jpg`,  eyebrow:'SIDE ENTRANCES' },
+  { e:'2', title:'The Nikkah Loophole',         img:`${IMGS}illus-ep2.jpg`,  eyebrow:'THE NIKKAH LOOPHOLE' },
+  { e:'3', title:'The Secret Translators',      img:`${IMGS}illus-ep3.jpg`,  eyebrow:'THE SECRET TRANSLATORS' },
+  { e:'4', title:'A Recitation Revolution',     img:`${IMGS}illus-ep4.jpg`,  eyebrow:'A RECITATION REVOLUTION' },
+  { e:'5', title:'Hanabneehu',                  img:`${IMGS}illus-ep5.jpg`,  eyebrow:'HANABNEEHU' },
+  { e:'6', title:'Cape Malay',                  img:`${IMGS}illus-ep6.jpg`,  eyebrow:'CAPE MALAY' },
+  { e:'7', title:'In Therapy, With SheikhaGPT', img:`${IMGS}illus-ep7.jpg`,  eyebrow:'IN THERAPY, WITH SHEIKHAGPT',
+    outroLine1:'Listen to the full episode at moremuslim.org.',
+    outroLine2:'Or search for \u201CMore Muslim\u201D on Apple Podcasts, Spotify, or wherever you listen to podcasts.' },
+  { e:'8', title:'The Travelling Sisterhood',   img:`${IMGS}illus-ep8.jpg`,  eyebrow:'THE TRAVELLING SISTERHOOD' },
+  { e:'9', title:'A More Muslim Japan',         img:`${IMGS}illus-ep9.jpg`,  eyebrow:'A MORE MUSLIM JAPAN' },
+];
+
+const COLORWAYS = [
+  { key:'night', name:'Night Blue',  bg:'#192136', ink:'#F6E1C6' },
+  { key:'oak',   name:'Oak Brown',   bg:'#511C14', ink:'#F6E1C6' },
+  { key:'beige', name:'Ivory Beige', bg:'#FBF2E9', ink:'#511C14' },
+  { key:'mist',  name:'Mist Blue',   bg:'#9FBCCC', ink:'#192136' },
+  { key:'black', name:'Black',       bg:'#000000', ink:'#FBF2E9' },
+];
+
+const T = 'rgba(246,225,198,0.4)', K = '#511C14';
+const LAYOUTS = [
+  { key:'cover',     name:'Cover',
+    thumb:()=><svg viewBox="0 0 54 67" fill="none"><rect width="54" height="67" fill={T}/><rect x="10" y="7" width="34" height="2" rx="1" fill={K} opacity="0.4"/><rect x="6" y="17" width="42" height="7" rx="1" fill={K}/><rect x="6" y="26" width="34" height="7" rx="1" fill={K}/><rect x="6" y="35" width="22" height="7" rx="1" fill={K}/><circle cx="11" cy="60" r="5.5" stroke={K} strokeWidth="1.5"/><rect x="22" y="58" width="25" height="2" rx="1" fill={K} opacity="0.5"/></svg>,
+    desc:'Large title, illustration, symbol' },
+  { key:'quote',     name:'Quote',
+    thumb:()=><svg viewBox="0 0 54 67" fill="none"><rect width="54" height="67" fill={T}/><rect x="6" y="7" width="42" height="1.5" rx="0.5" fill={K} opacity="0.35"/><rect x="6" y="16" width="18" height="1.5" rx="0.5" fill={K} opacity="0.6"/><rect x="6" y="20" width="42" height="5" rx="1" fill={K}/><rect x="6" y="27" width="35" height="5" rx="1" fill={K}/><rect x="6" y="38" width="18" height="1.5" rx="0.5" fill={K} opacity="0.6"/><rect x="6" y="42" width="42" height="5" rx="1" fill={K}/><rect x="6" y="49" width="35" height="5" rx="1" fill={K}/></svg>,
+    desc:'Two speakers, one quote each' },
+  { key:'synopsis',  name:'Synopsis',
+    thumb:()=><svg viewBox="0 0 54 67" fill="none"><rect width="54" height="67" fill={T}/><rect x="10" y="7" width="34" height="2" rx="1" fill={K} opacity="0.35"/><rect x="6" y="18" width="42" height="6" rx="1" fill={K}/><rect x="6" y="26" width="38" height="6" rx="1" fill={K}/><rect x="6" y="34" width="28" height="6" rx="1" fill={K}/><rect x="6" y="47" width="42" height="5" rx="1" fill={K} opacity="0.55"/><rect x="6" y="54" width="32" height="5" rx="1" fill={K} opacity="0.55"/></svg>,
+    desc:'Episode description in large type' },
+  { key:'streaming', name:'Streaming',
+    thumb:()=><svg viewBox="0 0 54 67" fill="none"><rect width="54" height="67" fill={T}/><rect x="6" y="16" width="42" height="3" rx="1" fill={K} opacity="0.45"/><rect x="6" y="22" width="42" height="7" rx="1" fill={K}/><rect x="6" y="32" width="42" height="3" rx="1" fill={K} opacity="0.45"/><rect x="6" y="42" width="42" height="4" rx="1" fill={K}/><rect x="6" y="49" width="32" height="4" rx="1" fill={K} opacity="0.65"/><circle cx="27" cy="61" r="5" stroke={K} strokeWidth="1.5"/></svg>,
+    desc:'"Now Streaming" with listen links' },
+  { key:'credits',   name:'Credits',
+    thumb:()=><svg viewBox="0 0 54 67" fill="none"><rect width="54" height="67" fill={T}/><rect x="11" y="7" width="32" height="2" rx="1" fill={K} opacity="0.35"/>{[19,28,37,46,55].map((y,i)=><React.Fragment key={i}><rect x="6" y={y} width="21" height="2" rx="0.5" fill={K}/><rect x="30" y={y} width="18" height="2" rx="0.5" fill={K} opacity="0.5"/></React.Fragment>)}</svg>,
+    desc:'Team and contributor list' },
+];
+
+function buildPrefill(st) {
+  const ep = EPISODES[st.epIdx];
+  const coverEp = `S1 \u00b7 E${ep.e}`;
+  const outroEp = `EPISODE ${ep.e}`;
+  const isStory = st.layout==='quote' || st.layout==='streaming';
+  let way = 'night', image = null;
+  if (st.bgType==='pattern') way = st.bgChoice;
+  else { image = st.bgChoice; way = 'night'; }
+  return {
+    tpl: st.format==='audiogram' ? 'audiogram' : (st.layout||'cover'),
+    way, image,
+    format: st.format==='audiogram' ? 'story' : (isStory ? 'story' : 'portrait'),
+    content: {
+      cover:    { presents:'More Muslim presents', title:ep.title, episode:coverEp },
+      quote:    { episode:`${outroEp}: ${ep.title}`, s1:'', t1:'', s2:'', t2:'' },
+      synopsis: { episode:ep.title, p1:'', p2:'' },
+      streaming:{ episode:outroEp, l1:'Listen to the full episode at moremuslim.org.', l2:'Or search \u201CMore Muslim\u201D wherever you listen.' },
+      credits:  { episode:coverEp, body:'' },
+      audiogram:{
+        guestWay:'oak', episodeEyebrow:ep.eyebrow||ep.title.toUpperCase(),
+        coverTitle:ep.title, coverEpisode:coverEp, outroEpisode:outroEp,
+        outroLine1: ep.outroLine1||'Listen to the full episode at moremuslim.org.',
+        outroLine2: ep.outroLine2||'Or search for \u201CMore Muslim\u201D on Apple Podcasts, Spotify, or wherever you listen.',
+        srt: st.srtText||'',
+      }
+    }
+  };
+}
+
+function Wizard() {
+  const [epIdx,   setEpIdx]   = React.useState(6);
+  const [format,  setFormat]  = React.useState(null);
+  const [layout,  setLayout]  = React.useState('cover');
+  const [bgType,  setBgType]  = React.useState('pattern');
+  const [bgChoice,setBgChoice]= React.useState('night');
+  const [srtMode, setSrtMode] = React.useState('skip');
+  const [srtText, setSrtText] = React.useState('');
+  const [audioFilename, setAudioFilename] = React.useState('');
+  const audioRef = React.useRef();
+  const srtRef   = React.useRef();
+  const launchRef= React.useRef();
+
+  const steps = React.useMemo(()=>{
+    if (format==='audiogram') return ['episode','format','background','audio','ready'];
+    if (format==='static')    return ['episode','format','layout','background','ready'];
+    return ['episode','format','background','audio','ready'];
+  }, [format]);
+  const [step, setStep] = React.useState(0);
+  const cur = steps[step];
+  const progress = (step / (steps.length - 1)) * 100;
+
+  const next = (to) => setStep(s => typeof to==='number' ? to : s+1);
+  const back = () => setStep(s => Math.max(0, s-1));
+
+  const launch = () => {
+    const pf = buildPrefill({epIdx,format,layout,bgType,bgChoice,srtText,srtMode});
+    try { localStorage.setItem('mm-studio-prefill', JSON.stringify(pf)); } catch {}
+    if (format==='audiogram') {
+      const ac = pf.content.audiogram;
+      try { localStorage.setItem('mm-audiogram-cfg', JSON.stringify({hostWay:pf.way,...ac,audioSrc:null})); } catch {}
+    }
+    window.location.href = '../../ui_kits/social/index.html';
+  };
+
+  const ep = EPISODES[epIdx];
+
+  const stepContent = {
+    episode: <>
+      <div className="step-q">Which episode?</div>
+      <div className="ep-grid">
+        {EPISODES.map((e,i)=>(
+          <div key={i} className={`ep-card${epIdx===i?' on':''}`} onClick={()=>setEpIdx(i)}>
+            <img src={e.img} alt={`E${e.e}`} loading="lazy" />
+            <div className="ep-num">E{e.e}</div>
+          </div>
+        ))}
+      </div>
+      {ep && <div className="ep-selected">S1 · E{ep.e} — {ep.title}</div>}
+      <div className="nav"><span/><button className="next-btn" onClick={()=>next()}>Continue →</button></div>
+    </>,
+
+    format: <>
+      <div className="step-q">What are you making?</div>
+      <div className="format-grid">
+        <button className={`format-opt${format==='audiogram'?' on':''}`} onClick={()=>setFormat('audiogram')}>
+          <span className="format-name">Audiogram</span>
+          <span className="format-desc">A short video clip with word-by-word captions — for Instagram stories and Reels.</span>
+        </button>
+        <button className={`format-opt${format==='static'?' on':''}`} onClick={()=>setFormat('static')}>
+          <span className="format-name">Static Post</span>
+          <span className="format-desc">A still image for your feed, carousel, or LinkedIn — five layout options.</span>
+        </button>
+      </div>
+      <div className="nav">
+        <button className="back-btn" onClick={back}>← Back</button>
+        <button className="next-btn" disabled={!format} onClick={()=>next()}>Continue →</button>
+      </div>
+    </>,
+
+    layout: <>
+      <div className="step-q">Choose a layout.</div>
+      <div className="layout-grid">
+        {LAYOUTS.map(l=>(
+          <div key={l.key} className={`layout-opt${layout===l.key?' on':''}`} onClick={()=>setLayout(l.key)}>
+            {l.thumb()}
+            <div className="layout-label">{l.name}</div>
+          </div>
+        ))}
+      </div>
+      <p className="layout-desc" style={{marginTop:16}}>{LAYOUTS.find(l=>l.key===layout)?.desc}</p>
+      <div className="nav">
+        <button className="back-btn" onClick={back}>← Back</button>
+        <button className="next-btn" onClick={()=>next()}>Continue →</button>
+      </div>
+    </>,
+
+    background: <>
+      <div className="step-q">Set the scene.</div>
+      <div className="bg-toggle">
+        <button className={`bg-tab${bgType==='pattern'?' on':''}`} onClick={()=>{setBgType('pattern');setBgChoice('night');}}>Colour pattern</button>
+        <button className={`bg-tab${bgType==='illustration'?' on':''}`} onClick={()=>{setBgType('illustration');setBgChoice(EPISODES[epIdx]?.img||EPISODES[0].img);}}>Episode illustration</button>
+      </div>
+      {bgType==='pattern' ? (
+        <div className="cw-grid">
+          {COLORWAYS.map(c=>(
+            <div key={c.key} className={`cw-opt${bgChoice===c.key?' on':''}`} onClick={()=>setBgChoice(c.key)} style={{background:c.bg,color:c.ink}}>
+              <div className="cw-swatch" style={{background:c.ink,opacity:0.2}}/>
+              <span className="cw-name">{c.name}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="img-grid">
+          {EPISODES.map((e,i)=>(
+            <div key={i} className={`img-opt${bgChoice===e.img?' on':''}`} onClick={()=>setBgChoice(e.img)}>
+              <img src={e.img} alt={e.title} loading="lazy" />
+              <div className="img-opt-label">E{e.e}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="nav">
+        <button className="back-btn" onClick={back}>← Back</button>
+        <button className="next-btn" onClick={()=>next()}>Continue →</button>
+      </div>
+    </>,
+
+    audio: <>
+      <div className="step-q">Add your audio.</div>
+      <div className={`drop-zone${audioFilename?' loaded':''}`}
+        onClick={()=>audioRef.current?.click()}
+        onDragOver={e=>e.preventDefault()}
+        onDrop={e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f)setAudioFilename(f.name);}}>
+        <input ref={audioRef} type="file" accept="audio/*" style={{display:'none'}} onChange={e=>{const f=e.target.files[0];if(f)setAudioFilename(f.name);}} />
+        <div className="drop-primary">{audioFilename||'Drop audio here or click to browse'}</div>
+        <div className="drop-secondary">{audioFilename?'You\u2019ll re-upload this in the studio':'MP3, M4A, WAV'}</div>
+      </div>
+      <p style={{fontFamily:"'ABCDiatype',sans-serif",fontSize:16,letterSpacing:'0.165em',textTransform:'uppercase',marginBottom:16}}>Captions</p>
+      <div className="caption-opts">
+        {[
+          {k:'skip',   l:'No captions yet',    s:'Add them in the studio later'},
+          {k:'paste',  l:'Paste SRT text',      s:'The standard subtitle format with timestamps'},
+          {k:'upload', l:'Upload an SRT file',  s:'We\u2019ll read the timing automatically'},
+        ].map(opt=>(
+          <div key={opt.k} className={`caption-opt${srtMode===opt.k?' on':''}`}
+            onClick={()=>{setSrtMode(opt.k);if(opt.k==='upload')srtRef.current?.click();}}>
+            {opt.k==='upload'&&<input ref={srtRef} type="file" accept=".srt,.txt" style={{display:'none'}}
+              onChange={async e=>{const f=e.target.files[0];if(!f)return;const t=await f.text();setSrtText(t);setSrtMode('upload');}} />}
+            <div className="cap-dot"/>
+            <div><div className="cap-label">{opt.l}</div><div className="cap-sub">{opt.s}</div></div>
+          </div>
+        ))}
+      </div>
+      {srtMode==='paste'&&<textarea className="srt-area" rows={6} placeholder="Paste SRT here..." value={srtText} onChange={e=>setSrtText(e.target.value)} />}
+      {srtMode==='upload'&&srtText&&<p style={{fontFamily:"'ABCDiatype',sans-serif",fontSize:14,marginTop:12}}>{srtText.split(/\n\s*\n/).filter(Boolean).length} caption blocks loaded</p>}
+      <div className="nav">
+        <button className="back-btn" onClick={back}>← Back</button>
+        <button className="next-btn" onClick={()=>next()}>Continue →</button>
+      </div>
+    </>,
+
+    ready: <>
+      <div className="step-q">Ready.</div>
+      <div className="summary">
+        <div className="sum-row"><div className="sum-key">Episode</div><div className="sum-val">S1 · E{ep.e} — {ep.title}</div></div>
+        <div className="sum-row"><div className="sum-key">Format</div><div className="sum-val">{format==='audiogram'?'Audiogram · 9:16 video':(LAYOUTS.find(l=>l.key===layout)?.name||'Cover')+' · '+(layout==='quote'||layout==='streaming'?'9:16':'4:5')}</div></div>
+        <div className="sum-row"><div className="sum-key">Background</div><div className="sum-val">{bgType==='pattern'?(COLORWAYS.find(c=>c.key===bgChoice)?.name||'Night Blue')+' pattern':'Episode illustration'}</div></div>
+        {format==='audiogram'&&<div className="sum-row">
+          <div className="sum-key">Audio</div>
+          <div className="sum-val">{audioFilename||'Not selected'}<div className="sum-note">{audioFilename?'Re-upload in the studio sidebar':'Upload in the studio sidebar'}</div></div>
+        </div>}
+        {format==='audiogram'&&srtMode!=='skip'&&srtText&&<div className="sum-row"><div className="sum-key">Captions</div><div className="sum-val">{srtText.split(/\n\s*\n/).filter(Boolean).length} blocks</div></div>}
+      </div>
+      <button className="next-btn" style={{width:'100%',padding:18,fontSize:14}} onClick={launch}>Open Studio →</button>
+      <a ref={launchRef} href="#studio" style={{display:'none'}}>studio</a>
+      <div className="nav" style={{marginTop:20}}>
+        <button className="back-btn" onClick={back}>← Back</button>
+      </div>
+    </>,
+  };
+
+  return (
+    <>
+      <div className="progress-bar" style={{width:`${progress}%`}} />
+      <div className="header">
+        <img src={`${LOGOS}logo-horizontal-oak.svg`} alt="More Muslim" />
+        <a href="index.html" className="skip-link">Open Studio directly →</a>
+      </div>
+      <div className="step" key={cur}>
+        {stepContent[cur]}
+      </div>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<Wizard />);
+</script>
+<template id="__bundler_thumbnail">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80">
+    <rect width="120" height="80" fill="rgba(246,225,198,0.4)"/>
+    <rect x="12" y="12" width="44" height="56" rx="0" fill="#511C14" opacity="0.08"/>
+    <rect x="64" y="12" width="44" height="26" rx="0" fill="#511C14" opacity="0.08"/>
+    <rect x="64" y="42" width="44" height="26" rx="0" fill="#511C14" opacity="0.08"/>
+    <rect x="12" y="72" width="96" height="1.5" fill="#511C14" opacity="0.2"/>
+  </svg>
+</template>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!-- @dsCard group="Brand" viewport="760x560" name="Patterns — Official Tiles" subtitle="The 20 ZAINA star-lattice tiles. The ONLY permitted patterns — never generate your own." -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--more-beige-soft); color: var(--text-primary); font-family: var(--font-serif); }
+  .wrap { padding: 28px 30px; }
+  .note { font-size: 13px; line-height: 1.5; color: var(--text-primary); max-width: 62ch; margin: 0 0 22px; }
+  .note strong { }
+  .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+  .cell figure { margin: 0; }
+  .swatch { aspect-ratio: 3 / 2; border-radius: var(--radius-sm); background-size: cover; background-position: center; border: 1px solid rgba(81,28,19,0.12); }
+  figcaption { display: flex; justify-content: space-between; align-items: baseline; margin-top: 7px; font-size: 11px; letter-spacing: 0.04em; }
+  .id { text-transform: uppercase; letter-spacing: 0.14em; color: var(--more-oak-brown); }
+  .w { color: var(--text-primary); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <p class="note">Twenty official artwork tiles ship in <code>assets/patterns/</code>. Each bakes in its own ground + tone-on-tone 8-point-star lattice. Use <code>PatternPanel</code> to place one — <strong>never hand-draw, recolour, or procedurally generate a star pattern.</strong></p>
+    <div class="grid" id="grid"></div>
+  </div>
+  <script>
+    const TILES = [
+      ["1A","solid"],["1B","solid"],["1C","solid"],["2A","solid"],["2B","solid"],
+      ["2C","solid"],["3A","line"],["3B","line"],["3C","line"],["4A","line"],
+      ["4B","line"],["4C","line"],["5A","fine"],["5B","fine"],["5C","fine"],
+      ["6A","fine"],["6B","fine"],["6C","fine"],["7A","duo"],["7B","duo"]
+    ];
+    document.getElementById("grid").innerHTML = TILES.map(([id, w]) => `
+      <div class="cell"><figure>
+        <div class="swatch" style="background-image:url('../assets/patterns/pattern-${id.toLowerCase()}.png')"></div>
+        <figcaption><span class="id">${id}</span><span class="w">${w}</span></figcaption>
+      </figure></div>`).join("");
+  </script>
+</body>
+</html>

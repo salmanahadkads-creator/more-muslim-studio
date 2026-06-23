@@ -1,0 +1,21 @@
+<!-- @dsCard group="Spacing" viewport="700x180" name="Radius & Shadow" subtitle="Sharp corners, soft warm shadows" -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--more-beige-soft); color: var(--more-oak-brown); font-family: var(--font-serif); }
+  .wrap { padding: 26px 28px; display: flex; gap: 26px; align-items: center; }
+  .box { width: 92px; height: 92px; background: var(--more-white); display: flex; align-items: flex-end; padding: 8px; box-sizing: border-box; font-size: 11px; letter-spacing: .04em; color: color-mix(in srgb, var(--more-oak-brown) 55%, transparent); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="box" style="border-radius:var(--radius-xs); box-shadow:var(--shadow-sm)">xs · sm</div>
+    <div class="box" style="border-radius:var(--radius-md); box-shadow:var(--shadow-md)">md · md</div>
+    <div class="box" style="border-radius:var(--radius-lg); box-shadow:var(--shadow-lg)">lg · lg</div>
+    <div class="box" style="border-radius:var(--radius-md); box-shadow:var(--shadow-warm)">warm</div>
+  </div>
+</body>
+</html>

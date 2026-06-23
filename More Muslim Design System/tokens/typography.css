@@ -1,0 +1,64 @@
+/* More Muslim — Typography
+   One typeface: ABC Marist (Regular + Italic only). No bold weights exist.
+   Build hierarchy with SIZE, CASE and LETTER-SPACING — never font-weight.
+   Display & wordmark-style headings are UPPERCASE with open tracking. */
+
+:root {
+  --font-serif: "ABC Marist", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-body:  var(--font-serif);
+
+  /* Type scale (rem, 16px base) — generous, editorial */
+  --text-2xs:   0.6875rem; /* 11px — micro labels */
+  --text-xs:    0.8125rem; /* 13px — captions */
+  --text-sm:    0.9375rem; /* 15px — secondary */
+  --text-base:  1.0625rem; /* 17px — body */
+  --text-lg:    1.375rem;  /* 22px — lead */
+  --text-xl:    1.75rem;   /* 28px */
+  --text-2xl:   2.375rem;  /* 38px */
+  --text-3xl:   3.25rem;   /* 52px */
+  --text-4xl:   4.5rem;    /* 72px */
+  --text-5xl:   6rem;      /* 96px — hero display */
+
+  /* ---- Canonical DISPLAY scale (brand print spec, in points) ----
+     The four official heading sizes. Each pairs a size with its fixed leading.
+     Use these for headlines/display; the rem steps above are for editorial body
+     & UI text. line-height is the unitless ratio of the spec'd pt leading. */
+  --text-display-lg: 76pt; --leading-display-lg: 1.0526; /* 76 / 80pt  */
+  --text-display-md: 60pt; --leading-display-md: 1.10;   /* 60 / 66pt  */
+  --text-display-sm: 50pt; --leading-display-sm: 1.10;   /* 50 / 55pt  */
+  --text-display-xs: 32pt; --leading-display-xs: 1.125;  /* 32 / 36pt  */
+
+  --leading-tight:   1.04;
+  --leading-snug:    1.18;  /* desktop body: 1.176 → moremuslim.org */
+  --leading-normal:  1.22;  /* mobile body: 1.225 → moremuslim.org  */
+  --leading-relaxed: 1.34;  /* prose / about text */
+
+  /* Tracking. THE brand rule: ALL uppercase text is tracked to 165 (InDesign
+     units) = 0.165em — this is the canonical all-caps value, taken from the
+     brand's `All-Caps---Tracking-165` paragraph style. Use --tracking-caps for
+     every uppercased run (eyebrows, display, buttons, tags, nav, sign-offs).
+     The wide/wider/widest steps below are for sentence-case fine-tuning only. */
+  --tracking-caps:    0.165em; /* ← all-caps standard; never retrack uppercase off this */
+  --tracking-tight:   -0.01em;
+  --tracking-normal:  0em;
+  --tracking-wide:    0.06em;
+  --tracking-wider:   0.14em;
+  --tracking-widest:  0.24em;
+
+  /* Single weight */
+  --weight-regular: 400;
+
+  /* Semantic roles */
+  --font-display:  var(--font-serif);
+  --font-heading:  var(--font-serif);
+  --font-label:    var(--font-serif);
+
+  /* Social Post Text Scale (px) — for Instagram & social media posts.
+     Use these sizes to maintain consistent hierarchy across 1080×1350 canvases.
+     All accompanied by line-height: 1.1 */
+  --social-text-l:  77px;   /* Headline / main body text */
+  --social-text-m:  56px;   /* Secondary headlines */
+  --social-text-s:  42px;   /* Tertiary text */
+  --social-text-xs: 32px;   /* Eyebrows, labels, CTAs */
+  --social-leading: 1em;    /* All social text uses solid leading */
+}

@@ -1,0 +1,84 @@
+<!-- @dsCard group="Components" viewport="900x900" name="Media — Episode Card" subtitle="EpisodeCard · desktop + mobile · editorial two-panel layout" -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<style>
+  body { margin: 0; background: var(--more-beige-soft); font-family: var(--font-serif); }
+  .wrap { padding: 36px; display: flex; flex-direction: column; gap: 36px; }
+  .lbl { font-size: 11px; letter-spacing: var(--tracking-caps); text-transform: uppercase; color: color-mix(in srgb, var(--more-oak-brown) 40%, transparent); margin-bottom: 12px; }
+  .mobile-center { display: flex; justify-content: flex-start; }
+
+  /* Episode card — desktop */
+  .ep-card { display: flex; background: var(--more-ivory-beige); border-radius: var(--radius-card); overflow: hidden; min-height: 420px; }
+  .ep-card__content { flex: 0 0 42%; display: flex; }
+  .ep-card__panel { background: #fff; padding: 32px; display: flex; flex-direction: column; gap: 20px; flex: 1; }
+  .ep-card__image { flex: 1 1 0; overflow: hidden; background: var(--more-night-blue); }
+  .ep-card__image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  /* Episode card — mobile */
+  .ep-card--mobile { background: #fff; border-radius: var(--radius-card); overflow: hidden; }
+  .ep-card--mobile .ep-img-top { width: 100%; aspect-ratio: 4/3; overflow: hidden; background: var(--more-night-blue); }
+  .ep-card--mobile .ep-img-top img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  /* Shared content panel */
+  /* Typography sourced from moremuslim.org main CSS */
+  .ep-meta { display: flex; justify-content: space-between; font-size: 0.75rem; letter-spacing: 1.5px; text-transform: uppercase; line-height: 1.2; }
+  .ep-meta span { opacity: 0.3; }
+  .ep-meta span:nth-child(2) { opacity: 1; }
+  .ep-title { margin: 0; font-family: var(--font-serif); font-size: 1.0625rem; letter-spacing: 2.7px; text-transform: uppercase; line-height: 1.059; color: var(--more-oak-brown); font-weight: 400; text-align: center; }
+  .ep-play { display: inline-flex; align-items: center; gap: 0.7em; padding: 6.5px 14px 5.5px; font-family: var(--font-serif); font-size: 0.75rem; letter-spacing: 1.5px; text-transform: uppercase; line-height: 1.6; color: var(--more-oak-brown); background: transparent; border: 1px solid rgba(81,28,20,0.05); border-radius: 5px; cursor: pointer; align-self: center; transition: border-color 0.2s; }
+  .ep-play:hover { border-color: rgb(81,28,20); }
+  .ep-body { margin: 0; font-size: 1rem; line-height: 1.125; letter-spacing: 0.2px; color: var(--more-oak-brown); }
+  .ep-cta { font-size: 0.75rem; letter-spacing: 1.5px; font-variant-caps: all-small-caps; line-height: 1.083; color: var(--more-oak-brown); cursor: pointer; text-decoration: none; margin-top: auto; opacity: 0.3; transition: opacity 0.3s; display: flex; align-items: center; gap: 10px; justify-content: center; }
+  .ep-cta:hover { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <div class="lbl">Desktop</div>
+    <div class="ep-card">
+      <div class="ep-card__content">
+        <div class="ep-card__panel">
+          <div class="ep-meta">
+            <span>06 Mar 2026</span>
+            <span>S1 E4</span>
+            <span>49:39</span>
+          </div>
+          <h2 class="ep-title">A Recitation Revolution</h2>
+          <button class="ep-play">&#x25B6; Play Episode</button>
+          <p class="ep-body">For most of her life, Maryam believed women couldn't recite the Qur'an aloud. That a woman's voice, especially while reciting the Qur'an, is awrah. Something to be hidden. Then, one day in high school, she heard a girl recite in public.</p>
+          <a class="ep-cta">Transcript &amp; Credits &#x2192;</a>
+        </div>
+      </div>
+      <div class="ep-card__image">
+        <img src="../../assets/imagery/illus-ep4.webp" alt="A Recitation Revolution illustration" style="width:100%;height:100%;object-fit:cover;display:block;" />
+      </div>
+    </div>
+  </div>
+  <div class="mobile-center">
+    <div style="width:300px">
+      <div class="lbl">Mobile</div>
+      <div class="ep-card--mobile">
+        <div class="ep-img-top">
+          <img src="https://moremuslim.org/app/uploads/2026/03/Al-Mujadilah_More-Muslim_Episode-4_Illustration_LR-2800_V1-1280x1059.jpg" alt="A Recitation Revolution illustration" style="width:100%;height:100%;object-fit:cover;display:block;" />
+        </div>
+        <div class="ep-card__panel">
+          <div class="ep-meta">
+            <span>06 Mar 2026</span>
+            <span>S1 E4</span>
+            <span>49:39</span>
+          </div>
+          <h2 class="ep-title">A Recitation Revolution</h2>
+          <button class="ep-play">&#x25B6; Play Episode</button>
+          <p class="ep-body">For most of her life, Maryam believed women couldn't recite the Qur'an aloud. That a woman's voice, especially while reciting the Qur'an, is awrah. Something to be hidden.</p>
+          <a class="ep-cta">Transcript &amp; Credits &#x2192;</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
