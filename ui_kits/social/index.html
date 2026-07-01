@@ -13,9 +13,9 @@
   .panel { background: rgba(246,225,198,0.55); border-right: 1px solid rgba(81,28,20,0.1); padding: 26px 22px; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; }
   .brand { display: flex; align-items: center; gap: 10px; }
   .brand img { height: 40px; }
-  .sect h4 { margin: 0 0 11px; font-size: 13px; letter-spacing: 0.165em; text-transform: uppercase; color: #511C14; font-weight: 400; }
+  .sect h4 { margin: 0 0 10px; font-size: 11px; letter-spacing: 0.165em; text-transform: uppercase; color: #511C14; font-weight: 400; }
   .tlist { display: flex; flex-direction: column; gap: 1px; }
-  .titem { text-align: left; padding: 10px 11px; border: none; border-left: 2px solid transparent; background: transparent; color: #511C14; font-family: var(--font-serif); font-size: 16px; cursor: pointer; transition: all 0.15s; width: 100%; }
+  .titem { text-align: left; padding: 8px 11px; border: none; border-left: 2px solid transparent; background: transparent; color: #511C14; font-family: var(--font-serif); font-size: 14px; cursor: pointer; transition: all 0.15s; width: 100%; }
   .titem:hover { background: rgba(81,28,20,0.06); }
   .titem.on { background: rgba(81,28,20,0.1); border-left-color: #511C14; color: #511C14; }
   .swatches { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -23,7 +23,7 @@
   .sw:hover { transform: scale(1.1); }
   .sw.on { border-color: #511C14; box-shadow: 0 0 0 1px rgba(81,28,20,0.3); }
   .seg { display: flex; gap: 4px; align-items: center; }
-  .seg button { flex: 1; padding: 8px 0; font-family: var(--font-serif); font-size: 16px; letter-spacing: 0.165em; text-transform: uppercase; border: 1px solid rgba(81,28,20,0.18); background: transparent; color: #511C14; cursor: pointer; transition: all 0.12s; }
+  .seg button { flex: 1; padding: 7px 0; font-family: var(--font-serif); font-size: 11px; letter-spacing: 0.165em; text-transform: uppercase; border: 1px solid rgba(81,28,20,0.18); background: transparent; color: #511C14; cursor: pointer; transition: all 0.12s; }
   .seg button.on { background: #511C14; color: #F6E1C6; border-color: transparent; }
   .stage { position: relative; display: flex; align-items: center; justify-content: center; overflow: auto; padding: 40px; background: rgba(246,225,198,0.25); }
   .stagewrap { display: flex; flex-direction: column; align-items: center; gap: 20px; }
@@ -31,20 +31,36 @@
   .meta { font-size: 13px; letter-spacing: 0.165em; text-transform: uppercase; color: #511C14; }
   .hint { font-size: 14px; line-height: 1.55; color: #511C14; }
   .imgpick { display: grid; grid-template-columns: repeat(3,1fr); gap: 5px; }
-  .imgthumb { width: 100%; aspect-ratio: 1; object-fit: cover; cursor: pointer; border: 2px solid transparent; opacity: 1; transition: all 0.12s; background: none; padding: 0; display: block; }
-  
-  .imgthumb.on { border-color: #511C14; opacity: 1; }
-  .nonebtn { grid-column: span 3; padding: 8px 0; font-family: var(--font-serif); font-size: 16px; letter-spacing: 0.165em; text-transform: uppercase; background: rgba(81,28,20,0.05); border: 1px solid rgba(81,28,20,0.14); color: #511C14; cursor: pointer; }
+  .imgthumb { width: 100%; aspect-ratio: 1; object-fit: cover; cursor: pointer; border: 2px solid transparent; opacity: 0.45; transition: all 0.12s; background: none; padding: 0; display: block; }
+  .imgthumb:hover { opacity: 0.75; }
+  .imgthumb.on { border-color: #511C14; opacity: 1; box-shadow: 0 0 0 2px #511C14; }
+  .nonebtn { grid-column: span 3; padding: 7px 0; font-family: var(--font-serif); font-size: 11px; letter-spacing: 0.165em; text-transform: uppercase; background: rgba(81,28,20,0.05); border: 1px solid rgba(81,28,20,0.14); color: #511C14; cursor: pointer; }
   .nonebtn.on { border-color: #511C14; opacity: 1; }
-  .uploadbtn { grid-column: span 3; padding: 8px 0; font-family: var(--font-serif); font-size: 16px; letter-spacing: 0.165em; text-transform: uppercase; background: rgba(226,177,109,0.1); border: 1px solid rgba(226,177,109,0.35); color: #7a4a0a; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.12s; }
+  .uploadbtn { grid-column: span 3; padding: 7px 0; font-family: var(--font-serif); font-size: 13px; letter-spacing: 0.04em; text-transform: none; background: rgba(226,177,109,0.1); border: 1px solid rgba(226,177,109,0.35); color: #7a4a0a; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.12s; }
   .uploadbtn:hover { background: rgba(226,177,109,0.2); }
   .uploadbtn.on { border-color: #E2B16D; color: #7a4a0a; }
-  input[type=file]#imgupload, input[type=file]#audioupload, input[type=file]#srtupload { display: none; }
+  input[type=file]#imgupload, input[type=file]#audioupload, input[type=file]#srtupload, input[type=file]#srtupload2, input[type=file]#coverimgupload { display: none; }
+  .cover-opts { display:flex; flex-direction:column; gap:2px; margin-bottom:10px; }
+  .cover-opt-btn { text-align:left; padding:7px 10px; border:none; border-left:2px solid transparent; background:transparent; color:#511C14; font-family:'ABCDiatype',sans-serif; font-size:13px; cursor:pointer; transition:all 0.12s; width:100%; }
+  .cover-opt-btn:hover { background:rgba(81,28,20,0.06); }
+  .cover-opt-btn.on { background:rgba(81,28,20,0.09); border-left-color:#511C14; }
+  .cover-tpl-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin:8px 0; }
+  .cover-tpl-opt { cursor:pointer; background:rgba(81,28,20,0.04); border:none; padding:0; overflow:hidden; transition:all 0.12s; display:flex; flex-direction:column; }
+  .cover-tpl-opt:hover { background:rgba(81,28,20,0.08); }
+  .cover-tpl-opt.on { outline:2px solid #511C14; }
+  .cover-tpl-lbl { font-family:'ABCDiatype',sans-serif; font-size:9px; letter-spacing:0.1em; text-transform:uppercase; text-align:center; padding:5px 2px; color:#511C14; }
+  .cover-tpl-opt.on .cover-tpl-lbl { background:#511C14; color:#F6E1C6; }
+  .capture-cover-btn { width:100%; padding:10px; background:rgba(81,28,20,0.07); border:1px solid rgba(81,28,20,0.18); color:#511C14; font-family:'ABCDiatype',sans-serif; font-size:13px; letter-spacing:0.14em; text-transform:uppercase; cursor:pointer; transition:all 0.12s; margin-top:6px; }
+  .capture-cover-btn:hover:not(:disabled) { background:rgba(81,28,20,0.13); }
+  .capture-cover-btn:disabled { opacity:0.35; cursor:wait; }
+  .srt-file-btn { display:block; width:100%; margin-bottom:6px; padding:7px 10px; background:rgba(226,177,109,0.08); border:1px solid rgba(226,177,109,0.25); color:#7a4a0a; font-family:'ABCDiatype',sans-serif; font-size:13px; letter-spacing:0.02em; text-transform:none; cursor:pointer; text-align:center; transition:all 0.12s; }
+  .srt-file-btn:hover { background:rgba(226,177,109,0.15); }
+  .srt-file-btn.on { border-color:#E2B16D; background:rgba(226,177,109,0.1); }
   .cropslider { width: 100%; accent-color: #511C14; cursor: pointer; margin-top: 4px; }
-  .croplabel { font-size: 13px; letter-spacing: 0.165em; text-transform: uppercase; color: #511C14; display: block; margin-top: 10px; }
-  .txfield { width: 100%; background: rgba(81,28,20,0.04); border: 1px solid rgba(81,28,20,0.14); color: #511C14; font-family: var(--font-serif); font-size: 16px; padding: 8px 10px; box-sizing: border-box; resize: none; outline: none; transition: border-color 0.15s; line-height: 1.4; }
+  .croplabel { font-size: 11px; letter-spacing: 0.165em; text-transform: uppercase; color: #511C14; display: block; margin-top: 10px; }
+  .txfield { width: 100%; background: rgba(81,28,20,0.04); border: 1px solid rgba(81,28,20,0.14); color: #511C14; font-family: var(--font-serif); font-size: 14px; padding: 7px 10px; box-sizing: border-box; resize: none; outline: none; transition: border-color 0.15s; line-height: 1.4; }
   .txfield:focus { border-color: rgba(81,28,20,0.4); }
-  .txlabel { font-size: 16px; letter-spacing: 0.165em; text-transform: uppercase; color: #511C14; display: block; margin: 10px 0 5px; }
+  .txlabel { font-size: 11px; letter-spacing: 0.165em; text-transform: uppercase; color: #511C14; display: block; margin: 10px 0 4px; }
   .richtextarea { display: flex; flex-direction: column; }
   .rttoolbar { display: flex; gap: 2px; padding: 3px 5px; background: rgba(81,28,20,0.04); border: 1px solid rgba(81,28,20,0.12); border-bottom: none; }
   .rtbtn { background: transparent; border: none; color: #511C14; font-family: var(--font-serif); font-size: 12px; cursor: pointer; padding: 2px 6px; line-height: 1; }
@@ -54,22 +70,36 @@
   .carousel-item { display: flex; align-items: center; gap: 8px; background: rgba(81,28,20,0.04); border: 1px solid rgba(81,28,20,0.1); padding: 6px 8px; }
   .carousel-swatch { flex: none; display: flex; align-items: center; justify-content: center; font-size: 7px; letter-spacing: 0.08em; text-transform: uppercase; }
   .carousel-meta { flex: 1; min-width: 0; }
-  .carousel-meta-tpl { font-size: 16px; color: #511C14; }
+  .carousel-meta-tpl { font-size: 13px; color: #511C14; }
   .carousel-meta-sub { font-size: 13px; color: #511C14; text-transform: uppercase; letter-spacing: 0.165em; margin-top: 2px; }
   .carousel-actions { display: flex; gap: 2px; flex: none; }
   .carousel-btn { background: transparent; border: none; color: #511C14; cursor: pointer; padding: 3px 6px; font-size: 13px; line-height: 1; }
   .carousel-btn:hover:not(:disabled) { opacity: 1; }
   .carousel-btn:disabled { opacity: 0.18; cursor: default; }
-  .carousel-add { width: 100%; padding: 9px; background: transparent; border: 1px dashed rgba(81,28,20,0.25); color: #511C14; font-family: var(--font-serif); font-size: 16px; letter-spacing: 0.165em; text-transform: uppercase; cursor: pointer; text-align: center; transition: all 0.12s; }
+  .carousel-add { width: 100%; padding: 8px; background: transparent; border: 1px dashed rgba(81,28,20,0.25); color: #511C14; font-family: var(--font-serif); font-size: 11px; letter-spacing: 0.165em; text-transform: uppercase; cursor: pointer; text-align: center; transition: all 0.12s; }
   .carousel-add:hover { background: rgba(81,28,20,0.05); border-color: #511C14; opacity: 1; }
-  .export-btn { width: 100%; margin-top: 8px; padding: 12px; background: #511C14; border: none; color: #F6E1C6; font-family: var(--font-serif); font-size: 16px; letter-spacing: 0.165em; text-transform: uppercase; cursor: pointer; transition: background 0.15s; }
+  .export-btn { width: 100%; margin-top: 8px; padding: 11px; background: #511C14; border: none; color: #F6E1C6; font-family: var(--font-serif); font-size: 11px; letter-spacing: 0.165em; text-transform: uppercase; cursor: pointer; transition: background 0.15s; }
   .export-btn:hover:not(:disabled) { background: #3a100a; }
+  .filmstrip { display:flex; gap:12px; align-items:flex-start; padding:8px 2px 2px; max-width:min(920px,92vw); overflow-x:auto; }
+  .film-slide { position:relative; flex:none; cursor:pointer; }
+  .film-thumb { overflow:hidden; background:#fff; box-shadow:0 2px 10px rgba(81,28,20,0.16); outline:2px solid transparent; transition:outline-color .12s; }
+  .film-slide.on .film-thumb { outline-color:#511C14; }
+  .film-slide:hover .film-thumb { outline-color:rgba(81,28,20,0.4); }
+  .film-cap { font-family:'ABCDiatype',sans-serif; font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:#511C14; text-align:center; margin-top:5px; opacity:0.5; white-space:nowrap; }
+  .film-slide.on .film-cap { opacity:1; }
+  .film-acts { position:absolute; top:4px; right:4px; display:flex; gap:3px; opacity:0; transition:opacity .12s; }
+  .film-slide:hover .film-acts { opacity:1; }
+  .film-acts button { width:19px; height:19px; border:none; border-radius:2px; background:rgba(81,28,20,0.82); color:#F6E1C6; cursor:pointer; font-size:11px; line-height:1; display:flex; align-items:center; justify-content:center; padding:0; }
+  .film-acts button:hover:not(:disabled) { background:#511C14; }
+  .film-acts button:disabled { opacity:0.3; cursor:default; }
+  .film-add { flex:none; align-self:flex-start; width:46px; height:116px; border:1px dashed rgba(81,28,20,0.3); background:transparent; color:#511C14; font-size:24px; cursor:pointer; transition:all .12s; }
+  .film-add:hover { background:rgba(81,28,20,0.05); border-color:#511C14; }
   .export-btn:disabled { opacity: 0.4; cursor: wait; }
   #audiogram-transport { display: flex; align-items: center; gap: 10px; width: min(520px,92vw); color: #511C14; font: 12px/1.3 var(--font-serif); }
   #audiogram-transport:empty { display: none; }
-  .atbtn { background: rgba(81,28,20,0.07); color: #511C14; border: 1px solid rgba(81,28,20,0.18); padding: 7px 13px; cursor: pointer; font: 16px var(--font-serif); white-space: nowrap; transition: border-color 0.12s; }
+  .atbtn { background: rgba(81,28,20,0.07); color: #511C14; border: 1px solid rgba(81,28,20,0.18); padding: 7px 13px; cursor: pointer; font: 13px var(--font-serif); white-space: nowrap; transition: border-color 0.12s; }
   .atbtn:hover { border-color: rgba(81,28,20,0.45); background: rgba(81,28,20,0.12); }
-  .sway-label { font-size: 13px; letter-spacing: 0.165em; text-transform: uppercase; color: #511C14; width: 100%; margin-bottom: 2px; }
+  .sway-label { font-size: 11px; letter-spacing: 0.165em; text-transform: uppercase; color: #511C14; width: 100%; margin-bottom: 2px; }
   @font-face { font-family: 'ABCDiatype'; src: url('../../uploads/ABCDiatype-Regular-Trial.otf') format('opentype'); font-weight: 400; font-style: normal; }
   @font-face { font-family: 'ABCDiatype'; src: url('../../uploads/ABCDiatype-Medium-Trial.otf') format('opentype'); font-weight: 500; font-style: normal; }
   .sect h4, .titem, .seg button, .txlabel, .txfield, .uploadbtn, .nonebtn, .export-btn,
@@ -78,9 +108,27 @@
 </style>
 </head>
 <body>
+<!-- Thumb preload for bundler inlining — bundler converts src to base64 data URIs -->
+<div id="__thumb-preload" style="display:none" aria-hidden="true">
+  <img id="__tlogo"  src="../../assets/logos/logo-horizontal-oak.svg">
+  <img id="__t1"  src="../../assets/imagery/thumb-illus-ep1.jpg">
+  <img id="__t2"  src="../../assets/imagery/thumb-illus-ep2.jpg">
+  <img id="__t3"  src="../../assets/imagery/thumb-illus-ep3.jpg">
+  <img id="__t4"  src="../../assets/imagery/thumb-illus-ep4.jpg">
+  <img id="__t5"  src="../../assets/imagery/thumb-illus-ep5.jpg">
+  <img id="__t6"  src="../../assets/imagery/thumb-illus-ep6.jpg">
+  <img id="__t7"  src="../../assets/imagery/thumb-illus-ep7.jpg">
+  <img id="__t8"  src="../../assets/imagery/thumb-illus-ep8.jpg">
+  <img id="__t9"  src="../../assets/imagery/thumb-illus-ep9.jpg">
+  <img id="__t10" src="../../assets/imagery/thumb-illus-ep10.jpg">
+  <img id="__p-pattern-6a" src="../../assets/patterns/pattern-6a.png">
+  <img id="__p-pattern-6b" src="../../assets/patterns/pattern-6b.png">
+  <img id="__p-pattern-5c" src="../../assets/patterns/pattern-5c.png">
+  <img id="__p-pattern-2b" src="../../assets/patterns/pattern-2b.png">
+</div>
 <div class="app">
   <aside class="panel">
-    <div class="brand"><img src="../../assets/logos/logo-horizontal-oak.svg" alt="More Muslim"><a href="onboarding.html" style="margin-left:auto;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:rgba(81,28,20,.5);text-decoration:none;border:1px solid rgba(81,28,20,.18);padding:4px 9px;letter-spacing:.1em;font-size:10px;font-family:'ABCDiatype',sans-serif;transition:all .15s" onmouseover="this.style.color='#511C14';this.style.borderColor='rgba(81,28,20,.5)'" onmouseout="this.style.color='rgba(81,28,20,.5)';this.style.borderColor='rgba(81,28,20,.18)'">+ New episode</a></div>
+    <div class="brand"><img id="__brand-logo" src="../../assets/logos/logo-horizontal-oak.svg" alt="More Muslim"><script>document.addEventListener("DOMContentLoaded",()=>{document.getElementById("__brand-logo").src=_LOGO();});</script><a href="onboarding.html" style="margin-left:auto;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:rgba(81,28,20,.5);text-decoration:none;border:1px solid rgba(81,28,20,.18);padding:4px 9px;letter-spacing:.1em;font-size:10px;font-family:'ABCDiatype',sans-serif;transition:all .15s" onmouseover="this.style.color='#511C14';this.style.borderColor='rgba(81,28,20,.5)'" onmouseout="this.style.color='rgba(81,28,20,.5)';this.style.borderColor='rgba(81,28,20,.18)'" onclick="return confirm('Start the guided setup wizard? Unsaved changes to the current post will be lost.')">✦ Setup wizard</a></div>
     <div class="sect">
       <h4>Template</h4>
       <div class="tlist" id="tlist"></div>
@@ -102,6 +150,7 @@
       <h4>Content</h4>
       <div id="textedit"></div>
     </div>
+    <div class="sect" id="cover-sect"></div>
     <div class="sect">
       <h4 id="carousel-label"></h4>
       <div id="carousel"></div>
@@ -115,6 +164,11 @@
       <div id="preview" class="frameshadow" style="position:relative"></div>
       <div id="audiogram-transport"></div>
       <div class="meta" id="metaline"></div>
+      <div id="drag-toolbar" style="display:flex;gap:8px;align-items:center;margin-top:4px;">
+        <button id="drag-toggle" onclick="toggleDrag()" style="padding:7px 14px;font-family:var(--font-serif);font-size:11px;letter-spacing:0.165em;text-transform:uppercase;background:rgba(81,28,20,0.07);border:1px solid rgba(81,28,20,0.18);color:#511C14;cursor:pointer;transition:all 0.15s;">✥ Drag elements</button>
+        <button onclick="resetDrag()" style="padding:7px 14px;font-family:var(--font-serif);font-size:11px;letter-spacing:0.165em;text-transform:uppercase;background:transparent;border:1px solid rgba(81,28,20,0.14);color:#511C14;cursor:pointer;opacity:0.6;transition:all 0.15s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6">↺ Reset</button>
+      </div>
+      <div id="filmstrip" class="filmstrip"></div>
     </div>
   </main>
 </div>
@@ -130,27 +184,61 @@
 <script type="text/babel">
 const S = window.MMSocial;
 
+// Symbol-logo URLs as literal strings here so the offline bundler inlines them (screens.jsx reads these)
+window.MM_SYMBOLS = {
+  beige: "data:image/svg+xml,%3C%3Fxml%20version%3D%221.0%22%3F%3E%3Csvg%20id%3D%22a%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%201800%201800%22%3E%3Cpolygon%20points%3D%22789.134%201168.935%20631.6%201168.935%20631.6%201011.401%20520.199%20900%20304.947%201115.252%20392.494%201202.799%20507.001%201088.279%20507.007%201293.527%20712.243%201293.533%20597.736%201408.041%20685.282%201495.587%20900.534%201280.335%20789.134%201168.935%22%20fill%3D%22%23f6e1c7%22%20stroke-width%3D%220%22%3E%3C%2Fpolygon%3E%3Cpolygon%20points%3D%221011.935%20631.065%201169.469%20631.065%201169.469%20788.6%201280.87%20900%201496.122%20684.748%201408.575%20597.201%201294.068%20711.721%201294.062%20506.473%201088.826%20506.467%201203.333%20391.959%201115.787%20304.413%20900.534%20519.665%201011.935%20631.065%22%20fill%3D%22%23f6e1c7%22%20stroke-width%3D%220%22%3E%3C%2Fpolygon%3E%3Cpolygon%20points%3D%22631.6%20788.6%20631.6%20631.065%20789.134%20631.065%20900.534%20519.665%20685.282%20304.413%20597.736%20391.959%20712.255%20506.467%20507.007%20506.473%20507.001%20711.708%20392.494%20597.201%20304.947%20684.748%20520.199%20900%20631.6%20788.6%22%20fill%3D%22%23f6e1c7%22%20stroke-width%3D%220%22%3E%3C%2Fpolygon%3E%3Cpolygon%20points%3D%221169.469%201011.401%201169.469%201168.935%201011.935%201168.935%20900.534%201280.335%201115.787%201495.587%201203.333%201408.041%201088.814%201293.533%201294.062%201293.527%201294.068%201088.292%201408.575%201202.799%201496.122%201115.252%201280.87%20900%201169.469%201011.401%22%20fill%3D%22%23f6e1c7%22%20stroke-width%3D%220%22%3E%3C%2Fpolygon%3E%3C%2Fsvg%3E",
+  oak: "data:image/svg+xml,%3C%3Fxml%20version%3D%221.0%22%3F%3E%3Csvg%20id%3D%22a%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%201800%201800%22%3E%3Cpolygon%20points%3D%22789.134%201168.935%20631.6%201168.935%20631.6%201011.401%20520.199%20900%20304.947%201115.252%20392.494%201202.799%20507.001%201088.279%20507.007%201293.527%20712.243%201293.533%20597.736%201408.041%20685.282%201495.587%20900.534%201280.335%20789.134%201168.935%22%20fill%3D%22%23511C13%22%20stroke-width%3D%220%22%3E%3C%2Fpolygon%3E%3Cpolygon%20points%3D%221011.935%20631.065%201169.469%20631.065%201169.469%20788.6%201280.87%20900%201496.122%20684.748%201408.575%20597.201%201294.068%20711.721%201294.062%20506.473%201088.826%20506.467%201203.333%20391.959%201115.787%20304.413%20900.534%20519.665%201011.935%20631.065%22%20fill%3D%22%23511C13%22%20stroke-width%3D%220%22%3E%3C%2Fpolygon%3E%3Cpolygon%20points%3D%22631.6%20788.6%20631.6%20631.065%20789.134%20631.065%20900.534%20519.665%20685.282%20304.413%20597.736%20391.959%20712.255%20506.467%20507.007%20506.473%20507.001%20711.708%20392.494%20597.201%20304.947%20684.748%20520.199%20900%20631.6%20788.6%22%20fill%3D%22%23511C13%22%20stroke-width%3D%220%22%3E%3C%2Fpolygon%3E%3Cpolygon%20points%3D%221169.469%201011.401%201169.469%201168.935%201011.935%201168.935%20900.534%201280.335%201115.787%201495.587%201203.333%201408.041%201088.814%201293.533%201294.062%201293.527%201294.068%201088.292%201408.575%201202.799%201496.122%201115.252%201280.87%20900%201169.469%201011.401%22%20fill%3D%22%23511C13%22%20stroke-width%3D%220%22%3E%3C%2Fpolygon%3E%3C%2Fsvg%3E",
+  night: "data:image/svg+xml,%3C%3Fxml%20version%3D%221.0%22%3F%3E%3Csvg%20id%3D%22a%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%201800%201800%22%3E%3Cpolygon%20points%3D%22789.134%201168.935%20631.6%201168.935%20631.6%201011.401%20520.199%20900%20304.947%201115.252%20392.494%201202.799%20507.001%201088.279%20507.007%201293.527%20712.243%201293.533%20597.736%201408.041%20685.282%201495.587%20900.534%201280.335%20789.134%201168.935%22%20fill%3D%22%23192136%22%20stroke-width%3D%220%22%3E%3C%2Fpolygon%3E%3Cpolygon%20points%3D%221011.935%20631.065%201169.469%20631.065%201169.469%20788.6%201280.87%20900%201496.122%20684.748%201408.575%20597.201%201294.068%20711.721%201294.062%20506.473%201088.826%20506.467%201203.333%20391.959%201115.787%20304.413%20900.534%20519.665%201011.935%20631.065%22%20fill%3D%22%23192136%22%20stroke-width%3D%220%22%3E%3C%2Fpolygon%3E%3Cpolygon%20points%3D%22631.6%20788.6%20631.6%20631.065%20789.134%20631.065%20900.534%20519.665%20685.282%20304.413%20597.736%20391.959%20712.255%20506.467%20507.007%20506.473%20507.001%20711.708%20392.494%20597.201%20304.947%20684.748%20520.199%20900%20631.6%20788.6%22%20fill%3D%22%23192136%22%20stroke-width%3D%220%22%3E%3C%2Fpolygon%3E%3Cpolygon%20points%3D%221169.469%201011.401%201169.469%201168.935%201011.935%201168.935%20900.534%201280.335%201115.787%201495.587%201203.333%201408.041%201088.814%201293.533%201294.062%201293.527%201294.068%201088.292%201408.575%201202.799%201496.122%201115.252%201280.87%20900%201169.469%201011.401%22%20fill%3D%22%23192136%22%20stroke-width%3D%220%22%3E%3C%2Fpolygon%3E%3C%2Fsvg%3E",
+  terracotta: "data:image/svg+xml,%3C%3Fxml%20version%3D%221.0%22%3F%3E%3Csvg%20id%3D%22a%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%201800%201800%22%3E%3Cpolygon%20points%3D%22789.134%201168.935%20631.6%201168.935%20631.6%201011.401%20520.199%20900%20304.947%201115.252%20392.494%201202.799%20507.001%201088.279%20507.007%201293.527%20712.243%201293.533%20597.736%201408.041%20685.282%201495.587%20900.534%201280.335%20789.134%201168.935%22%20fill%3D%22%23C15A3A%22%20stroke-width%3D%220%22%3E%3C%2Fpolygon%3E%3Cpolygon%20points%3D%221011.935%20631.065%201169.469%20631.065%201169.469%20788.6%201280.87%20900%201496.122%20684.748%201408.575%20597.201%201294.068%20711.721%201294.062%20506.473%201088.826%20506.467%201203.333%20391.959%201115.787%20304.413%20900.534%20519.665%201011.935%20631.065%22%20fill%3D%22%23C15A3A%22%20stroke-width%3D%220%22%3E%3C%2Fpolygon%3E%3Cpolygon%20points%3D%22631.6%20788.6%20631.6%20631.065%20789.134%20631.065%20900.534%20519.665%20685.282%20304.413%20597.736%20391.959%20712.255%20506.467%20507.007%20506.473%20507.001%20711.708%20392.494%20597.201%20304.947%20684.748%20520.199%20900%20631.6%20788.6%22%20fill%3D%22%23C15A3A%22%20stroke-width%3D%220%22%3E%3C%2Fpolygon%3E%3Cpolygon%20points%3D%221169.469%201011.401%201169.469%201168.935%201011.935%201168.935%20900.534%201280.335%201115.787%201495.587%201203.333%201408.041%201088.814%201293.533%201294.062%201293.527%201294.068%201088.292%201408.575%201202.799%201496.122%201115.252%201280.87%20900%201169.469%201011.401%22%20fill%3D%22%23C15A3A%22%20stroke-width%3D%220%22%3E%3C%2Fpolygon%3E%3C%2Fsvg%3E",
+  black: "data:image/svg+xml,%3C%3Fxml%20version%3D%221.0%22%3F%3E%3Csvg%20id%3D%22a%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%201800%201800%22%3E%3Cpolygon%20points%3D%22789.134%201168.935%20631.6%201168.935%20631.6%201011.401%20520.199%20900%20304.947%201115.252%20392.494%201202.799%20507.001%201088.279%20507.007%201293.527%20712.243%201293.533%20597.736%201408.041%20685.282%201495.587%20900.534%201280.335%20789.134%201168.935%22%20fill%3D%22%23000000%22%20stroke-width%3D%220%22%3E%3C%2Fpolygon%3E%3Cpolygon%20points%3D%221011.935%20631.065%201169.469%20631.065%201169.469%20788.6%201280.87%20900%201496.122%20684.748%201408.575%20597.201%201294.068%20711.721%201294.062%20506.473%201088.826%20506.467%201203.333%20391.959%201115.787%20304.413%20900.534%20519.665%201011.935%20631.065%22%20fill%3D%22%23000000%22%20stroke-width%3D%220%22%3E%3C%2Fpolygon%3E%3Cpolygon%20points%3D%22631.6%20788.6%20631.6%20631.065%20789.134%20631.065%20900.534%20519.665%20685.282%20304.413%20597.736%20391.959%20712.255%20506.467%20507.007%20506.473%20507.001%20711.708%20392.494%20597.201%20304.947%20684.748%20520.199%20900%20631.6%20788.6%22%20fill%3D%22%23000000%22%20stroke-width%3D%220%22%3E%3C%2Fpolygon%3E%3Cpolygon%20points%3D%221169.469%201011.401%201169.469%201168.935%201011.935%201168.935%20900.534%201280.335%201115.787%201495.587%201203.333%201408.041%201088.814%201293.533%201294.062%201293.527%201294.068%201088.292%201408.575%201202.799%201496.122%201115.252%201280.87%20900%201169.469%201011.401%22%20fill%3D%22%23000000%22%20stroke-width%3D%220%22%3E%3C%2Fpolygon%3E%3C%2Fsvg%3E",
+};
+
+const ASSET_BASE = (() => {
+  const segs = window.location.pathname.split('/').filter(Boolean);
+  return segs.some(s=>s==='ui_kits') ? '../../' : '../';
+})();
+// Use bundler-inlined srcs when available (the hidden img tags get base64-inlined by super_inline_html)
+const _T = (n) => { const el=document.getElementById('__t'+n); return (el&&el.src&&!el.src.startsWith('http'))?el.src:(ASSET_BASE+'assets/imagery/thumb-illus-ep'+n+'.jpg'); };
+const _LOGO = () => { const el=document.getElementById('__tlogo'); return (el&&el.src&&!el.src.startsWith('http'))?el.src:(ASSET_BASE+'assets/logos/logo-horizontal-oak.svg'); };
+const _P = (name) => { const el=document.getElementById('__p-'+name.replace('.png','').replace('.jpg','')); return (el&&el.src&&!el.src.startsWith('http'))?el.src:(ASSET_BASE+'assets/patterns/'+name); };
 const IMAGES = [
-  { src: "../../assets/imagery/illus-ep1.jpg", label: "E1 Side Entrances" },
-  { src: "../../assets/imagery/illus-ep2.jpg", label: "E2 Nikkah Loophole" },
-  { src: "../../assets/imagery/illus-ep3.jpg", label: "E3 Secret Translators" },
-  { src: "../../assets/imagery/illus-ep4.jpg", label: "E4 Recitation Revolution" },
-  { src: "../../assets/imagery/illus-ep5.jpg", label: "E5 Hanabneehu" },
-  { src: "../../assets/imagery/illus-ep6.jpg", label: "E6 Cape Malay" },
-  { src: "../../assets/imagery/illus-ep7.jpg", label: "E7 SheikhaGPT" },
-  { src: "../../assets/imagery/illus-ep8.jpg", label: "E8 Travelling Sisterhood" },
-  { src: "../../assets/imagery/illus-ep9.jpg", label: "E9 Burials" },
+  { src: ASSET_BASE+"assets/imagery/illus-ep1.jpg",  thumb: _T(1),  label: "E1 Side Entrances" },
+  { src: ASSET_BASE+"assets/imagery/illus-ep2.jpg",  thumb: _T(2),  label: "E2 Nikkah Loophole" },
+  { src: ASSET_BASE+"assets/imagery/illus-ep3.jpg",  thumb: _T(3),  label: "E3 Secret Translators" },
+  { src: ASSET_BASE+"assets/imagery/illus-ep4.jpg",  thumb: _T(4),  label: "E4 Recitation Revolution" },
+  { src: ASSET_BASE+"assets/imagery/illus-ep5.jpg",  thumb: _T(5),  label: "E5 Hanabneehu" },
+  { src: ASSET_BASE+"assets/imagery/illus-ep6.jpg",  thumb: _T(6),  label: "E6 Cape Malay" },
+  { src: ASSET_BASE+"assets/imagery/illus-ep7.jpg",  thumb: _T(7),  label: "E7 SheikhaGPT" },
+  { src: ASSET_BASE+"assets/imagery/illus-ep8.jpg",  thumb: _T(8),  label: "E8 Travelling Sisterhood" },
+  { src: ASSET_BASE+"assets/imagery/illus-ep9.jpg",  thumb: _T(9),  label: "E9 Burials" },
+  { src: ASSET_BASE+"assets/imagery/illus-ep10.jpg", thumb: _T(10), label: "E10 Washing the Dead" },
+];
+
+const AUDIOGRAM_PATTERN_WAYS = [
+  { key:'beige', name:'Ivory Beige', bg:'#FBF2E9', ink:'#511C14', pat:'pattern-6a.png' },
+  { key:'oak',   name:'Oak Brown',   bg:'#511C14', ink:'#F6E1C6', pat:'pattern-6b.png' },
+  { key:'night', name:'Night Blue',  bg:'#192136', ink:'#F6E1C6', pat:'pattern-5c.png' },
+  { key:'mist',  name:'Mist Blue',   bg:'#9FBCCC', ink:'#192136', pat:'pattern-2b.png' },
+  { key:'black', name:'Black',       bg:'#000000', ink:'#F6E1C6', pat:null },
 ];
 
 const AUDIOGRAM_BG_IMGS = [
-  { key:'cover',   name:'SheikhAGPT', src:'../../assets/imagery/cover-sheikhagpt.jpg' },
-  { key:'therapy', name:'Therapy',    src:'../../assets/imagery/illus-therapy.jpg' },
+  { key:'ep1', name:'E1 Side Entrances',        src:_T(1) },
+  { key:'ep2', name:'E2 Nikkah Loophole',       src:_T(2) },
+  { key:'ep3', name:'E3 Secret Translators',    src:_T(3) },
+  { key:'ep4', name:'E4 Recitation Revolution', src:_T(4) },
+  { key:'ep5', name:'E5 Hanabneehu',            src:_T(5) },
+  { key:'ep6', name:'E6 Cape Malay',            src:_T(6) },
+  { key:'ep7', name:'E7 SheikhaGPT',            src:_T(7) },
+  { key:'ep8', name:'E8 Travelling Sisterhood', src:_T(8) },
+  { key:'ep9', name:'E9 Burials',               src:_T(9) },
+  { key:'ep10', name:'E10 Washing the Dead',    src:_T(10) },
 ];
 
 const AUDIOGRAM_SRT = `1\n00:00:00,000 --> 00:00:03,000\nHost Name: Paste your SRT captions here.\n\n2\n00:00:03,000 --> 00:00:06,000\nGuest Name: Each block becomes a timed caption.`;
 
 const DEFAULTS = {
-  cover:     { presents:"More Muslim presents", title:"Side Entrances", episode:"S1 E7" },
+  cover:     { presents:"More Muslim presents", title:"Side Entrances", episode:"S1 E1" },
   quote:     { episode:"Episode 7: In Therapy, with SheikhAGPT",
                s1:"Yassmin", t1:"Do you remember the first time you heard about people using chatbots as therapists?",
                s2:"Dr. Rania", t2:"Yeah, it was a patient of mine. And she said, \u2018In between our sessions\u2026 I talked to a chatbot.\u2019" },
@@ -161,7 +249,7 @@ const DEFAULTS = {
                l1:"Listen to the full episode on moremuslim.org.",
                l2:"Or search \u201CMore Muslim\u201D on Apple Podcasts, Spotify, or wherever you get podcasts." },
   credits:   { episode:"S1 E7",
-               body:"<b>Yassmin Abdel-Magied</b> Reporter<br><b>Taqwa Sadiq</b> Producer<br><b>Sarah Qari</b> Story Editor<br><b>Alexander Overington</b> Composer &amp; Mix Engineer<br><b>Amel Mukhtar</b> Executive Producer" },
+               credits:[{name:"Rowaida Abdelaziz",title:"Reporter"},{name:"Heba Afify",title:"Producer"},{name:"Salman Ahad Khan",title:"Story Editor, Sound Designer, and Composer"},{name:"Heba Elorbarny",title:"Fact Checker"},{name:"Joe Flourde",title:"Mix Engineer"},{name:"Lina Jaradat",title:"Illustrator"},{name:"Sohaira Siddiqui",title:"Host"}] },
   audiogram: {
     guestWay:       "oak",
     episodeEyebrow: "IN THERAPY, WITH SHEIKHAGPT",
@@ -191,7 +279,7 @@ const FIELDS = {
   quote:     [{id:'episode',label:'Episode',type:'input'},{id:'s1',label:'Speaker 1',type:'input'},{id:'t1',label:'Quote 1',type:'textarea',rows:3,richtext:true},{id:'s2',label:'Speaker 2',type:'input'},{id:'t2',label:'Quote 2',type:'textarea',rows:3,richtext:true}],
   synopsis:  [{id:'episode',label:'Episode',type:'input'},{id:'p1',label:'Paragraph 1',type:'textarea',rows:4,richtext:true},{id:'p2',label:'Paragraph 2',type:'textarea',rows:4,richtext:true}],
   streaming: [{id:'episode',label:'Episode',type:'input'},{id:'l1',label:'Line 1',type:'textarea',rows:2,richtext:true},{id:'l2',label:'Line 2',type:'textarea',rows:2,richtext:true}],
-  credits:   [{id:'episode',label:'Episode',type:'input'},{id:'body',label:'Credits',type:'textarea',rows:8,richtext:true}],
+  credits:   [{id:'episode',label:'Episode',type:'input'},{id:'credits',label:'Credits',type:'credits'}],
   audiogram: [
     {id:'episodeEyebrow', label:'Episode Eyebrow',  type:'input'},
     {id:'coverTitle',     label:'Cover Title',       type:'input'},
@@ -206,30 +294,106 @@ const FIELDS = {
 // Read onboarding prefill (if any)
 const _pf = (() => { try { const s=localStorage.getItem('mm-studio-prefill'); if(s){localStorage.removeItem('mm-studio-prefill');return JSON.parse(s);} } catch {} return null; })();
 
+// Episode data for the "new episode carousel" scaffold
+const EPISODES = [
+  { e:1, title:'Side Entrances',              img:ASSET_BASE+'assets/imagery/illus-ep1.jpg' },
+  { e:2, title:'The Nikkah Loophole',         img:ASSET_BASE+'assets/imagery/illus-ep2.jpg' },
+  { e:3, title:'The Secret Translators',      img:ASSET_BASE+'assets/imagery/illus-ep3.jpg' },
+  { e:4, title:'A Recitation Revolution',     img:ASSET_BASE+'assets/imagery/illus-ep4.jpg' },
+  { e:5, title:'Hanabneehu',                  img:ASSET_BASE+'assets/imagery/illus-ep5.jpg' },
+  { e:6, title:'Cape Malay',                  img:ASSET_BASE+'assets/imagery/illus-ep6.jpg' },
+  { e:7, title:'In Therapy, With SheikhaGPT', img:ASSET_BASE+'assets/imagery/illus-ep7.jpg' },
+  { e:8, title:'The Travelling Sisterhood',   img:ASSET_BASE+'assets/imagery/illus-ep8.jpg' },
+  { e:9, title:'A More Muslim Japan',         img:ASSET_BASE+'assets/imagery/illus-ep9.jpg' },
+  { e:10, title:'The Women Who Wash Our Dead', img:ASSET_BASE+'assets/imagery/illus-ep10.jpg' },
+];
+const THUMB = Object.fromEntries(IMAGES.map(i=>[i.src,i.thumb]));
+const thumbOf = (src)=> src ? (THUMB[src]||src) : null;
+// In live studio (../../), use 1600px bg images for crisp preview; in bundle, use inlined thumbs
+const prevOf = (src) => {
+  if (!src) return null;
+  const n = (src.match(/illus-ep(\d+)/)||[])[1];
+  if (!n) return src;
+  if (ASSET_BASE === '../../') return ASSET_BASE+'assets/imagery/bg-illus-ep'+n+'.jpg';
+  const t = document.getElementById('__t'+n);
+  return (t && t.src && !t.src.startsWith('http')) ? t.src : thumbOf(src);
+};
+
+let _slideSeq = 0;
+function makeSlide(o={}) {
+  return Object.assign({
+    id:'sl'+Date.now()+'_'+(_slideSeq++),
+    tpl:'cover', way:'night', format:'portrait',
+    image:ASSET_BASE+'assets/imagery/illus-ep1.jpg', cropX:50, cropY:50, cropZoom:1, imgOpacity:1, pattern:true,
+    content: JSON.parse(JSON.stringify(DEFAULTS)),
+  }, o);
+}
+// Standard new-episode carousel: cover → synopsis → synopsis → credits → now streaming (all 4:5)
+function buildEpisodeCarousel(ep) {
+  const n = ep.e;
+  const mk = (tpl, way, image, patch) => {
+    const content = JSON.parse(JSON.stringify(DEFAULTS));
+    Object.assign(content[tpl], patch);
+    return makeSlide({ tpl, way, format:'portrait', image, content });
+  };
+  return [
+    mk('cover',     'night', ep.img, { presents:'More Muslim presents', title: ep.title, episode:'S1 \u00b7 E'+n }),
+    mk('synopsis',  'beige', null,   { episode: ep.title, p1:'', p2:'' }),
+    mk('synopsis',  'beige', null,   { episode: ep.title, p1:'', p2:'' }),
+    mk('credits',   'oak',   null,   { episode:'S1 \u00b7 E'+n }),
+    mk('streaming', 'night', null,   { episode:'Episode '+n }),
+  ];
+}
+
 function fmt(s) { s=Math.max(0,Math.floor(s||0)); return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; }
 
-function renderTemplate(tpl, way, format, scale, image, cropX, cropY, cropZoom, c) {
-  const common = { scale, way, format, image, cropX, cropY, cropZoom };
+function renderTemplate(tpl, way, format, scale, image, cropX, cropY, cropZoom, c, imgOpacity, pattern=true) {
+  const common = { scale, way, format, image, cropX, cropY, cropZoom, imgOpacity, pattern };
   switch(tpl) {
     case 'cover':     return <S.CoverPost {...common} presents={c.presents} title={c.title} episode={c.episode} />;
     case 'quote':     return <S.QuotePost {...common} episode={c.episode} exchanges={[{speaker:c.s1,text:c.t1},{speaker:c.s2,text:c.t2}]} />;
     case 'synopsis':  return <S.SynopsisPost {...common} episode={c.episode} paragraphs={[c.p1,c.p2].filter(Boolean)} />;
     case 'streaming': return <S.NowStreamingPost {...common} episode={c.episode} lines={[c.l1,c.l2]} />;
-    case 'credits':   return <S.CreditsPost {...common} episode={c.episode} body={c.body} />;
+    case 'credits': return <S.CreditsPost {...common} episode={c.episode} credits={c.credits||[]} />;
     default:          return null;
   }
 }
 
+// One thumbnail in the carousel filmstrip — memoized so only the edited slide re-renders
+const FilmSlide = React.memo(function FilmSlide({ slide, index, isActive, canDel, onSelect, onDup, onDel, onDragStart, onDrop }) {
+  const sz = S.SIZES[slide.format];
+  const H = 116, fScale = H / sz.h, W = sz.w * fScale;
+  const cFields = slide.content[slide.tpl] || slide.content;
+  return (
+    <div className={"film-slide"+(isActive?" on":"")} title={TEMPLATES[slide.tpl].label}
+      draggable onClick={()=>onSelect(index)}
+      onDragStart={()=>onDragStart(index)} onDragOver={e=>{e.preventDefault();}} onDrop={()=>onDrop(index)}>
+      <div className="film-thumb" style={{width:W,height:H}}>
+        <div style={{width:sz.w,height:sz.h,transform:`scale(${fScale})`,transformOrigin:'top left',pointerEvents:'none'}}>
+          {slide.tpl==='audiogram'
+            ? <div style={{width:sz.w,height:sz.h,background:'#192136',display:'flex',alignItems:'center',justifyContent:'center',color:'#F6E1C6',fontSize:160}}>▶</div>
+            : renderTemplate(slide.tpl, slide.way, slide.format, 1, thumbOf(slide.image), slide.cropX, slide.cropY, slide.cropZoom, cFields, slide.imgOpacity, slide.pattern)}
+        </div>
+      </div>
+      <div className="film-cap">{index+1} · {TEMPLATES[slide.tpl].label}</div>
+      <div className="film-acts">
+        <button title="Duplicate" onClick={e=>{e.stopPropagation();onDup(index);}}>⧉</button>
+        <button title="Delete" disabled={!canDel} onClick={e=>{e.stopPropagation();onDel(index);}}>×</button>
+      </div>
+    </div>
+  );
+});
+
 function RichTextarea({ id, value, onChange, rows }) {
   const ref = React.useRef();
-  React.useEffect(() => { if (ref.current) ref.current.innerHTML = value || ''; }, []);
+  React.useEffect(() => { if (ref.current && document.activeElement !== ref.current) ref.current.innerHTML = value || ''; }, [value]);
   const emit = () => onChange(ref.current.innerHTML);
   const execCmd = (cmd) => { ref.current.focus(); document.execCommand(cmd, false, null); emit(); };
   return (
     <div className="richtextarea">
       <div className="rttoolbar">
-        <button type="button" className="rtbtn" onMouseDown={e=>{e.preventDefault();execCmd('bold');}}><b>B</b></button>
-        <button type="button" className="rtbtn" onMouseDown={e=>{e.preventDefault();execCmd('italic');}}><i>I</i></button>
+        <button type="button" className="rtbtn" onMouseDown={e=>{e.preventDefault();document.execCommand('bold',false,null);emit()}}><b>B</b></button>
+        <button type="button" className="rtbtn" onMouseDown={e=>{e.preventDefault();document.execCommand('italic',false,null);emit()}}><i>I</i></button>
       </div>
       <div ref={ref} id={id} className="txfield rtfield" contentEditable suppressContentEditableWarning onInput={emit} style={{minHeight:`${(rows||2)*1.5}em`}} />
     </div>
@@ -244,12 +408,13 @@ async function exportCarouselFrames(carousel) {
   for (let idx = 0; idx < carousel.length; idx++) {
     const item = carousel[idx];
     const sz = S.SIZES[item.format];
+    const cFields = item.content[item.tpl] || item.content;
     const wrapper = document.createElement('div');
     wrapper.style.cssText = `width:${sz.w}px;height:${sz.h}px;overflow:hidden;flex:none;`;
     container.appendChild(wrapper);
     const root = ReactDOM.createRoot(wrapper);
     await new Promise(resolve => {
-      root.render(renderTemplate(item.tpl, item.way, item.format, 1, item.image, item.cropX, item.cropY, item.cropZoom, item.content));
+      root.render(renderTemplate(item.tpl, item.way, item.format, 1, item.image, item.cropX, item.cropY, item.cropZoom, cFields, item.imgOpacity||1, item.pattern));
       setTimeout(resolve, 1400);
     });
     const canvas = await html2canvas(wrapper, { width:sz.w, height:sz.h, scale:1, useCORS:true, allowTaint:true, logging:false });
@@ -263,42 +428,74 @@ async function exportCarouselFrames(carousel) {
 }
 
 function App() {
-  const [tpl, setTpl]         = React.useState(_pf?.tpl    || "cover");
-  const [way, setWay]         = React.useState(_pf?.way    || "night");
-  const [format, setFormat]   = React.useState(_pf?.format || "portrait");
-  const [image, setImage]     = React.useState(_pf?.image  || null);
-  const [cropX, setCropX]     = React.useState(50);
-  const [cropY, setCropY]     = React.useState(50);
-  const [cropZoom, setCropZoom] = React.useState(1);
+  // ── Carousel = ordered array of slides; the editor edits the active slide ──
+  const [slides, setSlides] = React.useState(() => {
+    try { const sv=localStorage.getItem('mm-studio-save'); if(sv){const p=JSON.parse(sv); if(Array.isArray(p)&&p.length) return p.map(s=>makeSlide({...s,content:{...JSON.parse(JSON.stringify(DEFAULTS)),...(s.content||{})}}));} } catch{}
+    if (_pf && Array.isArray(_pf.slides) && _pf.slides.length) {
+      return _pf.slides.map(s => makeSlide({ ...s, content: {...JSON.parse(JSON.stringify(DEFAULTS)), ...(s.content||{})} }));
+    }
+    return [ makeSlide({
+      tpl: _pf?.tpl || "cover",
+      way: _pf?.way || "night",
+      format: _pf?.format || "portrait",
+      image: _pf?.image !== undefined ? _pf.image : ASSET_BASE+'assets/imagery/illus-ep1.jpg',
+      content: _pf?.content ? {...JSON.parse(JSON.stringify(DEFAULTS)), ..._pf.content} : JSON.parse(JSON.stringify(DEFAULTS)),
+    }) ];
+  });
+  const [activeIdx, setActiveIdx] = React.useState(0);
+  const active = slides[activeIdx] || slides[0];
+  const { tpl, way, format, image, cropX, cropY, cropZoom, imgOpacity, pattern, content } = active;
+
+  const patchActive = (patch) => setSlides(s => s.map((sl,i)=> i===activeIdx ? {...sl, ...patch} : sl));
+  const setTpl=(v)=>patchActive({tpl:v}); const setWay=(v)=>patchActive({way:v});
+  const setFormat=(v)=>patchActive({format:v}); const setImage=(v)=>patchActive({image:v});
+  const setCropX=(v)=>patchActive({cropX:v}); const setCropY=(v)=>patchActive({cropY:v});
+  const setCropZoom=(v)=>patchActive({cropZoom:v}); const setImgOpacity=(v)=>patchActive({imgOpacity:v});
+  const setPattern=(v)=>patchActive({pattern:v});
+  const setContent=(u)=>setSlides(s=>s.map((sl,i)=> i===activeIdx ? {...sl, content: typeof u==='function'?u(sl.content):u} : sl));
+
   const [isDragging, setIsDragging] = React.useState(false);
-  const [content, setContent] = React.useState(_pf?.content ? {...DEFAULTS, ..._pf.content} : DEFAULTS);
   const [customImage, setCustomImage] = React.useState(null);
   const dragRef    = React.useRef(null);
   const fileRef    = React.useRef();
-  const [carousel, setCarousel]   = React.useState([]);
+  const filmDragRef = React.useRef(null);
   const [exporting, setExporting] = React.useState(false);
+  const [scaffoldEp, setScaffoldEp] = React.useState(7);
+
+  // Keep activeIdx in range after deletions
+  React.useEffect(()=>{ if (activeIdx > slides.length-1) setActiveIdx(Math.max(0, slides.length-1)); }, [slides.length, activeIdx]);
 
   // Audiogram
   const [audioSrc, setAudioSrc]       = React.useState(null);
   const [audioT, setAudioT]           = React.useState(0);
   const [audioDur, setAudioDur]       = React.useState(0);
   const [audioPlaying, setAudioPlaying] = React.useState(false);
-  const iframeRef    = React.useRef();
-  const audioFileRef = React.useRef();
-  const srtFileRef = React.useRef();
+  const iframeRef     = React.useRef();
+  const audioFileRef  = React.useRef();
+  const srtFileRef    = React.useRef();
+  const srtUpload2Ref = React.useRef();
+  const coverImgRef   = React.useRef();
+  const [coverMode,      setCoverMode]      = React.useState('default');
+  const [coverLayoutKey, setCoverLayoutKey] = React.useState('cover');
+  const [coverImage,     setCoverImage]     = React.useState(null);
+  const [capturingCover, setCapturingCover] = React.useState(false);
 
-  const addToCarousel    = () => setCarousel(prev => [...prev, { id:Date.now(), tpl, way, format, content:{...content[tpl]}, image, cropX, cropY, cropZoom }]);
-  const removeCarouselItem = (id) => setCarousel(prev => prev.filter(x => x.id !== id));
-  const moveCarouselItem   = (id, dir) => setCarousel(prev => {
-    const i=prev.findIndex(x=>x.id===id), j=i+dir;
-    if (i<0||j<0||j>=prev.length) return prev;
-    const next=[...prev]; [next[i],next[j]]=[next[j],next[i]]; return next;
-  });
-  const doExport = async () => { setExporting(true); try { await exportCarouselFrames(carousel); } finally { setExporting(false); } };
+  const doExport = async () => { setExporting(true); try { await exportCarouselFrames(slides); } finally { setExporting(false); } };
+  const [savedLabel, setSavedLabel] = React.useState('Save');
+  const saveSession = React.useCallback(() => { try { const sv=slides.map(sl=>({...sl,image:sl.image?.startsWith('blob:')?null:sl.image})); localStorage.setItem('mm-studio-save',JSON.stringify(sv)); setSavedLabel('Saved ✓'); setTimeout(()=>setSavedLabel('Save'),2000); } catch(e){console.warn('Save failed',e);} }, [slides]);
 
-  const pick      = (k) => { setTpl(k); setWay(TEMPLATES[k].way); setFormat(TEMPLATES[k].format); };
-  const pickImage = (src) => { setImage(src); setCropX(50); setCropY(50); setCropZoom(1); };
-  const upd       = (field, val) => setContent(s => ({...s, [tpl]:{...s[tpl],[field]:val}}));
+  const pick      = (k) => patchActive({ tpl:k, way:TEMPLATES[k].way, format:TEMPLATES[k].format });
+  const pickImage = (src) => patchActive({ image:src, cropX:50, cropY:50, cropZoom:1 });
+  const upd       = (field, val) => setSlides(s => s.map((sl,i)=> i===activeIdx ? {...sl, content:{...sl.content, [sl.tpl]:{...sl.content[sl.tpl], [field]:val}}} : sl));
+
+  // ── Slide operations (stable refs so FilmSlide thumbnails stay memoized) ──
+  const selectSlide   = React.useCallback((i)=> setActiveIdx(i), []);
+  const duplicateSlide= React.useCallback((i)=> setSlides(s=>{ const copy={...JSON.parse(JSON.stringify(s[i])), id:'sl'+Date.now()+'_'+(_slideSeq++)}; const next=[...s]; next.splice(i+1,0,copy); return next; }), []);
+  const deleteSlide   = React.useCallback((i)=>{ setSlides(s=> s.length<=1 ? s : s.filter((_,j)=>j!==i)); setActiveIdx(ai=> i<ai?ai-1:ai); }, []);
+  const filmDragStart = React.useCallback((i)=>{ filmDragRef.current=i; }, []);
+  const filmDrop      = React.useCallback((to)=>{ const from=filmDragRef.current; filmDragRef.current=null; if(from==null||from===to)return; setSlides(s=>{ const next=[...s]; const [m]=next.splice(from,1); next.splice(to,0,m); return next; }); setActiveIdx(ai=> from===ai?to : (from<ai&&to>=ai?ai-1 : (from>ai&&to<=ai?ai+1:ai))); }, []);
+  const addSlideAfter = () => { setSlides(s=>{ const sl=makeSlide({tpl:'synopsis', way:'beige', format:'portrait'}); const next=[...s]; next.splice(activeIdx+1,0,sl); return next; }); setActiveIdx(activeIdx+1); };
+  const newEpisodeCarousel = (epNum) => { if (!confirm('Replace your current slides with a fresh episode carousel? This clears the current post.')) return; const ep=EPISODES.find(e=>e.e===epNum)||EPISODES[6]; setSlides(buildEpisodeCarousel(ep)); setActiveIdx(0); };
 
   const handleUpload = (e) => {
     const file=e.target.files[0]; if (!file) return;
@@ -314,24 +511,76 @@ function App() {
     upd('srt', text);
   };
 
+  const handleCoverImgUpload = (e) => {
+    const file=e.target.files[0]; if (!file) return;
+    setCoverImage(URL.createObjectURL(file));
+    setCoverMode('upload');
+  };
+
+  const captureCoverFromLayout = async () => {
+    setCapturingCover(true);
+    try {
+      const sz = S.SIZES['story'];
+      const container = document.createElement('div');
+      container.style.cssText = 'position:fixed;left:-9999px;top:0;z-index:-1;pointer-events:none;';
+      document.body.appendChild(container);
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = `width:${sz.w}px;height:${sz.h}px;overflow:hidden;flex:none;`;
+      container.appendChild(wrapper);
+      const root2 = ReactDOM.createRoot(wrapper);
+      const cd = content[coverLayoutKey] || content.cover;
+      await new Promise(resolve => {
+        root2.render(renderTemplate(coverLayoutKey, way, 'story', 1, image, cropX, cropY, cropZoom, cd));
+        setTimeout(resolve, 1400);
+      });
+      const canvas = await html2canvas(wrapper, { width:sz.w, height:sz.h, scale:1, useCORS:true, allowTaint:true, logging:false });
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+      setCoverImage(URL.createObjectURL(blob));
+      setCoverMode('upload');
+      root2.unmount();
+      document.body.removeChild(container);
+    } finally { setCapturingCover(false); }
+  };
+
   const audiogramCmd = React.useCallback((type, extra={}) => {
     iframeRef.current?.contentWindow?.postMessage({type,...extra},'*');
+  }, []);
+
+  // Pick up audio file passed from onboarding via IndexedDB
+  React.useEffect(() => {
+    try {
+      const req = indexedDB.open('mm-studio', 1);
+      req.onupgradeneeded = e => e.target.result.createObjectStore('files');
+      req.onsuccess = e => {
+        const db = e.target.result;
+        const tx = db.transaction('files', 'readonly');
+        const getReq = tx.objectStore('files').get('pending-audio');
+        getReq.onsuccess = () => {
+          if (!getReq.result) return;
+          setAudioSrc(URL.createObjectURL(getReq.result));
+          // Clear after reading so it doesn't persist
+          const tx2 = db.transaction('files', 'readwrite');
+          tx2.objectStore('files').delete('pending-audio');
+        };
+      };
+    } catch(err) { console.warn('IndexedDB audio load failed:', err); }
   }, []);
 
   // Keep iframe in sync with config
   React.useEffect(() => {
     if (tpl !== 'audiogram') return;
     const ac = content.audiogram || {};
+    const coverImg = coverMode==='upload' ? coverImage : undefined;
     const msg = {
       type:'audiogram-config', hostWay:way, guestWay:ac.guestWay||'oak',
       episodeEyebrow:ac.episodeEyebrow, outroEpisode:ac.outroEpisode,
       outroLine1:ac.outroLine1, outroLine2:ac.outroLine2,
       coverTitle:ac.coverTitle, coverEpisode:ac.coverEpisode,
-      srt:ac.srt, audioSrc,
+      srt:ac.srt, audioSrc, coverImage:coverImg, imgOpacity, solidBg:!!ac.solidBg,
     };
-    try { localStorage.setItem('mm-audiogram-cfg', JSON.stringify(msg)); } catch {}
+    try { const {coverImage:_ci,...storable}=msg; localStorage.setItem('mm-audiogram-cfg', JSON.stringify(storable)); } catch {}
     iframeRef.current?.contentWindow?.postMessage(msg, '*');
-  }, [tpl, way, content.audiogram, audioSrc]);
+  }, [tpl, way, content.audiogram, audioSrc, coverMode, coverImage, imgOpacity]);
 
   // Listen for time updates from iframe
   React.useEffect(() => {
@@ -344,7 +593,7 @@ function App() {
   }, []);
 
   const size     = S.SIZES[format];
-  const maxH     = Math.min(660, window.innerHeight - 200);
+  const maxH     = Math.max(240, Math.min(540, window.innerHeight - 330));
   const scale    = maxH / size.h;
   const displayW = size.w * scale;
   const displayH = size.h * scale;
@@ -381,29 +630,51 @@ function App() {
 
   React.useEffect(() => {
     if (!isDragging) return;
-    const onMove = (e) => {
+    let rafId = null, lastX = 0, lastY = 0;
+    const apply = () => {
+      rafId = null;
       const d=dragRef.current; if (!d) return;
-      const dx=e.clientX-d.startX, dy=e.clientY-d.startY, sens=1/cropZoom;
+      const dx=lastX-d.startX, dy=lastY-d.startY, sens=1/cropZoom;
       setCropX(Math.max(0,Math.min(100,d.cropX-(dx/displayW*100)*sens)));
       setCropY(Math.max(0,Math.min(100,d.cropY-(dy/displayH*100)*sens)));
     };
-    const onUp = () => { setIsDragging(false); dragRef.current=null; };
+    const onMove = (e) => {
+      if (!dragRef.current) return;
+      lastX=e.clientX; lastY=e.clientY;
+      if (!rafId) rafId = requestAnimationFrame(apply);
+    };
+    const onUp = () => { setIsDragging(false); dragRef.current=null; if (rafId) cancelAnimationFrame(rafId); };
     window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
-    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); if (rafId) cancelAnimationFrame(rafId); };
   }, [isDragging, displayW, displayH, cropZoom]);
 
   const c = content[tpl];
   const isAudiogram = tpl === 'audiogram';
 
+  // Re-render on viewport resize so the preview rescales to fit
+  const [, _bumpVp] = React.useState(0);
+  React.useEffect(() => {
+    let raf = null;
+    const onResize = () => { if (raf) return; raf = requestAnimationFrame(() => { raf = null; _bumpVp(v => v + 1); }); };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  // Memoize the static preview so audio ticks & unrelated state don't rebuild the pattern/image tree
+  const previewEl = React.useMemo(
+    () => renderTemplate(tpl, way, format, scale, prevOf(image), cropX, cropY, cropZoom, c, imgOpacity, pattern),
+    [tpl, way, format, scale, image, cropX, cropY, cropZoom, c, imgOpacity, pattern]
+  );
+
   const openForRecording = () => {
     const ac=content.audiogram||{};
-    try { localStorage.setItem('mm-audiogram-cfg', JSON.stringify({ hostWay:way, guestWay:ac.guestWay||'oak', episodeEyebrow:ac.episodeEyebrow, outroEpisode:ac.outroEpisode, outroLine1:ac.outroLine1, outroLine2:ac.outroLine2, coverTitle:ac.coverTitle, coverEpisode:ac.coverEpisode, srt:ac.srt, audioSrc })); } catch {}
+    try { localStorage.setItem('mm-audiogram-cfg', JSON.stringify({ hostWay:way, guestWay:ac.guestWay||'oak', episodeEyebrow:ac.episodeEyebrow, outroEpisode:ac.outroEpisode, outroLine1:ac.outroLine1, outroLine2:ac.outroLine2, coverTitle:ac.coverTitle, coverEpisode:ac.coverEpisode, srt:ac.srt, audioSrc, solidBg:!!ac.solidBg })); } catch {}
     window.open('audiogram-player.html','_blank');
   };
 
   return (
     <React.Fragment>
-      <Mount el="illus-label">{isAudiogram ? 'Audio & Background' : 'Illustration'}</Mount>
+      <Mount el="illus-label">{isAudiogram ? 'Audio & Background' : 'Background'}</Mount>
       <Mount el="carousel-label">{isAudiogram ? 'Export' : 'Carousel'}</Mount>
       <Mount el="tlist">
         {ORDER.map(k => (
@@ -415,6 +686,7 @@ function App() {
         {Object.keys(S.WAYS).map(w => (
           <button key={w} className={"sw"+(w===way?" on":"")} title={w} style={{background:S.WAYS[w].bg}} onClick={()=>setWay(w)} />
         ))}
+        <button title="Shuffle colourway" className="sw" style={{background:'transparent',border:'1.5px dashed rgba(81,28,20,0.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,color:'#511C14'}} onClick={()=>{ const keys=Object.keys(S.WAYS); setWay(keys[Math.floor(Math.random()*keys.length)]); }}>⇄</button>
         {isAudiogram && (
           <React.Fragment>
             <div className="sway-label" style={{marginTop:8}}>Guest</div>
@@ -445,20 +717,37 @@ function App() {
             {audioSrc && (
               <button className="nonebtn" onClick={()=>setAudioSrc(null)} style={{gridColumn:'span 3',marginTop:4}}>Remove audio</button>
             )}
-            <span className="croplabel" style={{gridColumn:'span 3',marginTop:10,marginBottom:4}}>Background illustration</span>
-            <button className={"nonebtn"+((!['cover','therapy'].includes(way))?' on':'')}
-              onClick={()=>{ if(['cover','therapy'].includes(way)) setWay('beige'); }}
-              style={{gridColumn:'span 1'}}>None</button>
+            <span className="croplabel" style={{gridColumn:'span 3',marginTop:10,marginBottom:4}}>Illustration</span>
             {AUDIOGRAM_BG_IMGS.map(img => (
-              <img key={img.key} src={img.src} alt={img.name} title={img.name}
+              <img key={img.key} src={img.src} alt={img.name} title={img.name} loading="lazy"
                 className={"imgthumb"+(way===img.key?' on':'')} onClick={()=>setWay(img.key)} />
             ))}
+            <span className="croplabel" style={{gridColumn:'span 3',marginTop:12,marginBottom:4}}>Colour + Pattern</span>
+            {AUDIOGRAM_PATTERN_WAYS.map(pw => (
+              <button key={pw.key} title={pw.name}
+                className={"imgthumb"+(way===pw.key?' on':'')}
+                onClick={()=>setWay(pw.key)}
+                style={{background:pw.bg,position:'relative',overflow:'hidden',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-end',paddingBottom:4,cursor:'pointer'}}>
+                {pw.pat && <img src={_P(pw.pat)} alt="" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',opacity:0.22,pointerEvents:'none'}} />}
+                <span style={{position:'relative',fontSize:7,letterSpacing:'0.1em',textTransform:'uppercase',color:pw.ink,fontFamily:"'ABCDiatype',sans-serif",lineHeight:1.2,textAlign:'center',padding:'0 2px'}}>{pw.name}</span>
+              </button>
+            ))}
+            <button className={"nonebtn"+(content.audiogram?.solidBg?" on":"")} style={{gridColumn:'span 3',marginTop:8}} onClick={()=>upd('solidBg', !content.audiogram?.solidBg)}>
+              {content.audiogram?.solidBg ? '✓ Solid colour — no pattern' : 'Solid colour — no pattern'}
+            </button>
+            {AUDIOGRAM_BG_IMGS.map(i=>i.key).includes(way) && (
+              <React.Fragment>
+                <span className="croplabel" style={{gridColumn:'span 3',marginTop:12,marginBottom:4}}>Illustration opacity — {Math.round(imgOpacity*100)}%</span>
+                <input type="range" className="cropslider" style={{gridColumn:'span 3'}} min="0" max="1" step="0.01" value={imgOpacity} onChange={e=>setImgOpacity(Number(e.target.value))} />
+              </React.Fragment>
+            )}
           </React.Fragment>
         ) : (
           <React.Fragment>
-            <button className={"nonebtn"+(!image?" on":"")} onClick={()=>setImage(null)}>No illustration</button>
+            <button className={"nonebtn"+(!image&&pattern!==false?" on":"")} onClick={()=>{setImage(null);setPattern(true);}}>Pattern</button>
+            <button className={"nonebtn"+(!image&&pattern===false?" on":"")} onClick={()=>{setImage(null);setPattern(false);}}>Solid colour</button>
             {IMAGES.map(img => (
-              <img key={img.src} src={img.src} alt={img.label} title={img.label}
+              <img key={img.src} src={img.thumb} alt={img.label} title={img.label} loading="lazy"
                 className={"imgthumb"+(image===img.src?" on":"")} onClick={()=>pickImage(img.src)} />
             ))}
             {customImage && (
@@ -480,6 +769,8 @@ function App() {
             <input type="range" className="cropslider" min="0" max="100" value={cropX} onChange={e=>setCropX(Number(e.target.value))} />
             <span className="croplabel">Vertical</span>
             <input type="range" className="cropslider" min="0" max="100" value={cropY} onChange={e=>setCropY(Number(e.target.value))} />
+            <span className="croplabel">Opacity — {Math.round(imgOpacity*100)}%</span>
+            <input type="range" className="cropslider" min="0" max="1" step="0.01" value={imgOpacity} onChange={e=>setImgOpacity(Number(e.target.value))} />
           </React.Fragment>
         )}
       </Mount>
@@ -487,7 +778,29 @@ function App() {
         {(FIELDS[tpl]||[]).map((f,i) => (
           <React.Fragment key={f.id}>
             <span className="txlabel" style={{marginTop:i===0?0:10}}>{f.label}</span>
-            {f.type==='textarea' && f.richtext
+            {tpl==='audiogram' && f.id==='srt' && (
+              <React.Fragment>
+                <input type="file" id="srtupload2" ref={srtUpload2Ref} accept=".srt,.txt" style={{display:'none'}}
+                  onChange={async e=>{const file=e.target.files[0];if(!file)return;upd('srt',await file.text());}} />
+                <label htmlFor="srtupload2" className={'srt-file-btn'+(c.srt&&c.srt!==AUDIOGRAM_SRT?' on':'')}>
+                  {c.srt&&c.srt!==AUDIOGRAM_SRT ? '✓ Captions loaded — re-upload SRT' : '+ Upload SRT file'}
+                </label>
+              </React.Fragment>
+            )}
+            {f.type==='credits'
+              ? <div>
+                  {(c[f.id]||[]).map((credit, i) => (
+                    <div key={i} style={{display:'flex', gap:8, marginBottom:8, alignItems:'flex-start'}}>
+                      <div style={{flex:1, display:'flex', flexDirection:'column', gap:4}}>
+                        <input type="text" placeholder="Name" value={credit.name||''} onChange={e=>{const arr=[...c[f.id]]; arr[i]={...arr[i],name:e.target.value}; upd(f.id,arr);}} className="txfield" style={{fontSize:12}} />
+                        <input type="text" placeholder="Title" value={credit.title||''} onChange={e=>{const arr=[...c[f.id]]; arr[i]={...arr[i],title:e.target.value}; upd(f.id,arr);}} className="txfield" style={{fontSize:12}} />
+                      </div>
+                      <button onClick={()=>{const arr=c[f.id].filter((_,j)=>j!==i); upd(f.id,arr);}} style={{padding:'6px 10px',background:'rgba(81,28,20,0.1)',border:'1px solid rgba(81,28,20,0.2)',cursor:'pointer',fontSize:12,color:'#511C14'}}>×</button>
+                    </div>
+                  ))}
+                  <button onClick={()=>upd(f.id,[...(c[f.id]||[]),{name:'',title:''}])} style={{width:'100%',padding:8,background:'rgba(81,28,20,0.05)',border:'1px solid rgba(81,28,20,0.18)',cursor:'pointer',fontSize:12,color:'#511C14',marginTop:4}}>+ Add credit</button>
+                </div>
+              : f.type==='textarea' && f.richtext
               ? <RichTextarea id={"txf-"+f.id} value={c[f.id]} rows={f.rows||2} onChange={v=>upd(f.id,v)} />
               : f.type==='textarea'
               ? <textarea id={"txf-"+f.id} className="txfield" rows={f.rows||2} value={c[f.id]||''} onChange={e=>upd(f.id,e.target.value)} />
@@ -496,20 +809,63 @@ function App() {
           </React.Fragment>
         ))}
       </Mount>
+      <Mount el="cover-sect">
+        {isAudiogram && (
+          <React.Fragment>
+            <h4 style={{margin:'0 0 11px',fontSize:13,letterSpacing:'0.165em',textTransform:'uppercase',color:'#511C14',fontWeight:400,fontFamily:"'ABCDiatype',sans-serif"}}>Cover</h4>
+            <div className="cover-opts">
+              {[['default','Auto-generated'],['upload','Upload image'],['template','Create from layout']].map(([k,l])=>(
+                <button key={k} className={'cover-opt-btn'+(coverMode===k?' on':'')} onClick={()=>setCoverMode(k)}>{l}</button>
+              ))}
+            </div>
+            {coverMode==='upload' && (
+              <React.Fragment>
+                <input type="file" id="coverimgupload" ref={coverImgRef} accept="image/*" style={{display:'none'}} onChange={handleCoverImgUpload} />
+                <label htmlFor="coverimgupload" className={'uploadbtn'+(coverImage?' on':'')} style={{gridColumn:'span 3',display:'block',textAlign:'center',cursor:'pointer',marginBottom:8}}>
+                  {coverImage ? '✓ Cover uploaded — click to replace' : '+ Upload cover image'}
+                </label>
+                {coverImage && <img src={coverImage} alt="Cover" style={{width:'100%',aspectRatio:'9/16',objectFit:'cover',marginTop:4}} />}
+              </React.Fragment>
+            )}
+            {coverMode==='template' && (
+              <React.Fragment>
+                <p style={{fontFamily:"'ABCDiatype',sans-serif",fontSize:14,lineHeight:1.5,margin:'8px 0',opacity:0.7}}>Pick a layout to render as the cover frame:</p>
+                <div className="cover-tpl-grid">
+                  {['cover','synopsis','quote','streaming','credits'].map(k=>(
+                    <button key={k} className={'cover-tpl-opt'+(coverLayoutKey===k?' on':'')} onClick={()=>setCoverLayoutKey(k)}>
+                      <div style={{height:55,background:k==='quote'?'#511C14':'#192136',display:'flex',alignItems:'center',justifyContent:'center',fontSize:8,color:'rgba(246,225,198,0.6)',fontFamily:"'ABCDiatype',sans-serif",letterSpacing:'0.1em',textTransform:'uppercase'}}>
+                        {k.toUpperCase()}
+                      </div>
+                      <div className="cover-tpl-lbl">{TEMPLATES[k]?.label||k}</div>
+                    </button>
+                  ))}
+                </div>
+                <button className="capture-cover-btn" onClick={captureCoverFromLayout} disabled={capturingCover}>
+                  {capturingCover ? 'Rendering…' : '↓ Capture as cover'}
+                </button>
+                {coverImage && <img src={coverImage} alt="Captured" style={{width:'100%',aspectRatio:'9/16',objectFit:'cover',marginTop:8}} />}
+              </React.Fragment>
+            )}
+            {coverImage && coverMode!=='default' && (
+              <button className="nonebtn" style={{marginTop:6,gridColumn:'span 3'}} onClick={()=>{setCoverImage(null);setCoverMode('default');}}>Remove cover</button>
+            )}
+          </React.Fragment>
+        )}
+      </Mount>
       <Mount el="preview">
         {isAudiogram ? (
           <iframe ref={iframeRef} src="audiogram-player.html"
             style={{width:displayW, height:displayH, border:'none', display:'block'}}
             onLoad={() => {
               const ac=content.audiogram||{};
-              setTimeout(()=>{ iframeRef.current?.contentWindow?.postMessage({ type:'audiogram-config', hostWay:way, guestWay:ac.guestWay||'oak', episodeEyebrow:ac.episodeEyebrow, outroEpisode:ac.outroEpisode, outroLine1:ac.outroLine1, outroLine2:ac.outroLine2, coverTitle:ac.coverTitle, coverEpisode:ac.coverEpisode, srt:ac.srt, audioSrc }, '*'); }, 300);
+              setTimeout(()=>{ iframeRef.current?.contentWindow?.postMessage({ type:'audiogram-config', hostWay:way, guestWay:ac.guestWay||'oak', episodeEyebrow:ac.episodeEyebrow, outroEpisode:ac.outroEpisode, outroLine1:ac.outroLine1, outroLine2:ac.outroLine2, coverTitle:ac.coverTitle, coverEpisode:ac.coverEpisode, srt:ac.srt, audioSrc, solidBg:!!ac.solidBg }, '*'); }, 300);
             }}
           />
         ) : (
           <React.Fragment>
             <div onMouseDown={handleMouseDown} onDoubleClick={handleDoubleClick}
               style={{position:'absolute',inset:0,zIndex:10,cursor:isDragging?'grabbing':image?'grab':'default',userSelect:'none'}} />
-            {renderTemplate(tpl, way, format, scale, image, cropX, cropY, cropZoom, c)}
+            {previewEl}
           </React.Fragment>
         )}
       </Mount>
@@ -533,38 +889,36 @@ function App() {
         {isAudiogram ? (
           <React.Fragment>
             <p className="hint" style={{marginBottom:12}}>
-              Play the audiogram in the preview, then screen-record. Open fullscreen for best capture quality.
+              Opens the full-screen player, where you click ⬇ 4K MP4 to export a video file — or screen-record for a quick capture.
             </p>
-            <button className="export-btn" onClick={openForRecording}>Open for recording ↗</button>
+            <button className="export-btn" onClick={openForRecording}>Open player · Export 4K MP4 ↗</button>
           </React.Fragment>
         ) : (
           <React.Fragment>
-            <div className="carousel-list">
-              {carousel.map((item,i) => (
-                <div key={item.id} className="carousel-item">
-                  <div className="carousel-swatch" style={{width:28,height:item.format==='story'?50:35,background:S.WAYS[item.way].bg,color:S.WAYS[item.way].accent}}>
-                    {item.format==='story'?'9:16':'4:5'}
-                  </div>
-                  <div className="carousel-meta">
-                    <div className="carousel-meta-tpl">{TEMPLATES[item.tpl].label}</div>
-                    <div className="carousel-meta-sub">{item.way}</div>
-                  </div>
-                  <div className="carousel-actions">
-                    <button className="carousel-btn" onClick={()=>moveCarouselItem(item.id,-1)} disabled={i===0}>↑</button>
-                    <button className="carousel-btn" onClick={()=>moveCarouselItem(item.id,1)} disabled={i===carousel.length-1}>↓</button>
-                    <button className="carousel-btn" onClick={()=>removeCarouselItem(item.id)}>×</button>
-                  </div>
-                </div>
-              ))}
+            <p className="hint" style={{marginBottom:10}}>
+              A carousel is your set of slides below the preview. Build a standard new-episode set in one click, or add slides yourself.
+            </p>
+            <div style={{display:'flex',gap:6,marginBottom:8}}>
+              <select className="txfield" style={{flex:1,marginBottom:0}} value={scaffoldEp} onChange={e=>setScaffoldEp(Number(e.target.value))}>
+                {EPISODES.map(ep=> <option key={ep.e} value={ep.e}>E{ep.e} — {ep.title}</option>)}
+              </select>
             </div>
-            <button className="carousel-add" onClick={addToCarousel}>+ Add current frame</button>
-            {carousel.length > 0 && (
-              <button className="export-btn" onClick={doExport} disabled={exporting}>
-                {exporting ? 'Exporting\u2026' : `\u2b07 Export ${carousel.length} frame${carousel.length>1?'s':''} as PNG`}
-              </button>
-            )}
+            <button className="carousel-add" onClick={()=>newEpisodeCarousel(scaffoldEp)}>+ New episode carousel</button>
+            <p className="hint" style={{fontSize:12,opacity:0.55,margin:'6px 0 0'}}>Cover · Synopsis · Synopsis · Credits · Now Streaming (4:5)</p>
+            <button className="export-btn" style={{background:'rgba(81,28,20,0.1)',color:'#511C14',border:'1px solid rgba(81,28,20,0.22)',marginBottom:4}} onClick={saveSession}>{savedLabel}</button>
+            <button className="export-btn" onClick={doExport} disabled={exporting}>
+              {exporting ? 'Exporting\u2026' : `\u2b07 Export ${slides.length} slide${slides.length>1?'s':''} as PNG`}
+            </button>
           </React.Fragment>
         )}
+      </Mount>
+      <Mount el="filmstrip">
+        {slides.map((sl,i)=>(
+          <FilmSlide key={sl.id} slide={sl} index={i} isActive={i===activeIdx} canDel={slides.length>1}
+            onSelect={selectSlide} onDup={duplicateSlide} onDel={deleteSlide}
+            onDragStart={filmDragStart} onDrop={filmDrop} />
+        ))}
+        <button className="film-add" onClick={addSlideAfter} title="Add slide">+</button>
       </Mount>
       <Mount el="metaline">{TEMPLATES[tpl].label} · {way} · {size.w}×{size.h}</Mount>
     </React.Fragment>
@@ -590,6 +944,182 @@ ReactDOM.createRoot(host).render(<App />);
     <rect x="36" y="60" width="48" height="3" rx="1.5" fill="#F6E1C6" opacity="0.15"/>
   </svg>
 </template>
+
+<style id="__drag_overrides"></style>
+<script>
+// ── Drag-to-position with guides & snapping ─────────────────────────────
+const _dOff = {};
+const _dHistory = [];
+let _dMode = false, _dEl = null, _dField = null;
+let _dSX = 0, _dSY = 0, _dBX = 0, _dBY = 0;
+let _dNatX = 0, _dNatY = 0, _dElW = 0, _dElH = 0;
+let _dGuideX = null, _dGuideY = null;
+let _overlay = null;
+
+// Snap guides in canvas space (1080×1920)
+const GUIDES_X = [85, 540, 1080-85];
+const GUIDES_Y = [370, 960, 1920-370];
+const SNAP_PX = 14;
+
+function _preview() { return document.getElementById('preview'); }
+
+function _dScale() {
+  const el = document.querySelector('#preview [style*="scale("]');
+  if (!el) return 1;
+  const m = (el.style.transform||'').match(/scale\(([^)]+)\)/);
+  return m ? parseFloat(m[1]) : 1;
+}
+
+function _sizeOverlay() {
+  if (!_overlay) return;
+  const r = _preview().getBoundingClientRect();
+  Object.assign(_overlay.style, { left:r.left+'px', top:r.top+'px', width:r.width+'px', height:r.height+'px' });
+  _drawGuides();
+}
+
+function _ensureGuideEls() {
+  if (_overlay._guides) return _overlay._guides;
+  const mk = (css) => { const d=document.createElement('div'); d.style.cssText='position:absolute;pointer-events:none;display:none;'+css; _overlay.appendChild(d); return d; };
+  const g = {
+    rect: mk('border:1px dashed rgba(81,28,20,0.22);'),
+    hx:   mk('opacity:0.18;background:rgba(81,28,20,0.5);width:1px;top:0;height:100%;'),
+    hy:   mk('opacity:0.18;background:rgba(81,28,20,0.5);left:0;width:100%;height:1px;'),
+    sx:   mk('background:#C15A3A;opacity:0.85;z-index:2;top:0;width:2px;height:100%;'),
+    sy:   mk('background:#C15A3A;opacity:0.85;z-index:2;left:0;width:100%;height:2px;'),
+  };
+  _overlay._guides = g;
+  return g;
+}
+
+function _drawGuides(sc) {
+  if (!_overlay) return;
+  const g = _ensureGuideEls();
+  if (!_dMode) { Object.values(g).forEach(el => el.style.display='none'); return; }
+  sc = sc || _dScale();
+  // Safe-zone margin rect
+  const ml=85*sc, mt=370*sc, mr=(1080-85)*sc, mb=(1920-370)*sc;
+  g.rect.style.display='block';
+  g.rect.style.left=ml+'px'; g.rect.style.top=mt+'px';
+  g.rect.style.width=(mr-ml)+'px'; g.rect.style.height=(mb-mt)+'px';
+  // Center cross-hairs (during drag only)
+  const dragging = !!_dEl;
+  g.hx.style.display=dragging?'block':'none'; g.hx.style.left=(540*sc)+'px';
+  g.hy.style.display=dragging?'block':'none'; g.hy.style.top=(960*sc)+'px';
+  // Snap indicators
+  if (_dGuideX!==null) { g.sx.style.display='block'; g.sx.style.left=(_dGuideX*sc)+'px'; } else g.sx.style.display='none';
+  if (_dGuideY!==null) { g.sy.style.display='block'; g.sy.style.top=(_dGuideY*sc)+'px'; } else g.sy.style.display='none';
+}
+
+function _initOverlay() {
+  if (_overlay) return;
+  _overlay = document.createElement('div');
+  _overlay.style.cssText = 'position:fixed;z-index:9999;display:none;cursor:crosshair;box-sizing:border-box;overflow:hidden;';
+  document.body.appendChild(_overlay);
+  window.addEventListener('resize', _sizeOverlay);
+
+  _overlay.addEventListener('pointerdown', e => {
+    _overlay.style.display = 'none';
+    const stack = document.elementsFromPoint(e.clientX, e.clientY);
+    _overlay.style.display = 'block';
+    const preview = _preview();
+    let el = null;
+    for (const node of stack) {
+      const c = node.closest('[data-field]');
+      if (c && preview.contains(c)) { el = c; break; }
+    }
+    if (!el) return;
+    _dField = el.getAttribute('data-field');
+    _dEl = el;
+    _dSX = e.clientX; _dSY = e.clientY;
+    // Use inline transform as base if element hasn't been dragged yet
+    const _it=(s=>{ const m=(s||'').match(/translate\((-?[\d.]+)px,\s*(-?[\d.]+)px\)/); return m?{x:parseFloat(m[1]),y:parseFloat(m[2])}:{x:0,y:0}; })(el.style.transform);
+    _dBX = _dOff[_dField]!==undefined ? _dOff[_dField].x : _it.x;
+    _dBY = _dOff[_dField]!==undefined ? _dOff[_dField].y : _it.y;
+    _dHistory.push(JSON.parse(JSON.stringify(_dOff)));
+    const sc=_dScale(), pr=preview.getBoundingClientRect(), er=el.getBoundingClientRect();
+    _dElW=er.width/sc; _dElH=er.height/sc;
+    _dNatX=(er.left-pr.left)/sc-_dBX;
+    _dNatY=(er.top-pr.top)/sc-_dBY;
+    _overlay.style.cursor='grabbing';
+    _overlay.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+
+  _overlay.addEventListener('pointermove', e => {
+    if (!_dEl) return;
+    const sc=_dScale();
+    let px=_dBX+(e.clientX-_dSX)/sc;
+    let py=_dBY+(e.clientY-_dSY)/sc;
+
+    // Shift: lock to dominant axis
+    if (e.shiftKey) {
+      if (Math.abs(px-_dBX)>=Math.abs(py-_dBY)) py=_dBY; else px=_dBX;
+    }
+
+    // X snap
+    _dGuideX=null;
+    const l=_dNatX+px, r=l+_dElW, cx=l+_dElW/2;
+    for (const g of GUIDES_X) {
+      if (Math.abs(l-g)<SNAP_PX)  { px+=g-l;  _dGuideX=g; break; }
+      if (Math.abs(cx-g)<SNAP_PX) { px+=g-cx; _dGuideX=g; break; }
+      if (Math.abs(r-g)<SNAP_PX)  { px+=g-r;  _dGuideX=g; break; }
+    }
+
+    // Y snap
+    _dGuideY=null;
+    const t=_dNatY+py, b=t+_dElH, my=t+_dElH/2;
+    for (const g of GUIDES_Y) {
+      if (Math.abs(t-g)<SNAP_PX)  { py+=g-t;  _dGuideY=g; break; }
+      if (Math.abs(my-g)<SNAP_PX) { py+=g-my; _dGuideY=g; break; }
+      if (Math.abs(b-g)<SNAP_PX)  { py+=g-b;  _dGuideY=g; break; }
+    }
+
+    _dOff[_dField]={x:px,y:py};
+    _dCSS(); _drawGuides(sc);
+  });
+
+  _overlay.addEventListener('pointerup', () => {
+    if (_dEl) { _dEl=null; _dGuideX=null; _dGuideY=null; _overlay.style.cursor='crosshair'; _drawGuides(); }
+  });
+}
+
+function _dCSS() {
+  let css='';
+  if (_dMode) css+='#preview [data-field]{outline:2px dashed rgba(81,28,20,0.4)!important;outline-offset:5px!important;cursor:grab!important;}\n';
+  Object.entries(_dOff).forEach(([f,{x,y}]) => {
+    css+=`#preview [data-field="${f}"]{transform:translate(${Math.round(x)}px,${Math.round(y)}px)!important;}\n`;
+  });
+  document.getElementById('__drag_overrides').textContent=css;
+}
+
+function toggleDrag() {
+  _initOverlay();
+  _dMode=!_dMode;
+  _sizeOverlay();
+  _overlay.style.display=_dMode?'block':'none';
+  const btn=document.getElementById('drag-toggle');
+  btn.style.background=_dMode?'#511C14':'rgba(81,28,20,0.07)';
+  btn.style.color=_dMode?'#F6E1C6':'#511C14';
+  btn.textContent=_dMode?'✥ Dragging (click to exit)':'✥ Drag elements';
+  _dCSS(); _drawGuides();
+}
+
+function resetDrag() {
+  Object.keys(_dOff).forEach(k=>delete _dOff[k]);
+  _dHistory.length=0;
+  _dCSS();
+}
+
+document.addEventListener('keydown', e => {
+  if ((e.metaKey||e.ctrlKey)&&e.key==='z'&&_dMode&&_dHistory.length) {
+    e.preventDefault();
+    const prev=_dHistory.pop();
+    Object.keys(_dOff).forEach(k=>delete _dOff[k]);
+    Object.assign(_dOff,prev);
+    _dCSS();
+  }
+});
+</script>
 
 </body>
 </html>

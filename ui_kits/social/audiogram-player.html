@@ -15,12 +15,15 @@
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 <script src="../../_ds_bundle.js"></script>
+<!-- 4K MP4 export: WebCodecs H.264 muxing (DOM→canvas done natively via SVG foreignObject) -->
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5/build/mp4-muxer.min.js"></script>
 <script type="text/babel">
 /* More Muslim — Audiogram Player
    Embedded in social-studio as iframe; also opens standalone for screen recording.
    Config + transport arrive via postMessage from the studio. Falls back to localStorage. */
 
 const IS_IFRAME = window.self !== window.top;
+const FPS = 24; // playback throttle + export frame rate
 
 const DEFAULT_SRT = `1
 00:00:00,000 --> 00:00:01,650
@@ -59,7 +62,7 @@ const DEFAULT_CFG = {
   coverTitle:'In Therapy, With SheikhaGPT', coverEpisode:'S1 \u00b7 E7',
   coverBody:'A patient tells Dr. Rania Awaad she has been using an AI chatbot as a therapist.',
   wordMotion:'fade', captionSize:'L',
-  showSpeakerLabel:true, bgDrift:true, illusTint:true,
+  showSpeakerLabel:true, bgDrift:true, illusTint:true, solidBg:false,
   imgZoom:1, imgCropX:50, imgCropY:50,
   srt:DEFAULT_SRT, audioSrc:null,
 };
@@ -74,7 +77,7 @@ function calcScale() {
 }
 
 class AudiogramPlayer extends React.Component {
-  state = { t:0, duration:0, playing:false, started:false, scale:calcScale(), cfg:loadCfg() };
+  state = { t:0, duration:0, playing:false, started:false, scale:calcScale(), cfg:loadCfg(), exporting:false, exportPct:0 };
 
   ways = {
     beige:   { bg:'#FBF2E9', tile:'6A', ink:'#511C14', logo:'oak',   grain:0.06, tileOpacity:0.10 },
@@ -82,8 +85,20 @@ class AudiogramPlayer extends React.Component {
     night:   { bg:'#192136', tile:'5C', ink:'#F6E1C6', logo:'beige', grain:0.10, tileOpacity:0.15 },
     mist:    { bg:'#9FBCCC', tile:'2B', ink:'#192136', logo:'night', grain:0.07, tileOpacity:0.10 },
     black:   { bg:'#000000', tile:null, ink:'#FBF2E9', logo:'beige', grain:0.14, tileOpacity:0 },
-    therapy: { bg:'#192136', isImage:true, image:'../../assets/imagery/illus-therapy.jpg',    ink:'#F6E1C6', logo:'beige' },
-    cover:   { bg:'#511C14', isImage:true, image:'../../assets/imagery/cover-sheikhagpt.jpg', ink:'#F6E1C6', logo:'beige' },
+    harvest:    { bg:'#E2B16D', tile:'3A', ink:'#511C14', logo:'oak',   grain:0.08, tileOpacity:0.10 },
+    terracotta: { bg:'#C15A3A', tile:'6B', ink:'#F6E1C6', logo:'beige', grain:0.10, tileOpacity:0.15 },
+    coastal:    { bg:'#6185A3', tile:'2B', ink:'#F6E1C6', logo:'beige', grain:0.08, tileOpacity:0.12 },
+    stone:      { bg:'#3C5065', tile:'5C', ink:'#F6E1C6', logo:'beige', grain:0.10, tileOpacity:0.15 },
+    ep1: { bg:'#192136', isImage:true, image:'../../assets/imagery/bg-illus-ep1.jpg', ink:'#F6E1C6', logo:'beige' },
+    ep2: { bg:'#192136', isImage:true, image:'../../assets/imagery/bg-illus-ep2.jpg', ink:'#F6E1C6', logo:'beige' },
+    ep3: { bg:'#192136', isImage:true, image:'../../assets/imagery/bg-illus-ep3.jpg', ink:'#F6E1C6', logo:'beige' },
+    ep4: { bg:'#192136', isImage:true, image:'../../assets/imagery/bg-illus-ep4.jpg', ink:'#F6E1C6', logo:'beige' },
+    ep5: { bg:'#192136', isImage:true, image:'../../assets/imagery/bg-illus-ep5.jpg', ink:'#F6E1C6', logo:'beige' },
+    ep6: { bg:'#192136', isImage:true, image:'../../assets/imagery/bg-illus-ep6.jpg', ink:'#F6E1C6', logo:'beige' },
+    ep7: { bg:'#192136', isImage:true, image:'../../assets/imagery/bg-illus-ep7.jpg', ink:'#F6E1C6', logo:'beige' },
+    ep8: { bg:'#192136', isImage:true, image:'../../assets/imagery/bg-illus-ep8.jpg', ink:'#F6E1C6', logo:'beige' },
+    ep9: { bg:'#192136', isImage:true, image:'../../assets/imagery/bg-illus-ep9.jpg', ink:'#F6E1C6', logo:'beige' },
+    ep10: { bg:'#192136', isImage:true, image:'../../assets/imagery/bg-illus-ep10.jpg', ink:'#F6E1C6', logo:'beige' },
   };
 
   ensureParsed() {
@@ -164,6 +179,13 @@ class AudiogramPlayer extends React.Component {
 
   _patch(patch) {
     const prev=this.state.cfg;
+    if (patch.coverImage && patch.coverImage !== prev.coverImage) {
+      this.ways.customCover = { bg:'#192136', isImage:true, image:patch.coverImage, ink:'#F6E1C6', logo:'beige' };
+      patch = {...patch, coverWay:'customCover'};
+      this._pc = {};
+    } else if (patch.coverImage === undefined && prev.coverWay === 'customCover') {
+      patch = {...patch, coverWay:'cover'};
+    }
     this.setState(s=>({cfg:{...s.cfg,...patch}}), ()=>{
       if (patch.srt && patch.srt!==prev.srt) this._parsed=false;
       if (patch.audioSrc && patch.audioSrc!==prev.audioSrc && this.audio) {
@@ -178,9 +200,14 @@ class AudiogramPlayer extends React.Component {
     if (a && !a.paused) {
       const dur=isFinite(a.duration)?a.duration:0;
       if (!this.state.duration&&dur) this.setState({duration:dur});
-      if (dur) a.volume=1-Math.min(1,Math.max(0,(a.currentTime-(dur-1))));
-      this.setState({t:a.currentTime});
-      if (IS_IFRAME) window.parent.postMessage({type:'audiogram-time',t:a.currentTime,duration:dur,playing:true},'*');
+      if (dur) a.volume=1-Math.min(1,Math.max(0,(a.currentTime-(dur-1)))); // volume fade every frame
+      // Throttle React re-render + postMessage to ~FPS (drift/caption fades stay smooth)
+      const now = performance.now();
+      if (!this._lastTick || now - this._lastTick >= 1000/FPS) {
+        this._lastTick = now;
+        this.setState({t:a.currentTime});
+        if (IS_IFRAME) window.parent.postMessage({type:'audiogram-time',t:a.currentTime,duration:dur,playing:true},'*');
+      }
     }
     this._raf=requestAnimationFrame(this.tick);
   };
@@ -205,9 +232,10 @@ class AudiogramPlayer extends React.Component {
   panel(way) {
     const w=this.ways[way], DS=window.MoreMuslimDesignSystem_019df4||{};
     this._pc=this._pc||{};
+    if (!w) return <div style={{position:'absolute',inset:0,background:'#FBF2E9'}} />;
     if (w.isImage) {
-      const {imgZoom:z,imgCropX:cx,imgCropY:cy}=this.state.cfg, key=`img:${way}:${z}:${cx}:${cy}`;
-      if (!this._pc[key]) this._pc[key]=<img src={w.image} alt="" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',objectPosition:`${cx}% ${cy}%`,transform:`scale(${z})`,transformOrigin:`${cx}% ${cy}%`}} />;
+      const {imgZoom:z,imgCropX:cx,imgCropY:cy,imgOpacity:op=1}=this.state.cfg, key=`img:${way}:${z}:${cx}:${cy}:${op}`;
+      if (!this._pc[key]) this._pc[key]=<img src={w.image} alt="" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',objectPosition:`${cx}% ${cy}%`,transform:`scale(${z})`,transformOrigin:`${cx}% ${cy}%`,opacity:op}} />;
       return this._pc[key];
     }
     if (DS.PatternPanel) {
@@ -219,12 +247,12 @@ class AudiogramPlayer extends React.Component {
   }
 
   groundLayer(way, opacity, key) {
-    const w=this.ways[way], t=this.state.t, drift=this.state.cfg.bgDrift;
+    const w=this.ways[way]||this.ways.beige, t=this.state.t, drift=this.state.cfg.bgDrift;
     const dx=drift?Math.sin(t*0.05)*14:0, dy=drift?Math.cos(t*0.04)*14:0;
     return (
       <div key={key} style={{position:'absolute',inset:0,background:w.bg,opacity}}>
         <div style={{position:'absolute',inset:0,transform:`scale(1.08) translate(${dx}px,${dy}px)`,transformOrigin:'center',willChange:'transform'}}>
-          {this.panel(way)}
+          {(this.state.cfg.solidBg && !w.isImage) ? null : this.panel(way)}
         </div>
         {w.isImage && this.state.cfg.illusTint && <div style={{position:'absolute',inset:0,background:'linear-gradient(180deg,rgba(8,10,18,0.42) 0%,rgba(8,10,18,0.30) 42%,rgba(8,10,18,0.66) 100%)'}} />}
       </div>
@@ -243,14 +271,21 @@ class AudiogramPlayer extends React.Component {
     return (
       <div style={{color:ink}}>
         {cfg.showSpeakerLabel && <div style={{fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',marginBottom:28,color:labelColor||ink}}>{this.firstName(active.speaker)}</div>}
-        <div style={{fontSize:size,lineHeight:1.06,maxWidth:780}}>{spans}</div>
+        <div style={{fontSize:size,lineHeight:1.06,maxWidth:900}}>{spans}</div>
       </div>
     );
   }
 
   buildCover() {
     if (this.state.started) return null;
-    const {cfg}=this.state, way=cfg.coverWay, w=this.ways[way], ink=w.ink;
+    const {cfg}=this.state, way=cfg.coverWay, w=this.ways[way]||this.ways.beige, ink=w.ink;
+    if (way === 'customCover') {
+      return (
+        <div style={{position:'absolute',inset:0}}>
+          <div style={{position:'absolute',inset:0}}>{this.groundLayer(way,1,'cover')}</div>
+        </div>
+      );
+    }
     const symSrc=`../../assets/logos/symbol-${w.logo}.svg`;
     const eb=(txt)=><div style={{fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',color:ink}}>{txt}</div>;
     let content=null;
@@ -258,7 +293,7 @@ class AudiogramPlayer extends React.Component {
       content=(
         <div style={{position:'relative',height:'100%',display:'flex',flexDirection:'column',padding:'150px 85px 300px',color:ink}}>
           <div style={{textAlign:'center'}}>{eb(cfg.coverEyebrow)}</div>
-          <h1 style={{margin:'40px auto 0',textAlign:'center',fontWeight:400,textTransform:'uppercase',letterSpacing:'0.165em',fontSize:77,lineHeight:1.06,maxWidth:820}}>{cfg.coverTitle}</h1>
+          <h1 style={{margin:'40px auto 0',textAlign:'center',fontWeight:400,textTransform:'uppercase',letterSpacing:'0.165em',fontSize:77,lineHeight:1.06,maxWidth:910}}>{cfg.coverTitle}</h1>
           <div style={{marginTop:'auto',display:'flex',alignItems:'center'}}>
             <img src={symSrc} alt="" style={{width:180,height:180,flex:'none'}} />
             <div style={{flex:1,textAlign:'center',fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',color:ink}}>{cfg.coverEpisode}</div>
@@ -270,7 +305,7 @@ class AudiogramPlayer extends React.Component {
       content=(
         <div style={{position:'relative',height:'100%',display:'flex',flexDirection:'column',padding:'150px 85px 300px',color:ink}}>
           <div style={{textAlign:'center',marginBottom:64}}>{eb(cfg.coverEpisode)}</div>
-          <div style={{flex:1,display:'flex',alignItems:'center'}}><p style={{margin:0,fontSize:56,lineHeight:1.05,maxWidth:780}}>{cfg.coverBody}</p></div>
+          <div style={{flex:1,display:'flex',alignItems:'center'}}><p style={{margin:0,fontSize:56,lineHeight:1.05,maxWidth:900}}>{cfg.coverBody}</p></div>
           <div style={{textAlign:'center',fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em'}}>MOREMUSLIM.ORG</div>
         </div>
       );
@@ -293,9 +328,126 @@ class AudiogramPlayer extends React.Component {
   restart=()=>{ const a=this.audio; if(!a) return; a.currentTime=0; a.volume=1; a.play(); this.setState({t:0,started:true}); };
   seek=(e)=>{ const v=+e.target.value; if(this.audio) this.audio.currentTime=v; this.setState({t:v,started:true}); };
 
+  // Fetch a same-origin asset and cache it as a data URI (reused across every frame).
+  _inline = async (url) => {
+    this._inlineCache = this._inlineCache || {};
+    if (this._inlineCache[url]) return this._inlineCache[url];
+    const blob = await (await fetch(url)).blob();
+    const data = await new Promise((res, rej) => { const fr = new FileReader(); fr.onerror = rej; fr.onload = () => res(fr.result); fr.readAsDataURL(blob); });
+    this._inlineCache[url] = data; return data;
+  };
+
+  // Snapshot the live 1080×1920 frame to a W×H canvas via an SVG <foreignObject>.
+  // All <img> and CSS background images are inlined as data URIs so the SVG rasterises offline.
+  _snapshot = async (W, H) => {
+    const clone = this.frame.cloneNode(true);
+    clone.style.transform = 'none'; clone.style.margin = '0';
+    for (const img of clone.querySelectorAll('img')) {
+      const s = img.getAttribute('src');
+      if (s && !s.startsWith('data:')) img.setAttribute('src', await this._inline(new URL(s, location.href).href));
+    }
+    for (const el of [clone, ...clone.querySelectorAll('*')]) {
+      const bg = el.style && el.style.backgroundImage;
+      const m = bg && bg.includes('url(') && bg.match(/url\(["']?([^"')]+)["']?\)/);
+      if (m && !m[1].startsWith('data:')) el.style.backgroundImage = `url("${await this._inline(new URL(m[1], location.href).href)}")`;
+    }
+    clone.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+    const xml = new XMLSerializer().serializeToString(clone);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 1080 1920"><foreignObject x="0" y="0" width="1080" height="1920">${xml}</foreignObject></svg>`;
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('frame render failed')); i.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
+    const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
+    canvas.getContext('2d').drawImage(img, 0, 0, W, H);
+    return canvas;
+  };
+
+  // Offline 4K (2160×3840) H.264 export. Each frame is rendered deterministically from
+  // state.t, snapshotted to a canvas, and encoded via WebCodecs into an MP4.
+  exportVideo = async () => {
+    if (this.state.exporting) return;
+    if (typeof VideoEncoder === 'undefined' || !window.Mp4Muxer) {
+      alert('4K export needs a Chromium browser with WebCodecs (Chrome or Edge).');
+      return;
+    }
+    this._inlineCache = {}; // re-inline assets fresh for this export
+    const fps = FPS, W = 2160, H = 3840;
+    const a = this.audio;
+    const audioDur = a && isFinite(a.duration) && a.duration ? a.duration : 0;
+    const total = Math.max((this.contentEnd || 0) + (this.state.cfg.outroDuration || 5), audioDur);
+    const totalFrames = Math.max(1, Math.ceil(total * fps));
+    const wasStarted = this.state.started;
+    if (a && !a.paused) a.pause();
+
+    // Decode the source audio up front so we can mux an AAC track alongside the video.
+    let audioBuf = null;
+    if (this.state.cfg.audioSrc) {
+      try {
+        const buf = await (await fetch(this.state.cfg.audioSrc)).arrayBuffer();
+        const ac = new (window.AudioContext || window.webkitAudioContext)();
+        audioBuf = await ac.decodeAudioData(buf);
+        ac.close();
+      } catch (e) { console.warn('Audio decode failed — exporting silent video.', e); }
+    }
+
+    const { Muxer, ArrayBufferTarget } = window.Mp4Muxer;
+    const muxer = new Muxer({
+      target: new ArrayBufferTarget(),
+      video: { codec: 'avc', width: W, height: H, frameRate: fps },
+      ...(audioBuf ? { audio: { codec: 'aac', sampleRate: audioBuf.sampleRate, numberOfChannels: Math.min(2, audioBuf.numberOfChannels) } } : {}),
+      fastStart: 'in-memory',
+    });
+    const venc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: e => console.error('VideoEncoder', e) });
+    venc.configure({ codec: 'avc1.640033', width: W, height: H, bitrate: 24_000_000, framerate: fps });
+
+    ReactDOM.flushSync(() => this.setState({ exporting: true, exportPct: 0, started: true, duration: total }));
+    try {
+      for (let f = 0; f < totalFrames; f++) {
+        const t = f / fps;
+        ReactDOM.flushSync(() => this.setState({ t })); // commit this frame's DOM synchronously
+        const canvas = await this._snapshot(W, H);       // image-load await yields each frame (works backgrounded, unlike rAF)
+        const frame = new VideoFrame(canvas, { timestamp: Math.round(t * 1e6), duration: Math.round(1e6 / fps) });
+        venc.encode(frame, { keyFrame: f % (fps * 2) === 0 });
+        frame.close();
+        if (f % 3 === 0) this.setState({ exportPct: Math.round((f / totalFrames) * 100) });
+        while (venc.encodeQueueSize > 8) await new Promise(r => setTimeout(r, 0));
+      }
+      await venc.flush();
+
+      if (audioBuf) {
+        try {
+          const ch = Math.min(2, audioBuf.numberOfChannels), sr = audioBuf.sampleRate, len = audioBuf.length;
+          const aenc = new AudioEncoder({ output: (c, m) => muxer.addAudioChunk(c, m), error: e => console.error('AudioEncoder', e) });
+          aenc.configure({ codec: 'mp4a.40.2', sampleRate: sr, numberOfChannels: ch, bitrate: 160_000 });
+          const inter = new Float32Array(len * ch); // interleaved f32 for WebCodecs AudioData
+          for (let c = 0; c < ch; c++) { const d = audioBuf.getChannelData(c); for (let i = 0; i < len; i++) inter[i * ch + c] = d[i]; }
+          const CHUNK = 8192;
+          for (let off = 0; off < len; off += CHUNK) {
+            const n = Math.min(CHUNK, len - off);
+            const ad = new AudioData({ format: 'f32', sampleRate: sr, numberOfFrames: n, numberOfChannels: ch, timestamp: Math.round((off / sr) * 1e6), data: inter.subarray(off * ch, (off + n) * ch) });
+            aenc.encode(ad); ad.close();
+          }
+          await aenc.flush(); aenc.close();
+        } catch (e) { console.warn('Audio encode failed — video saved without sound.', e); }
+      }
+
+      muxer.finalize();
+      const blob = new Blob([muxer.target.buffer], { type: 'video/mp4' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url; link.download = 'moremuslim-audiogram-4k.mp4';
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch (e) {
+      console.error('Export failed', e);
+      alert('Export failed: ' + e.message);
+    } finally {
+      try { if (venc.state !== 'closed') venc.close(); } catch {}
+      ReactDOM.flushSync(() => this.setState({ exporting: false, exportPct: 0, started: wasStarted, t: 0, duration: audioDur }));
+    }
+  };
+
   render() {
     this.ensureParsed();
-    const {cfg,t,scale,playing}=this.state;
+    const {cfg,t,scale,playing,exporting,exportPct}=this.state;
     const active=this.activeBlock();
     const inkColor=(this.ways[cfg.hostWay]||this.ways.beige).ink;
     const guestActive=active&&this.guest&&active.speaker===this.guest;
@@ -312,22 +464,23 @@ class AudiogramPlayer extends React.Component {
     this._vars={s:scale,ink:inkColor,chromeOp:1-oProg,outroOp:oProg,outroPe:oProg>0.5?'auto':'none',outroInk:ow.ink};
     this._applyVars();
 
+    const btn={background:'#232d45',color:'#e9edf5',border:'1px solid #2e3a55',borderRadius:6,padding:'7px 12px',cursor:'pointer',font:'13px -apple-system,sans-serif'};
     return (
       <div style={{width:'100%',height:'100%',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:IS_IFRAME?0:14,padding:IS_IFRAME?0:20,fontFamily:"'ABC Marist','Iowan Old Style',Georgia,serif"}}>
         <div ref={this.rootRef} style={{position:'relative',width:1080*scale,height:1920*scale,flexShrink:0,boxShadow:'0 20px 60px rgba(0,0,0,0.5)'}}>
-          <div style={{position:'absolute',top:0,left:0,width:1080,height:1920,transform:`scale(${scale})`,transformOrigin:'top left',overflow:'hidden',background:'#000',fontFamily:"'ABC Marist','Iowan Old Style',Georgia,serif",lineHeight:1}}>
+          <div ref={el=>this.frame=el} style={{position:'absolute',top:0,left:0,width:1080,height:1920,transform:`scale(${scale})`,transformOrigin:'top left',overflow:'hidden',background:'#000',fontFamily:"'ABC Marist','Iowan Old Style',Georgia,serif",lineHeight:1}}>
             <div style={{position:'absolute',inset:0}}>{this.groundLayer(cfg.hostWay,1,'host')}</div>
-            <div style={{position:'absolute',top:150,left:0,right:0,textAlign:'center',fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',whiteSpace:'nowrap',padding:'0 60px',color:'var(--ink,#511C14)',opacity:'var(--chromeOp,1)'}}>{cfg.episodeEyebrow}</div>
-            <div style={{position:'absolute',left:85,right:90,top:660,bottom:360,display:'flex',flexDirection:'column',justifyContent:'flex-start',alignItems:'flex-start',pointerEvents:'none'}}>
+            <div style={{position:'absolute',top:370,left:0,right:0,textAlign:'center',fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',whiteSpace:'nowrap',padding:'0 60px',color:'var(--ink,#511C14)',opacity:'var(--chromeOp,1)'}}>{cfg.episodeEyebrow}</div>
+            <div style={{position:'absolute',left:86,right:86,top:460,bottom:460,display:'flex',flexDirection:'column',justifyContent:'flex-start',alignItems:'flex-start',pointerEvents:'none'}}>
               {this.buildCaption(inkColor,labelColor)}
             </div>
-            <div style={{position:'absolute',bottom:300,left:0,right:0,textAlign:'center',fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',whiteSpace:'nowrap',color:'var(--ink,#511C14)',opacity:'var(--chromeOp,1)'}}>MOREMUSLIM.ORG</div>
+            <div style={{position:'absolute',bottom:370,left:0,right:0,textAlign:'center',fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',whiteSpace:'nowrap',color:'var(--ink,#511C14)',opacity:'var(--chromeOp,1)'}}>MOREMUSLIM.ORG</div>
             <div style={{position:'absolute',inset:0,opacity:'var(--outroOp,0)',pointerEvents:'var(--outroPe,none)'}}>
               <div style={{position:'absolute',inset:0}}>{this.groundLayer(outroWay,1,'outroG')}</div>
               <div style={{position:'relative',height:'100%',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',padding:'0 130px',color:'var(--outroInk,#F6E1C6)'}}>
                 <div style={{fontSize:56,textTransform:'uppercase',letterSpacing:'0.165em',lineHeight:1.16}}>{cfg.outroEpisode}<br/>Now Streaming</div>
-                <div style={{marginTop:140,fontSize:48,maxWidth:780,lineHeight:1.18}}>{cfg.outroLine1}</div>
-                <div style={{marginTop:90,fontSize:48,maxWidth:780,lineHeight:1.24}}>{cfg.outroLine2}</div>
+                <div style={{marginTop:140,fontSize:48,maxWidth:860,lineHeight:1.18}}>{cfg.outroLine1}</div>
+                <div style={{marginTop:90,fontSize:48,maxWidth:860,lineHeight:1.24}}>{cfg.outroLine2}</div>
                 <img src={symSrc} alt="" style={{width:190,height:190,marginTop:150}} />
               </div>
             </div>
@@ -335,10 +488,11 @@ class AudiogramPlayer extends React.Component {
           </div>
         </div>
         {!IS_IFRAME && (
-          <div style={{display:'flex',alignItems:'center',gap:12,color:'#cdd3e0',font:'13px/1.3 -apple-system,sans-serif',width:Math.min(520,1080*scale)}}>
-            <button onClick={this.togglePlay} style={{background:'#232d45',color:'#e9edf5',border:'1px solid #2e3a55',borderRadius:6,padding:'7px 12px',cursor:'pointer',font:'13px -apple-system,sans-serif',whiteSpace:'nowrap'}}>{playing?'❚❚ Pause':'▶ Play'}</button>
-            <button onClick={this.restart} style={{background:'#232d45',color:'#e9edf5',border:'1px solid #2e3a55',borderRadius:6,padding:'7px 12px',cursor:'pointer',font:'13px -apple-system,sans-serif'}}>↺ Restart</button>
-            <input type="range" min={0} max={dur} step={0.01} value={t} onInput={this.seek} style={{flex:1,accentColor:'#9FBCCC'}} />
+          <div style={{display:'flex',alignItems:'center',gap:12,color:'#cdd3e0',font:'13px/1.3 -apple-system,sans-serif',width:Math.min(640,1080*scale)}}>
+            <button onClick={this.togglePlay} disabled={exporting} style={{...btn,whiteSpace:'nowrap',opacity:exporting?0.5:1}}>{playing?'❚❚ Pause':'▶ Play'}</button>
+            <button onClick={this.restart} disabled={exporting} style={{...btn,opacity:exporting?0.5:1}}>↺ Restart</button>
+            <button onClick={this.exportVideo} disabled={exporting} title="Render a 2160×3840 H.264 MP4" style={{...btn,background:'#3a2018',borderColor:'#5a3528',color:'#F6E1C6',whiteSpace:'nowrap'}}>{exporting?`Rendering ${exportPct}%`:'⬇ 4K MP4'}</button>
+            <input type="range" min={0} max={dur} step={0.01} value={t} onInput={this.seek} disabled={exporting} style={{flex:1,accentColor:'#9FBCCC'}} />
             <span style={{fontVariantNumeric:'tabular-nums',minWidth:80,textAlign:'right'}}>{this.fmt(t)} / {this.fmt(dur)}</span>
           </div>
         )}
