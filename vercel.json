@@ -1,5 +1,6 @@
 {
-  "rewrites": [
-    { "source": "/", "destination": "/social-studio.html" }
+  "redirects": [
+    { "source": "/", "destination": "/ui_kits/social/onboarding.html", "permanent": false },
+    { "source": "/social-studio.html", "destination": "/ui_kits/social/onboarding.html", "permanent": false }
   ]
 }
