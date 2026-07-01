@@ -154,6 +154,7 @@ class AudiogramPlayer extends React.Component {
     this._raf = requestAnimationFrame(this.tick);
     window.addEventListener('message', this._onMessage);
     window.addEventListener('storage', this._onStorage);
+    this._loadHandoffAudio();
   }
   componentWillUnmount() {
     cancelAnimationFrame(this._raf);
@@ -161,6 +162,34 @@ class AudiogramPlayer extends React.Component {
     window.removeEventListener('message', this._onMessage);
     window.removeEventListener('storage', this._onStorage);
   }
+
+  // The Studio's "Open player" button hands the audio over via IndexedDB, because
+  // blob: URLs from the Studio tab are not valid in this tab. When the config flags
+  // audioSrc:'pending', poll for the stashed blob and adopt it (then clear it).
+  _loadHandoffAudio = () => {
+    if (this.state.cfg.audioSrc !== 'pending') return;
+    let tries = 0;
+    const poll = () => {
+      tries++;
+      const retry = () => { if (tries < 15) setTimeout(poll, 400); };
+      try {
+        const req = indexedDB.open('mm-studio', 1);
+        req.onupgradeneeded = e => { const db = e.target.result; if (!db.objectStoreNames.contains('files')) db.createObjectStore('files'); };
+        req.onsuccess = e => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains('files')) return retry();
+          const g = db.transaction('files', 'readonly').objectStore('files').get('player-audio');
+          g.onsuccess = () => {
+            if (g.result) { this._patch({ audioSrc: URL.createObjectURL(g.result) }); try { db.transaction('files', 'readwrite').objectStore('files').delete('player-audio'); } catch {} }
+            else retry();
+          };
+          g.onerror = retry;
+        };
+        req.onerror = retry;
+      } catch (err) { retry(); }
+    };
+    poll();
+  };
 
   _onResize = () => { const s=calcScale(); if (Math.abs(s-this.state.scale)>0.002) this.setState({scale:s}); };
 
@@ -379,7 +408,7 @@ class AudiogramPlayer extends React.Component {
 
     // Decode the source audio up front so we can mux an AAC track alongside the video.
     let audioBuf = null;
-    if (this.state.cfg.audioSrc) {
+    if (this.state.cfg.audioSrc && this.state.cfg.audioSrc !== 'pending') {
       try {
         const buf = await (await fetch(this.state.cfg.audioSrc)).arrayBuffer();
         const ac = new (window.AudioContext || window.webkitAudioContext)();
@@ -496,7 +525,7 @@ class AudiogramPlayer extends React.Component {
             <span style={{fontVariantNumeric:'tabular-nums',minWidth:80,textAlign:'right'}}>{this.fmt(t)} / {this.fmt(dur)}</span>
           </div>
         )}
-        <audio ref={this.audioRef} src={cfg.audioSrc||undefined} preload="auto" />
+        <audio ref={this.audioRef} src={(cfg.audioSrc && cfg.audioSrc!=='pending') ? cfg.audioSrc : undefined} preload="auto" />
       </div>
     );
   }

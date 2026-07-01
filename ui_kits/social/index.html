@@ -668,8 +668,17 @@ function App() {
 
   const openForRecording = () => {
     const ac=content.audiogram||{};
-    try { localStorage.setItem('mm-audiogram-cfg', JSON.stringify({ hostWay:way, guestWay:ac.guestWay||'oak', episodeEyebrow:ac.episodeEyebrow, outroEpisode:ac.outroEpisode, outroLine1:ac.outroLine1, outroLine2:ac.outroLine2, coverTitle:ac.coverTitle, coverEpisode:ac.coverEpisode, srt:ac.srt, audioSrc, solidBg:!!ac.solidBg })); } catch {}
-    window.open('audiogram-player.html','_blank');
+    const hasAudio = !!audioSrc;
+    // Flag 'pending' so the new tab knows to pull the audio from IndexedDB (blob: URLs don't cross tabs).
+    try { localStorage.setItem('mm-audiogram-cfg', JSON.stringify({ hostWay:way, guestWay:ac.guestWay||'oak', episodeEyebrow:ac.episodeEyebrow, outroEpisode:ac.outroEpisode, outroLine1:ac.outroLine1, outroLine2:ac.outroLine2, coverTitle:ac.coverTitle, coverEpisode:ac.coverEpisode, srt:ac.srt, audioSrc: hasAudio ? 'pending' : null, solidBg:!!ac.solidBg })); } catch {}
+    window.open('audiogram-player.html','_blank'); // open synchronously (avoids popup blocking)
+    if (hasAudio) {
+      fetch(audioSrc).then(r=>r.blob()).then(blob=>{
+        const req=indexedDB.open('mm-studio',1);
+        req.onupgradeneeded=e=>{const db=e.target.result; if(!db.objectStoreNames.contains('files')) db.createObjectStore('files');};
+        req.onsuccess=e=>{ try{ e.target.result.transaction('files','readwrite').objectStore('files').put(blob,'player-audio'); }catch(err){console.warn(err);} };
+      }).catch(e=>console.warn('Could not hand audio to player tab', e));
+    }
   };
 
   return (
