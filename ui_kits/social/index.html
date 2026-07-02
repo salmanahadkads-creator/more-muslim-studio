@@ -12,7 +12,7 @@
   .app { display: grid; grid-template-columns: 340px 1fr; height: 100vh; }
   .panel { background: rgba(246,225,198,0.5); border-right: 1px solid rgba(81,28,20,0.1); padding: 20px 16px 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
   .brand { display: flex; align-items: center; gap: 10px; padding: 0 4px 6px; }
-  .brand img { height: 36px; }
+  .brand img { height: 52px; }
   /* Collapsible, card-grouped sections */
   .sect { background: rgba(255,255,255,0.45); border: 1px solid rgba(81,28,20,0.09); border-radius: 11px; padding: 11px 13px; }
   .sect:empty { display: none; padding: 0; border: none; background: none; }
@@ -47,6 +47,7 @@
   .uploadbtn { grid-column: span 3; padding: 7px 0; font-family: var(--font-serif); font-size: 13px; letter-spacing: 0.04em; text-transform: none; background: rgba(226,177,109,0.1); border: 1px solid rgba(226,177,109,0.35); color: #7a4a0a; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.12s; }
   .uploadbtn:hover { background: rgba(226,177,109,0.2); }
   .uploadbtn.on { border-color: #E2B16D; color: #7a4a0a; }
+  .uploadbtn.dragging, .srt-file-btn.dragging { border-color: #511C14; border-style: dashed; background: rgba(226,177,109,0.4); }
   input[type=file]#imgupload, input[type=file]#audioupload, input[type=file]#srtupload, input[type=file]#srtupload2, input[type=file]#coverimgupload { display: none; }
   .cover-opts { display:flex; flex-direction:column; gap:2px; margin-bottom:10px; }
   .cover-opt-btn { text-align:left; padding:7px 10px; border:none; border-left:2px solid transparent; background:transparent; color:#511C14; font-family:'ABCDiatype',sans-serif; font-size:13px; cursor:pointer; transition:all 0.12s; width:100%; }
@@ -505,19 +506,18 @@ function App() {
   const addSlideAfter = () => { setSlides(s=>{ const sl=makeSlide({tpl:'synopsis', way:'beige', format:'portrait'}); const next=[...s]; next.splice(activeIdx+1,0,sl); return next; }); setActiveIdx(activeIdx+1); };
   const newEpisodeCarousel = (epNum) => { if (!confirm('Replace your current slides with a fresh episode carousel? This clears the current post.')) return; const ep=EPISODES.find(e=>e.e===epNum)||EPISODES[6]; setSlides(buildEpisodeCarousel(ep)); setActiveIdx(0); };
 
-  const handleUpload = (e) => {
-    const file=e.target.files[0]; if (!file) return;
-    const url=URL.createObjectURL(file); setCustomImage(url); pickImage(url);
-  };
-  const handleAudioUpload = (e) => {
-    const file=e.target.files[0]; if (!file) return;
-    setAudioSrc(URL.createObjectURL(file));
-  };
-  const handleSrtUpload = async (e) => {
-    const file=e.target.files[0]; if (!file) return;
-    const text = await file.text();
-    upd('srt', text);
-  };
+  const acceptImage = (file) => { if (!file || !file.type.startsWith('image')) return; const url=URL.createObjectURL(file); setCustomImage(url); pickImage(url); };
+  const acceptAudio = (file) => { if (!file || !file.type.startsWith('audio')) return; setAudioSrc(URL.createObjectURL(file)); };
+  const acceptSrt   = async (file) => { if (!file) return; upd('srt', await file.text()); };
+  const handleUpload      = (e) => acceptImage(e.target.files[0]);
+  const handleAudioUpload = (e) => acceptAudio(e.target.files[0]);
+  const handleSrtUpload   = (e) => acceptSrt(e.target.files[0]);
+  // Drag & drop onto any upload zone
+  const dropZone = (accept) => ({
+    onDragOver: e => { e.preventDefault(); e.currentTarget.classList.add('dragging'); },
+    onDragLeave: e => e.currentTarget.classList.remove('dragging'),
+    onDrop: e => { e.preventDefault(); e.currentTarget.classList.remove('dragging'); accept(e.dataTransfer.files && e.dataTransfer.files[0]); },
+  });
 
   const handleCoverImgUpload = (e) => {
     const file=e.target.files[0]; if (!file) return;
@@ -658,6 +658,8 @@ function App() {
 
   const c = content[tpl];
   const isAudiogram = tpl === 'audiogram';
+  // Audio is essential for audiograms — auto-expand the "Audio & Background" section when selected.
+  React.useEffect(() => { if (isAudiogram) document.getElementById('illus-label')?.closest('.sect')?.classList.remove('collapsed'); }, [isAudiogram]);
 
   // Re-render on viewport resize so the preview rescales to fit
   const [, _bumpVp] = React.useState(0);
@@ -679,7 +681,7 @@ function App() {
     const hasAudio = !!audioSrc;
     // Flag 'pending' so the new tab knows to pull the audio from IndexedDB (blob: URLs don't cross tabs).
     try { localStorage.setItem('mm-audiogram-cfg', JSON.stringify({ hostWay:way, guestWay:ac.guestWay||'oak', episodeEyebrow:ac.episodeEyebrow, outroEpisode:ac.outroEpisode, outroLine1:ac.outroLine1, outroLine2:ac.outroLine2, coverTitle:ac.coverTitle, coverEpisode:ac.coverEpisode, srt:ac.srt, audioSrc: hasAudio ? 'pending' : null, solidBg:!!ac.solidBg })); } catch {}
-    window.open('audiogram-player.html','_blank'); // open synchronously (avoids popup blocking)
+    // The player tab is opened by the <a target="_blank"> button (popup-blocker safe); here we only stage config + audio.
     if (hasAudio) {
       fetch(audioSrc).then(r=>r.blob()).then(blob=>{
         const req=indexedDB.open('mm-studio',1);
@@ -724,12 +726,12 @@ function App() {
         {isAudiogram ? (
           <React.Fragment>
             <input type="file" id="audioupload" ref={audioFileRef} accept="audio/*" onChange={handleAudioUpload} />
-            <label htmlFor="audioupload" className={"uploadbtn"+(audioSrc?" on":"")}>
-              {audioSrc ? '✓ Audio loaded' : '+ Upload audio (.mp3, .m4a)'}
+            <label htmlFor="audioupload" className={"uploadbtn"+(audioSrc?" on":"")} {...dropZone(acceptAudio)}>
+              {audioSrc ? '✓ Audio loaded' : '+ Upload or drop audio (.mp3, .m4a)'}
             </label>
             <input type="file" id="srtupload" ref={srtFileRef} accept=".srt,.txt" onChange={handleSrtUpload} />
-            <label htmlFor="srtupload" className={"uploadbtn"+(content.audiogram?.srt && content.audiogram.srt !== AUDIOGRAM_SRT ? ' on' : '')}>
-              {content.audiogram?.srt && content.audiogram.srt !== AUDIOGRAM_SRT ? '✓ Captions loaded' : '+ Upload captions (SRT)'}
+            <label htmlFor="srtupload" className={"uploadbtn"+(content.audiogram?.srt && content.audiogram.srt !== AUDIOGRAM_SRT ? ' on' : '')} {...dropZone(acceptSrt)}>
+              {content.audiogram?.srt && content.audiogram.srt !== AUDIOGRAM_SRT ? '✓ Captions loaded' : '+ Upload or drop captions (SRT)'}
             </label>
             {audioSrc && (
               <button className="nonebtn" onClick={()=>setAudioSrc(null)} style={{gridColumn:'span 3',marginTop:4}}>Remove audio</button>
@@ -772,7 +774,7 @@ function App() {
                 className={"imgthumb"+(image===customImage?" on":"")} onClick={()=>pickImage(customImage)} />
             )}
             <input type="file" id="imgupload" ref={fileRef} accept="image/*" onChange={handleUpload} />
-            <label htmlFor="imgupload" className={"uploadbtn"+(image&&image===customImage?" on":"")}>+ Upload image</label>
+            <label htmlFor="imgupload" className={"uploadbtn"+(image&&image===customImage?" on":"")} {...dropZone(acceptImage)}>+ Upload or drop image</label>
           </React.Fragment>
         )}
       </Mount>
@@ -799,8 +801,8 @@ function App() {
               <React.Fragment>
                 <input type="file" id="srtupload2" ref={srtUpload2Ref} accept=".srt,.txt" style={{display:'none'}}
                   onChange={async e=>{const file=e.target.files[0];if(!file)return;upd('srt',await file.text());}} />
-                <label htmlFor="srtupload2" className={'srt-file-btn'+(c.srt&&c.srt!==AUDIOGRAM_SRT?' on':'')}>
-                  {c.srt&&c.srt!==AUDIOGRAM_SRT ? '✓ Captions loaded — re-upload SRT' : '+ Upload SRT file'}
+                <label htmlFor="srtupload2" className={'srt-file-btn'+(c.srt&&c.srt!==AUDIOGRAM_SRT?' on':'')} {...dropZone(acceptSrt)}>
+                  {c.srt&&c.srt!==AUDIOGRAM_SRT ? '✓ Captions loaded — drop or re-upload SRT' : '+ Upload or drop SRT file'}
                 </label>
               </React.Fragment>
             )}
@@ -827,7 +829,7 @@ function App() {
         ))}
       </Mount>
       <Mount el="cover-sect">
-        {isAudiogram && (
+        {false /* audiogram cover option removed per request — uses auto-generated cover */ && (
           <React.Fragment>
             <h4 style={{margin:'0 0 11px',fontSize:13,letterSpacing:'0.165em',textTransform:'uppercase',color:'#511C14',fontWeight:400,fontFamily:"'ABCDiatype',sans-serif"}}>Cover</h4>
             <div className="cover-opts">
@@ -908,7 +910,7 @@ function App() {
             <p className="hint" style={{marginBottom:12}}>
               Opens the full-screen player, where you click ⬇ 4K MP4 to export a video file — or screen-record for a quick capture.
             </p>
-            <button className="export-btn" onClick={openForRecording}>Open player · Export 4K MP4 ↗</button>
+            <a className="export-btn" href="audiogram-player.html" target="_blank" rel="noopener" onClick={openForRecording} style={{display:'block',textAlign:'center',textDecoration:'none'}}>Open player · Export 4K MP4 ↗</a>
           </React.Fragment>
         ) : (
           <React.Fragment>
