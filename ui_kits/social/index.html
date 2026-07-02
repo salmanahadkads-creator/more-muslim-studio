@@ -21,7 +21,7 @@
   .sect.collapsed .chev { transform: rotate(-90deg); }
   .sect-body { margin-top: 11px; }
   .sect.collapsed .sect-body { display: none; }
-  .sect h4 { margin: 0; font-size: 11px; letter-spacing: 0.165em; text-transform: uppercase; color: #511C14; font-weight: 400; }
+  .sect h4 { margin: 0; font-size: 11px; letter-spacing: 0.165em; text-transform: uppercase; color: #511C14; font-weight: 500; font-family: 'ABCDiatype', -apple-system, sans-serif; }
   .tlist { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
   .titem { text-align: left; padding: 8px 10px; border: none; border-radius: 7px; background: rgba(81,28,20,0.04); color: #511C14; font-family: var(--font-serif); font-size: 13px; line-height: 1.15; cursor: pointer; transition: all 0.12s; width: 100%; }
   .titem:hover { background: rgba(81,28,20,0.1); }
@@ -716,7 +716,7 @@ function App() {
       </Mount>
       <Mount el="formats">
         {isAudiogram
-          ? <span style={{fontSize:12,letterSpacing:'0.1em',color:'rgba(246,225,198,0.35)'}}>9:16 STORY</span>
+          ? <button className="on" style={{cursor:'default'}} title="Audiograms are always 9:16 Story">9:16 Story</button>
           : FORMATS.map(([f,lbl]) => <button key={f} className={f===format?"on":""} onClick={()=>setFormat(f)}>{lbl}</button>)
         }
       </Mount>
@@ -779,7 +779,7 @@ function App() {
       <Mount el="cropsliders">
         {!isAudiogram && image && (
           <React.Fragment>
-            <span className="croplabel" style={{color:'rgba(246,225,198,0.3)',display:'block',marginBottom:4}}>Drag image to pan</span>
+            <span className="croplabel" style={{color:'rgba(81,28,20,0.45)',display:'block',marginBottom:4}}>Drag image to pan</span>
             <span className="croplabel">Zoom</span>
             <input type="range" className="cropslider" min="1" max="3" step="0.05" value={cropZoom} onChange={e=>setCropZoom(Number(e.target.value))} />
             <span className="croplabel">Horizontal</span>
