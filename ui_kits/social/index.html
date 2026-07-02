@@ -479,6 +479,8 @@ function App() {
   const [audioT, setAudioT]           = React.useState(0);
   const [audioDur, setAudioDur]       = React.useState(0);
   const [audioPlaying, setAudioPlaying] = React.useState(false);
+  const [agExporting, setAgExporting] = React.useState(false);
+  const [agExportPct, setAgExportPct] = React.useState(0);
   const iframeRef     = React.useRef();
   const audioFileRef  = React.useRef();
   const srtFileRef    = React.useRef();
@@ -593,8 +595,11 @@ function App() {
   // Listen for time updates from iframe
   React.useEffect(() => {
     const onMsg = (e) => {
-      if (!e.data || e.data.type !== 'audiogram-time') return;
-      setAudioT(e.data.t||0); setAudioDur(e.data.duration||0); setAudioPlaying(e.data.playing||false);
+      const m = e.data; if (!m) return;
+      if (m.type === 'audiogram-time') { setAudioT(m.t||0); setAudioDur(m.duration||0); setAudioPlaying(m.playing||false); }
+      else if (m.type === 'audiogram-export-progress') { setAgExporting(true); setAgExportPct(m.pct||0); }
+      else if (m.type === 'audiogram-export-done') { setAgExporting(false); setAgExportPct(0); }
+      else if (m.type === 'audiogram-export-error') { setAgExporting(false); setAgExportPct(0); alert('Export failed: ' + (m.message||'unknown') + '\n\n4K export needs Chrome or Edge.'); }
     };
     window.addEventListener('message', onMsg);
     return () => window.removeEventListener('message', onMsg);
@@ -908,9 +913,13 @@ function App() {
         {isAudiogram ? (
           <React.Fragment>
             <p className="hint" style={{marginBottom:12}}>
-              Opens the full-screen player, where you click ⬇ 4K MP4 to export a video file — or screen-record for a quick capture.
+              Renders a 2160×3840 H.264 MP4 with your audio &amp; captions and downloads it straight to your device. Takes a minute or so.
             </p>
-            <a className="export-btn" href="audiogram-player.html" target="_blank" rel="noopener" onClick={openForRecording} style={{display:'block',textAlign:'center',textDecoration:'none'}}>Open player · Export 4K MP4 ↗</a>
+            <button className="export-btn" onClick={()=>audiogramCmd('audiogram-export')} disabled={agExporting}>
+              {agExporting ? `Rendering ${agExportPct}%…` : '⬇ Download 4K MP4'}
+            </button>
+            <a className="export-btn" href="audiogram-player.html" target="_blank" rel="noopener" onClick={openForRecording}
+              style={{display:'block',textAlign:'center',textDecoration:'none',background:'transparent',color:'#511C14',border:'1px solid rgba(81,28,20,0.22)',marginTop:6,pointerEvents:agExporting?'none':'auto',opacity:agExporting?0.4:1}}>Open full-screen player ↗</a>
           </React.Fragment>
         ) : (
           <React.Fragment>

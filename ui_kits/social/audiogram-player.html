@@ -200,6 +200,7 @@ class AudiogramPlayer extends React.Component {
     else if (m.type==='audiogram-pause')   { this.audio?.pause(); }
     else if (m.type==='audiogram-restart') { if(this.audio){this.audio.currentTime=0;this.audio.volume=1;this.audio.play();} this.setState({t:0,started:true}); }
     else if (m.type==='audiogram-seek')    { if(this.audio) this.audio.currentTime=m.time; this.setState({t:m.time,started:true}); }
+    else if (m.type==='audiogram-export')  { this.exportVideo(); }
   };
 
   _onStorage = (e) => {
@@ -394,7 +395,8 @@ class AudiogramPlayer extends React.Component {
   exportVideo = async () => {
     if (this.state.exporting) return;
     if (typeof VideoEncoder === 'undefined' || !window.Mp4Muxer) {
-      alert('4K export needs a Chromium browser with WebCodecs (Chrome or Edge).');
+      const m = '4K export needs a Chromium browser with WebCodecs (Chrome or Edge).';
+      if (IS_IFRAME) window.parent.postMessage({ type:'audiogram-export-error', message:m }, '*'); else alert(m);
       return;
     }
     this._inlineCache = {}; // re-inline assets fresh for this export
@@ -436,7 +438,7 @@ class AudiogramPlayer extends React.Component {
         const frame = new VideoFrame(canvas, { timestamp: Math.round(t * 1e6), duration: Math.round(1e6 / fps) });
         venc.encode(frame, { keyFrame: f % (fps * 2) === 0 });
         frame.close();
-        if (f % 3 === 0) this.setState({ exportPct: Math.round((f / totalFrames) * 100) });
+        if (f % 3 === 0) { const pct = Math.round((f / totalFrames) * 100); this.setState({ exportPct: pct }); if (IS_IFRAME) window.parent.postMessage({ type:'audiogram-export-progress', pct }, '*'); }
         while (venc.encodeQueueSize > 8) await new Promise(r => setTimeout(r, 0));
       }
       await venc.flush();
@@ -465,9 +467,10 @@ class AudiogramPlayer extends React.Component {
       link.href = url; link.download = 'moremuslim-audiogram-4k.mp4';
       document.body.appendChild(link); link.click(); link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      if (IS_IFRAME) window.parent.postMessage({ type:'audiogram-export-done' }, '*');
     } catch (e) {
       console.error('Export failed', e);
-      alert('Export failed: ' + e.message);
+      if (IS_IFRAME) window.parent.postMessage({ type:'audiogram-export-error', message:e.message }, '*'); else alert('Export failed: ' + e.message);
     } finally {
       try { if (venc.state !== 'closed') venc.close(); } catch {}
       ReactDOM.flushSync(() => this.setState({ exporting: false, exportPct: 0, started: wasStarted, t: 0, duration: audioDur }));
