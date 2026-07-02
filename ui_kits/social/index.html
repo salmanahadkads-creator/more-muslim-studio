@@ -10,14 +10,22 @@
   * { box-sizing: border-box; }
   body { margin: 0; background: rgba(246,225,198,0.4); color: #511C14; font-family: var(--font-serif); height: 100vh; overflow: hidden; }
   .app { display: grid; grid-template-columns: 340px 1fr; height: 100vh; }
-  .panel { background: rgba(246,225,198,0.55); border-right: 1px solid rgba(81,28,20,0.1); padding: 26px 22px; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; }
-  .brand { display: flex; align-items: center; gap: 10px; }
-  .brand img { height: 40px; }
-  .sect h4 { margin: 0 0 10px; font-size: 11px; letter-spacing: 0.165em; text-transform: uppercase; color: #511C14; font-weight: 400; }
-  .tlist { display: flex; flex-direction: column; gap: 1px; }
-  .titem { text-align: left; padding: 8px 11px; border: none; border-left: 2px solid transparent; background: transparent; color: #511C14; font-family: var(--font-serif); font-size: 14px; cursor: pointer; transition: all 0.15s; width: 100%; }
-  .titem:hover { background: rgba(81,28,20,0.06); }
-  .titem.on { background: rgba(81,28,20,0.1); border-left-color: #511C14; color: #511C14; }
+  .panel { background: rgba(246,225,198,0.5); border-right: 1px solid rgba(81,28,20,0.1); padding: 20px 16px 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 0 4px 6px; }
+  .brand img { height: 36px; }
+  /* Collapsible, card-grouped sections */
+  .sect { background: rgba(255,255,255,0.45); border: 1px solid rgba(81,28,20,0.09); border-radius: 11px; padding: 11px 13px; }
+  .sect:empty { display: none; padding: 0; border: none; background: none; }
+  .sect-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; background: none; border: none; padding: 0; margin: 0; cursor: pointer; color: #511C14; text-align: left; font-family: inherit; }
+  .sect-head .chev { font-size: 10px; opacity: 0.4; transition: transform 0.2s ease; flex: none; }
+  .sect.collapsed .chev { transform: rotate(-90deg); }
+  .sect-body { margin-top: 11px; }
+  .sect.collapsed .sect-body { display: none; }
+  .sect h4 { margin: 0; font-size: 11px; letter-spacing: 0.165em; text-transform: uppercase; color: #511C14; font-weight: 400; }
+  .tlist { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .titem { text-align: left; padding: 8px 10px; border: none; border-radius: 7px; background: rgba(81,28,20,0.04); color: #511C14; font-family: var(--font-serif); font-size: 13px; line-height: 1.15; cursor: pointer; transition: all 0.12s; width: 100%; }
+  .titem:hover { background: rgba(81,28,20,0.1); }
+  .titem.on { background: #511C14; color: #F6E1C6; }
   .swatches { display: flex; flex-wrap: wrap; gap: 8px; }
   .sw { width: 32px; height: 32px; border-radius: 2px; cursor: pointer; border: 2px solid transparent; transition: transform 0.12s; }
   .sw:hover { transform: scale(1.1); }
@@ -106,6 +114,7 @@
   .croplabel, .sway-label, .meta, .hint, .atbtn, .carousel-add, .carousel-meta-tpl,
   .carousel-meta-sub, .rtbtn, #audiogram-transport { font-family: 'ABCDiatype', -apple-system, sans-serif; }
 </style>
+<script>function toggleSect(b){ b.closest('.sect').classList.toggle('collapsed'); }</script>
 </head>
 <body>
 <!-- Thumb preload for bundler inlining — bundler converts src to base64 data URIs -->
@@ -130,33 +139,32 @@
   <aside class="panel">
     <div class="brand"><img id="__brand-logo" src="../../assets/logos/logo-horizontal-oak.svg" alt="More Muslim"><script>document.addEventListener("DOMContentLoaded",()=>{document.getElementById("__brand-logo").src=_LOGO();});</script><a href="onboarding.html" style="margin-left:auto;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:rgba(81,28,20,.5);text-decoration:none;border:1px solid rgba(81,28,20,.18);padding:4px 9px;letter-spacing:.1em;font-size:10px;font-family:'ABCDiatype',sans-serif;transition:all .15s" onmouseover="this.style.color='#511C14';this.style.borderColor='rgba(81,28,20,.5)'" onmouseout="this.style.color='rgba(81,28,20,.5)';this.style.borderColor='rgba(81,28,20,.18)'" onclick="return confirm('Start the guided setup wizard? Unsaved changes to the current post will be lost.')">✦ Setup wizard</a></div>
     <div class="sect">
-      <h4>Template</h4>
-      <div class="tlist" id="tlist"></div>
+      <button class="sect-head" onclick="toggleSect(this)"><h4>Template</h4><span class="chev">⌄</span></button>
+      <div class="sect-body"><div class="tlist" id="tlist"></div></div>
     </div>
     <div class="sect">
-      <h4>Colourway</h4>
-      <div class="swatches" id="swatches"></div>
+      <button class="sect-head" onclick="toggleSect(this)"><h4>Format</h4><span class="chev">⌄</span></button>
+      <div class="sect-body"><div class="seg" id="formats"></div></div>
     </div>
     <div class="sect">
-      <h4>Format</h4>
-      <div class="seg" id="formats"></div>
+      <button class="sect-head" onclick="toggleSect(this)"><h4>Colourway</h4><span class="chev">⌄</span></button>
+      <div class="sect-body"><div class="swatches" id="swatches"></div></div>
     </div>
-    <div class="sect">
-      <h4 id="illus-label"></h4>
-      <div class="imgpick" id="imgpick"></div>
-      <div id="cropsliders"></div>
-    </div>
-    <div class="sect">
-      <h4>Content</h4>
-      <div id="textedit"></div>
+    <div class="sect collapsed">
+      <button class="sect-head" onclick="toggleSect(this)"><h4 id="illus-label"></h4><span class="chev">⌄</span></button>
+      <div class="sect-body"><div class="imgpick" id="imgpick"></div><div id="cropsliders"></div></div>
     </div>
     <div class="sect" id="cover-sect"></div>
     <div class="sect">
-      <h4 id="carousel-label"></h4>
-      <div id="carousel"></div>
+      <button class="sect-head" onclick="toggleSect(this)"><h4>Content</h4><span class="chev">⌄</span></button>
+      <div class="sect-body"><div id="textedit"></div></div>
     </div>
-    <div class="sect" style="margin-top:auto">
-      <p class="hint">Instagram-only formats: portrait (4:5) and story (9:16). Six approved colourways, each using the correct official ground × ink pairing.</p>
+    <div class="sect">
+      <button class="sect-head" onclick="toggleSect(this)"><h4 id="carousel-label"></h4><span class="chev">⌄</span></button>
+      <div class="sect-body"><div id="carousel"></div></div>
+    </div>
+    <div style="margin-top:auto; padding:4px 4px 0">
+      <p class="hint" style="font-size:12px; opacity:0.7; line-height:1.5">Instagram formats: portrait (4:5) &amp; story (9:16). Nine brand colourways, each on its approved ground × ink pairing.</p>
     </div>
   </aside>
   <main class="stage">
