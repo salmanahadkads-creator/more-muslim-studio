@@ -155,6 +155,7 @@ const LAYOUTS = [
 ];
 
 const THUMB_H = 200;
+const SAMPLE_IMG = `${IMGS}illus-ep1.jpg`;
 function PostThumb({ layout, epImg }) {
   const S = window.MMSocial;
   if (!S) return <div style={{width:140,height:THUMB_H,background:'#192136',opacity:0.3}}/>;
@@ -168,15 +169,15 @@ function PostThumb({ layout, epImg }) {
   let content = null;
   switch(layout) {
     case 'cover':
-      content = <S.CoverPost format={format} way={way} image={epImg||null} scale={scale}
-        presents="More Muslim presents" title="Episode Title" episode="S1 · E1" />;
+      content = <S.CoverPost format={format} way={way} image={SAMPLE_IMG} scale={scale}
+        presents="More Muslim presents" title="Side Entrances" episode="S1 · E1" />;
       break;
     case 'quote':
       content = <S.QuotePost format={format} way={way} scale={scale} episode={ep7}
         exchanges={[{speaker:'Yassmin',text:'Do you remember the first time you heard about this?'},{speaker:'Dr. Rania',text:'Yeah — a patient told me between our sessions.'}]} />;
       break;
     case 'synopsis':
-      content = <S.SynopsisPost format={format} way={way} image={epImg||null} scale={scale} episode={ep7}
+      content = <S.SynopsisPost format={format} way={way} image={SAMPLE_IMG} scale={scale} episode={ep7}
         paragraphs={['When a patient starts using ChatGPT as a therapist, a reporter investigates.','What does it mean when an AI becomes your spiritual guide?']} />;
       break;
     case 'streaming':
