@@ -49,12 +49,23 @@ body { background:rgba(246,225,198,0.4); color:#511C14; font-family:var(--font-s
 .cw-opt.on .cw-check { opacity:1; }
 .cw-name { font-family:'ABCDiatype'; font-size:13px; letter-spacing:0.12em; text-transform:uppercase; }
 .cw-hex { font-family:'ABCDiatype'; font-size:11px; opacity:0.55; }
+.cw-opt.is-pattern { aspect-ratio:1; padding:0; background-size:cover; background-position:center; justify-content:flex-end; }
+.cw-opt.is-pattern .cw-name,
+.cw-opt.is-pattern .cw-hex { position:relative; z-index:1; padding:7px 10px 0; }
+.cw-opt.is-pattern .cw-name:last-of-type,
+.cw-opt.is-pattern .cw-hex { padding-bottom:7px; }
+.cw-opt.is-pattern::before { content:''; position:absolute; inset:0; background:rgba(0,0,0,0.35); }
+.cw-opt.is-pattern .cw-name,
+.cw-opt.is-pattern .cw-hex { color:#F6E1C6 !important; }
+.cw-opt.is-pattern .cw-check { color:#F6E1C6 !important; }
 .img-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:rgba(81,28,20,0.1); margin-top:24px; }
 .img-opt { aspect-ratio:1; cursor:pointer; position:relative; overflow:hidden; }
 .img-opt img { width:100%; height:100%; object-fit:cover; display:block; transition:transform 0.2s; }
 .img-opt:hover img { transform:scale(1.03); }
 .img-opt.on { outline:3px solid #511C14; outline-offset:-3px; }
 .img-opt-label { position:absolute; bottom:0; left:0; right:0; padding:7px 10px; background:rgba(0,0,0,0.5); font-family:'ABCDiatype'; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:#F6E1C6; }
+.img-opt.is-empty { cursor:default; }
+.img-opt-placeholder { width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:rgba(81,28,20,0.08); font-family:'ABCDiatype'; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:rgba(81,28,20,0.4); text-align:center; padding:16px; }
 .layout-grid { display:flex; gap:1px; background:rgba(81,28,20,0.1); margin-bottom:20px; align-items:flex-end; }
 .layout-opt { cursor:pointer; background:rgba(246,225,198,0.3); overflow:hidden; display:flex; flex-direction:column; align-items:center; border:none; padding:0; flex:1; transition:background 0.15s; }
 .layout-opt:hover { background:rgba(255,255,255,0.7); }
@@ -99,21 +110,22 @@ body { background:rgba(246,225,198,0.4); color:#511C14; font-family:var(--font-s
 <script type="text/babel">
 const IS_BUNDLE = !window.location.pathname.includes('/ui_kits/social/');
 const IMGS  = IS_BUNDLE ? 'assets/imagery/' : '../../assets/imagery/';
+const PATTERNS = IS_BUNDLE ? 'assets/patterns/' : '../../assets/patterns/';
 const LOGOS = IS_BUNDLE ? 'assets/logos/'   : '../../assets/logos/';
 const STUDIO = IS_BUNDLE ? 'ui_kits/social/index.html' : 'index.html';
 const OVERVIEW = IS_BUNDLE ? 'overview.html' : '../../overview.html';
 
 const EPISODES = [
-  { e:'1', title:'Side Entrances',              img:`${IMGS}illus-ep1.jpg`, thumb:`${IMGS}thumb-illus-ep1.jpg`,  eyebrow:'SIDE ENTRANCES',            outroLine1:'Listen to the full episode at moremuslim.org.', outroLine2:'Or search for “More Muslim” on Apple Podcasts, Spotify, or wherever you listen.' },
-  { e:'2', title:'The Nikkah Loophole',         img:`${IMGS}illus-ep2.jpg`, thumb:`${IMGS}thumb-illus-ep2.jpg`,  eyebrow:'THE NIKKAH LOOPHOLE',       outroLine1:'Listen to the full episode at moremuslim.org.', outroLine2:'Or search for “More Muslim” on Apple Podcasts, Spotify, or wherever you listen.' },
-  { e:'3', title:'The Secret Translators',      img:`${IMGS}illus-ep3.jpg`, thumb:`${IMGS}thumb-illus-ep3.jpg`,  eyebrow:'THE SECRET TRANSLATORS',    outroLine1:'Listen to the full episode at moremuslim.org.', outroLine2:'Or search for “More Muslim” on Apple Podcasts, Spotify, or wherever you listen.' },
-  { e:'4', title:'A Recitation Revolution',     img:`${IMGS}illus-ep4.jpg`, thumb:`${IMGS}thumb-illus-ep4.jpg`,  eyebrow:'A RECITATION REVOLUTION',   outroLine1:'Listen to the full episode at moremuslim.org.', outroLine2:'Or search for “More Muslim” on Apple Podcasts, Spotify, or wherever you listen.' },
-  { e:'5', title:'Hanabneehu',                  img:`${IMGS}illus-ep5.jpg`, thumb:`${IMGS}thumb-illus-ep5.jpg`,  eyebrow:'HANABNEEHU',                outroLine1:'Listen to the full episode at moremuslim.org.', outroLine2:'Or search for “More Muslim” on Apple Podcasts, Spotify, or wherever you listen.' },
-  { e:'6', title:'Cape Malay',                  img:`${IMGS}illus-ep6.jpg`, thumb:`${IMGS}thumb-illus-ep6.jpg`,  eyebrow:'CAPE MALAY',                outroLine1:'Listen to the full episode at moremuslim.org.', outroLine2:'Or search for “More Muslim” on Apple Podcasts, Spotify, or wherever you listen.' },
-  { e:'7', title:'In Therapy, With SheikhaGPT', img:`${IMGS}illus-ep7.jpg`, thumb:`${IMGS}thumb-illus-ep7.jpg`,  eyebrow:'IN THERAPY, WITH SHEIKHAGPT', outroLine1:'Listen to the full episode at moremuslim.org.', outroLine2:'Or search for “More Muslim” on Apple Podcasts, Spotify, or wherever you listen.' },
-  { e:'8', title:'The Travelling Sisterhood',   img:`${IMGS}illus-ep8.jpg`, thumb:`${IMGS}thumb-illus-ep8.jpg`,  eyebrow:'THE TRAVELLING SISTERHOOD', outroLine1:'Listen to the full episode at moremuslim.org.', outroLine2:'Or search for “More Muslim” on Apple Podcasts, Spotify, or wherever you listen.' },
-  { e:'9', title:'A More Muslim Japan',         img:`${IMGS}illus-ep9.jpg`, thumb:`${IMGS}thumb-illus-ep9.jpg`,  eyebrow:'A MORE MUSLIM JAPAN',       outroLine1:'Listen to the full episode at moremuslim.org.', outroLine2:'Or search for “More Muslim” on Apple Podcasts, Spotify, or wherever you listen.' },
-  { e:'10', title:'The Women Who Wash Our Dead', img:`${IMGS}illus-ep10.jpg`, thumb:`${IMGS}thumb-illus-ep10.jpg`, eyebrow:'THE WOMEN WHO WASH OUR DEAD', outroLine1:'Listen to the full episode at moremuslim.org.', outroLine2:'Or search for “More Muslim” on Apple Podcasts, Spotify, or wherever you listen.' },
+  { e:'1', title:'Side Entrances',              img:`${IMGS}illus-ep1.jpg`, thumb:`${IMGS}illus-ep1.jpg`,  eyebrow:'SIDE ENTRANCES',            outroLine1:'Listen to the full episode at moremuslim.org.', outroLine2:'Or search for “More Muslim” on Apple Podcasts, Spotify, or wherever you listen.' },
+  { e:'2', title:'The Nikkah Loophole',         img:`${IMGS}illus-ep2.jpg`, thumb:`${IMGS}illus-ep2.jpg`,  eyebrow:'THE NIKKAH LOOPHOLE',       outroLine1:'Listen to the full episode at moremuslim.org.', outroLine2:'Or search for “More Muslim” on Apple Podcasts, Spotify, or wherever you listen.' },
+  { e:'3', title:'The Secret Translators',      img:`${IMGS}illus-ep3.jpg`, thumb:`${IMGS}illus-ep3.jpg`,  eyebrow:'THE SECRET TRANSLATORS',    outroLine1:'Listen to the full episode at moremuslim.org.', outroLine2:'Or search for “More Muslim” on Apple Podcasts, Spotify, or wherever you listen.' },
+  { e:'4', title:'A Recitation Revolution',     img:`${IMGS}illus-ep4.jpg`, thumb:`${IMGS}illus-ep4.jpg`,  eyebrow:'A RECITATION REVOLUTION',   outroLine1:'Listen to the full episode at moremuslim.org.', outroLine2:'Or search for “More Muslim” on Apple Podcasts, Spotify, or wherever you listen.' },
+  { e:'5', title:'Hanabneehu',                  img:`${IMGS}illus-ep5.jpg`, thumb:`${IMGS}illus-ep5.jpg`,  eyebrow:'HANABNEEHU',                outroLine1:'Listen to the full episode at moremuslim.org.', outroLine2:'Or search for “More Muslim” on Apple Podcasts, Spotify, or wherever you listen.' },
+  { e:'6', title:'Cape Malay',                  img:`${IMGS}illus-ep6.jpg`, thumb:`${IMGS}illus-ep6.jpg`,  eyebrow:'CAPE MALAY',                outroLine1:'Listen to the full episode at moremuslim.org.', outroLine2:'Or search for “More Muslim” on Apple Podcasts, Spotify, or wherever you listen.' },
+  { e:'7', title:'In Therapy, With SheikhaGPT', img:`${IMGS}illus-ep7.jpg`, thumb:`${IMGS}illus-ep7.jpg`,  eyebrow:'IN THERAPY, WITH SHEIKHAGPT', outroLine1:'Listen to the full episode at moremuslim.org.', outroLine2:'Or search for “More Muslim” on Apple Podcasts, Spotify, or wherever you listen.' },
+  { e:'8', title:'The Travelling Sisterhood',   img:`${IMGS}illus-ep8.jpg`, thumb:`${IMGS}illus-ep8.jpg`,  eyebrow:'THE TRAVELLING SISTERHOOD', outroLine1:'Listen to the full episode at moremuslim.org.', outroLine2:'Or search for “More Muslim” on Apple Podcasts, Spotify, or wherever you listen.' },
+  { e:'9', title:'A More Muslim Japan',         img:null, thumb:null,  eyebrow:'A MORE MUSLIM JAPAN',       outroLine1:'Listen to the full episode at moremuslim.org.', outroLine2:'Or search for “More Muslim” on Apple Podcasts, Spotify, or wherever you listen.' },
+  { e:'10', title:'The Women Who Wash Our Dead', img:`${IMGS}illus-ep10.jpg`, thumb:`${IMGS}illus-ep10.jpg`, eyebrow:'THE WOMEN WHO WASH OUR DEAD', outroLine1:'Listen to the full episode at moremuslim.org.', outroLine2:'Or search for “More Muslim” on Apple Podcasts, Spotify, or wherever you listen.' },
 ];
 
 const COLORWAYS = [
@@ -127,6 +139,12 @@ const COLORWAYS = [
   { key:'stone',      name:'Stone Blue',      bg:'#3C5065', ink:'#F6E1C6', hex:'#3C5065' },
   { key:'black',      name:'Black',           bg:'#000000', ink:'#FBF2E9', hex:'#000000' },
 ];
+
+// Ground colourway → official ZAINA star-lattice tile, matching PatternPanel.jsx's GROUND_TILE.
+const GROUND_TILE = {
+  beige:'6a', harvest:'3a', terracotta:'5b', oak:'6b',
+  mist:'2b', coastal:'6c', stone:'1b', night:'5c', black:'5c',
+};
 
 const LAYOUTS = [
   { key:'cover',     name:'Cover',     isStory:false, desc:'Large title, illustration background, symbol' },
@@ -404,19 +422,26 @@ function Wizard() {
         </div>
         {(bgType==='pattern' || bgType==='solid') ? (
           <div className="cw-grid">
-            {COLORWAYS.map(c=>(
-              <div key={c.key} className={`cw-opt${bgChoice===c.key?' on':''}`} style={{background:c.bg,color:c.ink}} onClick={()=>setBgChoice(c.key)}>
-                <span className="cw-check" style={{color:c.ink}}>✓</span>
-                <span className="cw-name">{c.name}</span>
-                <span className="cw-hex" style={{color:c.ink}}>{c.hex}</span>
-              </div>
-            ))}
+            {COLORWAYS.map(c=>{
+              const isPattern = bgType==='pattern';
+              const tileUrl = isPattern ? `${PATTERNS}pattern-${GROUND_TILE[c.key]}.png` : null;
+              return (
+                <div key={c.key}
+                  className={`cw-opt${bgChoice===c.key?' on':''}${isPattern?' is-pattern':''}`}
+                  style={isPattern ? {backgroundColor:c.bg, backgroundImage:`url("${tileUrl}")`} : {background:c.bg,color:c.ink}}
+                  onClick={()=>setBgChoice(c.key)}>
+                  <span className="cw-check" style={isPattern?undefined:{color:c.ink}}>✓</span>
+                  <span className="cw-name">{c.name}</span>
+                  <span className="cw-hex" style={isPattern?undefined:{color:c.ink}}>{c.hex}</span>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div className="img-grid">
             {EPISODES.map((e,i)=>(
-              <div key={i} className={`img-opt${bgChoice===e.img?' on':''}`} onClick={()=>setBgChoice(e.img)}>
-                <img src={e.thumb} alt={e.title} loading="lazy"/>
+              <div key={i} className={`img-opt${e.thumb&&bgChoice===e.img?' on':''}${e.thumb?'':' is-empty'}`} onClick={()=>e.thumb&&setBgChoice(e.img)}>
+                {e.thumb ? <img src={e.thumb} alt={e.title} loading="lazy"/> : <div className="img-opt-placeholder">No illustration yet</div>}
                 <div className="img-opt-label">E{e.e} — {e.title}</div>
               </div>
             ))}
