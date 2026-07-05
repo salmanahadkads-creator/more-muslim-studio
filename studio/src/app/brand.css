@@ -1,0 +1,37 @@
+/* More Muslim brand webfonts.
+   ABC Marist by Dinamo — brand serif, Regular + Italic only (no bold; hierarchy
+   is built with size, case, tracking, and colour). ABC Diatype trials carry the
+   wide-tracked caps/labels. Licensed to More Muslim Podcast — do not publish
+   these files outside brand deployments. */
+
+@font-face {
+  font-family: "ABC Marist";
+  src: url("../../../assets/fonts/ABCMarist-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "ABC Marist";
+  src: url("../../../assets/fonts/ABCMarist-RegularItalic.otf") format("opentype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "ABC Diatype";
+  src: url("../../../uploads/ABCDiatype-Regular-Trial.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "ABC Diatype";
+  src: url("../../../uploads/ABCDiatype-Medium-Trial.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: block;
+}
