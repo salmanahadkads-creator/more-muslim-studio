@@ -257,6 +257,9 @@ const DEFAULTS = {
     breathe:        true,
     wordAccent:     true,
     bgDrift:        true,
+    gateWeave:      true,
+    textZoom:       true,
+    paperTexture:   true,
     outroEpisode:   "EPISODE 7",
     outroLine1:     "Listen to the full episode at moremuslim.org.",
     outroLine2:     "Or search for \u201CMore Muslim\u201D on Apple Podcasts, Spotify, or wherever you listen to podcasts.",
@@ -495,6 +498,7 @@ function App() {
 
   // Audiogram
   const [audioSrc, setAudioSrc]       = React.useState(null);
+  const [audioBlob, setAudioBlob]     = React.useState(null); // handed to the iframe via structured clone — blob: URLs don't survive across documents reliably
   const [audioT, setAudioT]           = React.useState(0);
   const [audioDur, setAudioDur]       = React.useState(0);
   const [audioPlaying, setAudioPlaying] = React.useState(false);
@@ -523,7 +527,7 @@ function App() {
   const newEpisodeCarousel = (epNum) => { if (!confirm('Replace your current slides with a fresh episode carousel? This clears the current post.')) return; const ep=EPISODES.find(e=>e.e===epNum)||EPISODES[6]; setSlides(buildEpisodeCarousel(ep)); setActiveIdx(0); };
 
   const acceptImage = (file) => { if (!file || !file.type.startsWith('image')) return; const url=URL.createObjectURL(file); setCustomImage(url); pickImage(url); };
-  const acceptAudio = (file) => { if (!file || !file.type.startsWith('audio')) return; setAudioSrc(URL.createObjectURL(file)); };
+  const acceptAudio = (file) => { if (!file || !file.type.startsWith('audio')) return; setAudioBlob(file); setAudioSrc(URL.createObjectURL(file)); };
   const acceptSrt   = async (file) => { if (!file) return; upd('srt', await file.text()); };
   const handleUpload      = (e) => acceptImage(e.target.files[0]);
   const handleAudioUpload = (e) => acceptAudio(e.target.files[0]);
@@ -550,6 +554,7 @@ function App() {
         const getReq = tx.objectStore('files').get('pending-audio');
         getReq.onsuccess = () => {
           if (!getReq.result) return;
+          setAudioBlob(getReq.result);
           setAudioSrc(URL.createObjectURL(getReq.result));
           // Clear after reading so it doesn't persist
           const tx2 = db.transaction('files', 'readwrite');
@@ -570,11 +575,14 @@ function App() {
       highlight: ac.highlight===undefined ? 'auto' : ac.highlight,
       speakerSwap: ac.speakerSwap!==false, breathe: ac.breathe!==false,
       wordAccent: ac.wordAccent!==false, bgDrift: ac.bgDrift!==false,
+      gateWeave: ac.gateWeave!==false, textZoom: ac.textZoom!==false, paperTexture: ac.paperTexture!==false,
       srt:ac.srt, audioSrc, imgOpacity, solidBg:!!ac.solidBg,
     };
-    try { localStorage.setItem('mm-audiogram-cfg', JSON.stringify(msg)); } catch {}
-    iframeRef.current?.contentWindow?.postMessage(msg, '*');
-  }, [tpl, way, content.audiogram, audioSrc, imgOpacity]);
+    // Never persist blob: URLs — they are dead outside this document. The iframe gets the
+    // actual Blob (structured clone) and mints its own URL.
+    try { const st={...msg}; if (st.audioSrc && st.audioSrc.startsWith('blob:')) st.audioSrc=null; localStorage.setItem('mm-audiogram-cfg', JSON.stringify(st)); } catch {}
+    iframeRef.current?.contentWindow?.postMessage(audioBlob ? {...msg, audioSrc:undefined, audioBlob} : msg, '*');
+  }, [tpl, way, content.audiogram, audioSrc, audioBlob, imgOpacity]);
 
   // Listen for time updates from iframe
   React.useEffect(() => {
@@ -669,7 +677,7 @@ function App() {
     const ac=content.audiogram||{};
     const hasAudio = !!audioSrc;
     // Flag 'pending' so the new tab knows to pull the audio from IndexedDB (blob: URLs don't cross tabs).
-    try { localStorage.setItem('mm-audiogram-cfg', JSON.stringify({ hostWay:way, guestWay:ac.guestWay||'oak', episodeEyebrow:ac.episodeEyebrow, outroEpisode:ac.outroEpisode, outroLine1:ac.outroLine1, outroLine2:ac.outroLine2, highlight: ac.highlight===undefined?'auto':ac.highlight, speakerSwap: ac.speakerSwap!==false, breathe: ac.breathe!==false, wordAccent: ac.wordAccent!==false, bgDrift: ac.bgDrift!==false, srt:ac.srt, audioSrc: hasAudio ? 'pending' : null, solidBg:!!ac.solidBg })); } catch {}
+    try { localStorage.setItem('mm-audiogram-cfg', JSON.stringify({ hostWay:way, guestWay:ac.guestWay||'oak', episodeEyebrow:ac.episodeEyebrow, outroEpisode:ac.outroEpisode, outroLine1:ac.outroLine1, outroLine2:ac.outroLine2, highlight: ac.highlight===undefined?'auto':ac.highlight, speakerSwap: ac.speakerSwap!==false, breathe: ac.breathe!==false, wordAccent: ac.wordAccent!==false, bgDrift: ac.bgDrift!==false, gateWeave: ac.gateWeave!==false, textZoom: ac.textZoom!==false, paperTexture: ac.paperTexture!==false, srt:ac.srt, audioSrc: hasAudio ? 'pending' : null, solidBg:!!ac.solidBg })); } catch {}
     // The player tab is opened by the <a target="_blank"> button (popup-blocker safe); here we only stage config + audio.
     if (hasAudio) {
       fetch(audioSrc).then(r=>r.blob()).then(blob=>{
@@ -723,7 +731,7 @@ function App() {
               {content.audiogram?.srt && content.audiogram.srt !== AUDIOGRAM_SRT ? '✓ Captions loaded' : '+ Upload or drop captions (SRT)'}
             </label>
             {audioSrc && (
-              <button className="nonebtn" onClick={()=>setAudioSrc(null)} style={{gridColumn:'span 3',marginTop:4}}>Remove audio</button>
+              <button className="nonebtn" onClick={()=>{setAudioSrc(null);setAudioBlob(null);}} style={{gridColumn:'span 3',marginTop:4}}>Remove audio</button>
             )}
             <span className="croplabel" style={{gridColumn:'span 3',marginTop:10,marginBottom:4}}>Illustration</span>
             {AUDIOGRAM_BG_IMGS.map(img => (
@@ -840,7 +848,7 @@ function App() {
                 Everything is on by default; switch off anything a clip does not need.
               </p>
               <div className="hlchips">
-                {[['speakerSwap','Speaker ground swap'],['breathe','Breathing pattern'],['wordAccent','Word accent'],['bgDrift','Background drift']].map(([k,label])=>(
+                {[['speakerSwap','Speaker ground swap'],['breathe','Breathing pattern'],['wordAccent','Word accent'],['bgDrift','Background drift'],['gateWeave','Gate weave'],['textZoom','Text zoom'],['paperTexture','Paper texture']].map(([k,label])=>(
                   <button key={k} className={'hlchip'+(c[k]!==false?' on':'')} onClick={()=>upd(k, c[k]===false)}>
                     {label}
                   </button>
@@ -856,7 +864,7 @@ function App() {
             style={{width:displayW, height:displayH, border:'none', display:'block'}}
             onLoad={() => {
               const ac=content.audiogram||{};
-              setTimeout(()=>{ iframeRef.current?.contentWindow?.postMessage({ type:'audiogram-config', hostWay:way, guestWay:ac.guestWay||'oak', episodeEyebrow:ac.episodeEyebrow, outroEpisode:ac.outroEpisode, outroLine1:ac.outroLine1, outroLine2:ac.outroLine2, highlight: ac.highlight===undefined?'auto':ac.highlight, speakerSwap: ac.speakerSwap!==false, breathe: ac.breathe!==false, wordAccent: ac.wordAccent!==false, bgDrift: ac.bgDrift!==false, srt:ac.srt, audioSrc, solidBg:!!ac.solidBg }, '*'); }, 300);
+              setTimeout(()=>{ iframeRef.current?.contentWindow?.postMessage({ type:'audiogram-config', hostWay:way, guestWay:ac.guestWay||'oak', episodeEyebrow:ac.episodeEyebrow, outroEpisode:ac.outroEpisode, outroLine1:ac.outroLine1, outroLine2:ac.outroLine2, highlight: ac.highlight===undefined?'auto':ac.highlight, speakerSwap: ac.speakerSwap!==false, breathe: ac.breathe!==false, wordAccent: ac.wordAccent!==false, bgDrift: ac.bgDrift!==false, gateWeave: ac.gateWeave!==false, textZoom: ac.textZoom!==false, paperTexture: ac.paperTexture!==false, srt:ac.srt, ...(audioBlob?{audioBlob}:{audioSrc}), solidBg:!!ac.solidBg }, '*'); }, 300);
             }}
           />
         ) : (

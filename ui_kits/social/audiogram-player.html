@@ -24,6 +24,7 @@
 
 const IS_IFRAME = window.self !== window.top;
 const FPS = 12; // playback throttle + export frame rate (12fps for a stop-motion, documentary feel)
+const SYNC_LEAD = 0.12; // captions lead the audio slightly — compensates fade-in + frame quantisation
 
 const DEFAULT_SRT = `1
 00:00:00,000 --> 00:00:01,650
@@ -61,12 +62,20 @@ const DEFAULT_CFG = {
   showSpeakerLabel:true, bgDrift:true, illusTint:true, solidBg:false,
   highlight:'auto', // 'auto' | 'off' | block index \u2014 one sentence rendered as a large italic set piece
   speakerSwap:true, breathe:true, wordAccent:true,
+  gateWeave:true, textZoom:true, paperTexture:true,
   imgZoom:1, imgCropX:50, imgCropY:50,
   srt:DEFAULT_SRT, audioSrc:null,
 };
 
 function loadCfg() {
-  try { const s = localStorage.getItem('mm-audiogram-cfg'); return s ? { ...DEFAULT_CFG, ...JSON.parse(s) } : DEFAULT_CFG; }
+  try {
+    const s = localStorage.getItem('mm-audiogram-cfg');
+    const cfg = s ? { ...DEFAULT_CFG, ...JSON.parse(s) } : DEFAULT_CFG;
+    // blob: URLs never survive into a fresh document — treat a stored one as "no audio"
+    // rather than letting playback/export silently fail on a dead URL.
+    if (cfg.audioSrc && String(cfg.audioSrc).startsWith('blob:')) cfg.audioSrc = null;
+    return cfg;
+  }
   catch { return DEFAULT_CFG; }
 }
 function calcScale() {
@@ -90,6 +99,10 @@ const frand = (n) => { const x = Math.sin(n*127.1 + 311.7)*43758.5453; return x 
 const grainURI = (v) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" width="280" height="280"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="matrix" values="0 0 0 0 ${v} 0 0 0 0 ${v} 0 0 0 0 ${v} 0 0 0 0.55 0"/></filter><rect width="280" height="280" filter="url(#n)"/></svg>`);
 const GRAIN_DARK = grainURI(0), GRAIN_LIGHT = grainURI(1);
+// Coarser second octave — paper tooth. Drifts slowly instead of jumping like the grain.
+const paperURI = (v) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="520" height="520"><filter id="p"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="matrix" values="0 0 0 0 ${v} 0 0 0 0 ${v} 0 0 0 0 ${v} 0 0 0 0.5 0"/></filter><rect width="520" height="520" filter="url(#p)"/></svg>`);
+const PAPER_DARK = paperURI(0), PAPER_LIGHT = paperURI(1);
 
 class AudiogramPlayer extends React.Component {
   state = { t:0, duration:0, playing:false, started:false, scale:calcScale(), cfg:loadCfg(), exporting:false, exportPct:0 };
@@ -222,17 +235,40 @@ class AudiogramPlayer extends React.Component {
   };
 
   _onStorage = (e) => {
-    if (e.key==='mm-audiogram-cfg') try { this._patch(JSON.parse(e.newValue||'{}')); } catch {}
+    if (e.key!=='mm-audiogram-cfg') return;
+    // Storage sync carries content/config only. Audio arrives via postMessage (Blob) or the
+    // IndexedDB handoff — a stored audioSrc (always null or stale) must never clobber it.
+    try { const {audioSrc:_a, audioBlob:_b, ...rest}=JSON.parse(e.newValue||'{}'); this._patch(rest); } catch {}
   };
 
   _patch(patch) {
     const prev=this.state.cfg;
+    // Audio can arrive as a Blob (structured-clone from the studio). Mint our own
+    // object URL so it is always valid in THIS document — blob: URLs created in
+    // another tab or a previous session are dead on arrival.
+    if (patch.audioBlob) {
+      const blobKey = patch.audioBlob.size + ':' + patch.audioBlob.type;
+      if (this._audioBlobKey === blobKey) {
+        // Same audio re-sent on an unrelated config change — keep the current URL, don't restart.
+        const {audioBlob:_b, audioSrc:_s, ...rest} = patch; patch = rest;
+      } else {
+        this._audioBlobKey = blobKey;
+        try { patch = {...patch, audioSrc: URL.createObjectURL(patch.audioBlob)}; } catch {}
+        delete patch.audioBlob;
+      }
+    }
     this.setState(s=>({cfg:{...s.cfg,...patch}}), ()=>{
       if (patch.srt && patch.srt!==prev.srt) this._parsed=false;
       if (patch.audioSrc && patch.audioSrc!==prev.audioSrc) {
         if (this.audio) { this.audio.src=patch.audioSrc; this.audio.load(); }
         this.setState({t:0,duration:0,started:false,playing:false});
         this._loadEnv();
+      } else if (patch.audioSrc===null && prev.audioSrc) {
+        // Audio explicitly removed: unload the element and forget the blob key so the
+        // same file can be re-uploaded later.
+        this._audioBlobKey=null; this._env=null; this._envSrc=null;
+        if (this.audio) { this.audio.pause(); this.audio.removeAttribute('src'); this.audio.load(); }
+        this.setState({t:0,duration:0,started:false,playing:false});
       }
     });
   }
@@ -283,7 +319,7 @@ class AudiogramPlayer extends React.Component {
     return !!(c.speakerSwap!==false && h && g && !h.isImage && !g.isImage && c.guestWay!==c.hostWay && this.guest);
   }
   groundState() {
-    const t=this.state.t, bs=this.blocks||[], c=this.state.cfg;
+    const t=this.state.t+SYNC_LEAD, bs=this.blocks||[], c=this.state.cfg;
     let cur=c.hostWay, prevW=c.hostWay, k=1;
     if (this.swapEnabled()) {
       let idx=-1;
@@ -345,11 +381,8 @@ class AudiogramPlayer extends React.Component {
     el.addEventListener('ended', ()=>this.setState({playing:false}));
   };
 
-  rootRef = (el) => { this.root=el; this._applyVars(); };
-  _applyVars() { if (!this.root||!this._vars) return; for (const k in this._vars) this.root.style.setProperty('--'+k, String(this._vars[k])); }
-
   activeBlock() {
-    const t=this.state.t, bs=this.blocks||[]; let idx=-1;
+    const t=this.state.t+SYNC_LEAD, bs=this.blocks||[]; let idx=-1;
     for (let i=0;i<bs.length;i++) { if(bs[i].start<=t) idx=i; else break; }
     return idx>=0?bs[idx]:null;
   }
@@ -391,6 +424,7 @@ class AudiogramPlayer extends React.Component {
             (breathe ? <div style={{position:'absolute',inset:0,opacity:patOp}}>{this.panel(way)}</div> : this.panel(way))}
         </div>
         {w.isImage && cfg.illusTint && <div style={{position:'absolute',inset:0,background:'linear-gradient(180deg,rgba(8,10,18,0.42) 0%,rgba(8,10,18,0.30) 42%,rgba(8,10,18,0.66) 100%)'}} />}
+        {cfg.paperTexture!==false && <div style={{position:'absolute',inset:0,backgroundImage:`url("${lightGround?PAPER_DARK:PAPER_LIGHT}")`,backgroundSize:'520px 520px',backgroundPosition:`${(t*4)%520}px ${(t*2.5)%520}px`,opacity:lightGround?0.045:0.06,pointerEvents:'none'}} />}
         <div style={{position:'absolute',inset:0,backgroundImage:`url("${lightGround?GRAIN_DARK:GRAIN_LIGHT}")`,backgroundSize:'280px 280px',backgroundPosition:`${gx}px ${gy}px`,opacity:lightGround?0.05:0.07,pointerEvents:'none'}} />
       </div>
     );
@@ -398,7 +432,7 @@ class AudiogramPlayer extends React.Component {
 
   buildCaption(ink, accent, isHi) {
     const active=this.activeBlock(); if (!active) return null;
-    const {t,cfg}=this.state, motion=cfg.wordMotion;
+    const {cfg}=this.state, motion=cfg.wordMotion, t=this.state.t+SYNC_LEAD;
     const size = isHi ? (cfg.captionSize==='M'?62:82) : (cfg.captionSize==='M'?48:69);
     const spans=[];
     const words=active.words;
@@ -572,34 +606,50 @@ class AudiogramPlayer extends React.Component {
     const symSrc=`../../assets/logos/symbol-${ow.logo}.svg`;
     const dur=this.state.duration||((this.contentEnd||0)+cfg.outroDuration)||1;
 
-    this._vars={s:scale,ink:gs.ink,chromeOp:1-oProg};
-    this._applyVars();
+    // All colours/opacities are inline (not CSS variables) so the export snapshot —
+    // which clones only the frame — renders identically to the live preview.
+    const chromeOp=(1-oProg)*(isHi?0.35:1); // eyebrow/footer recede during the highlight set piece
+    // Gate weave: slow filmic wander of the whole frame + a whisper of exposure flicker.
+    const fIdx=Math.floor(t*FPS), weave=cfg.gateWeave!==false;
+    const wx=weave?Math.sin(t*0.9+1.7)*2.2+(frand(fIdx*3+11)*2-1)*0.5:0;
+    const wy=weave?Math.cos(t*0.7+0.4)*2.2+(frand(fIdx*3+77)*2-1)*0.5:0;
+    const wr=weave?Math.sin(t*0.5+2.6)*0.05:0;
+    const flick=weave?frand(fIdx+301)*0.02:0;
+    // Text zoom: a slow push on the live sentence; stronger arc on the highlight.
+    let zScale=1;
+    if (cfg.textZoom!==false && active) {
+      const bp=clamp01((t+SYNC_LEAD-active.start)/Math.max(1.2,(active.end-active.start)||1.2));
+      zScale=isHi?0.98+0.10*bp:1+0.035*bp;
+    }
 
     const btn={background:'#232d45',color:'#e9edf5',border:'1px solid #2e3a55',borderRadius:6,padding:'7px 12px',cursor:'pointer',font:'13px -apple-system,sans-serif'};
     return (
       <div style={{width:'100%',height:'100%',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:IS_IFRAME?0:14,padding:IS_IFRAME?0:20,fontFamily:"'ABC Marist','Iowan Old Style',Georgia,serif"}}>
-        <div ref={this.rootRef} style={{position:'relative',width:1080*scale,height:1920*scale,flexShrink:0,boxShadow:'0 20px 60px rgba(0,0,0,0.5)'}}>
+        <div style={{position:'relative',width:1080*scale,height:1920*scale,flexShrink:0,boxShadow:'0 20px 60px rgba(0,0,0,0.5)'}}>
           <div ref={el=>this.frame=el} style={{position:'absolute',top:0,left:0,width:1080,height:1920,transform:`scale(${scale})`,transformOrigin:'top left',overflow:'hidden',background:'#000',fontFamily:"'ABC Marist','Iowan Old Style',Georgia,serif",lineHeight:1}}>
-            <div style={{position:'absolute',inset:0}}>
-              {gs.k<1 && this.groundLayer(gs.prev,1,'g-prev')}
-              {this.groundLayer(gs.cur,gs.k,'g-cur')}
-            </div>
-            <div style={{position:'absolute',top:370,left:0,right:0,textAlign:'center',fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',whiteSpace:'nowrap',padding:'0 60px',color:'var(--ink,#511C14)',opacity:'var(--chromeOp,1)'}}>{cfg.episodeEyebrow}</div>
-            <div style={{position:'absolute',left:86,right:86,top:460,bottom:460,display:'flex',flexDirection:'column',justifyContent:isHi?'center':'flex-start',alignItems:isHi?'center':'flex-start',pointerEvents:'none'}}>
-              {this.buildCaption(gs.ink,gs.accent,isHi)}
-            </div>
-            <div style={{position:'absolute',bottom:370,left:0,right:0,textAlign:'center',fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',whiteSpace:'nowrap',color:'var(--ink,#511C14)',opacity:'var(--chromeOp,1)'}}>MOREMUSLIM.ORG</div>
-            {oProg>0 && (
-              <div style={{position:'absolute',inset:0,opacity:oProg,pointerEvents:oProg>0.5?'auto':'none'}}>
-                <div style={{position:'absolute',inset:0}}>{this.groundLayer(outroWay,1,'outroG')}</div>
-                <div style={{position:'relative',height:'100%',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',padding:'0 130px',color:ow.ink}}>
-                  <div style={{fontSize:56,textTransform:'uppercase',letterSpacing:'0.165em',lineHeight:1.16,opacity:oFade(0.15)}}>{cfg.outroEpisode}<br/>Now Streaming</div>
-                  <div style={{marginTop:140,fontSize:48,maxWidth:860,lineHeight:1.18,opacity:oFade(0.55)}}>{cfg.outroLine1}</div>
-                  <div style={{marginTop:90,fontSize:48,maxWidth:860,lineHeight:1.24,opacity:oFade(0.95)}}>{cfg.outroLine2}</div>
-                  <img src={symSrc} alt="" style={{width:190,height:190,marginTop:150,opacity:oFade(1.35)}} />
-                </div>
+            <div style={{position:'absolute',inset:0,transform:`translate(${wx.toFixed(2)}px,${wy.toFixed(2)}px) rotate(${wr.toFixed(3)}deg) scale(1.006)`,transformOrigin:'center'}}>
+              <div style={{position:'absolute',inset:0}}>
+                {gs.k<1 && this.groundLayer(gs.prev,1,'g-prev')}
+                {this.groundLayer(gs.cur,gs.k,'g-cur')}
               </div>
-            )}
+              <div style={{position:'absolute',top:370,left:0,right:0,textAlign:'center',fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',whiteSpace:'nowrap',padding:'0 60px',color:gs.ink,opacity:chromeOp}}>{cfg.episodeEyebrow}</div>
+              <div style={{position:'absolute',left:86,right:86,top:460,bottom:460,display:'flex',flexDirection:'column',justifyContent:isHi?'center':'flex-start',alignItems:isHi?'center':'flex-start',pointerEvents:'none',transform:`scale(${zScale.toFixed(4)})`,transformOrigin:isHi?'50% 50%':'0% 22%'}}>
+                {this.buildCaption(gs.ink,gs.accent,isHi)}
+              </div>
+              <div style={{position:'absolute',bottom:370,left:0,right:0,textAlign:'center',fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',whiteSpace:'nowrap',color:gs.ink,opacity:chromeOp}}>MOREMUSLIM.ORG</div>
+              {oProg>0 && (
+                <div style={{position:'absolute',inset:0,opacity:oProg,pointerEvents:oProg>0.5?'auto':'none'}}>
+                  <div style={{position:'absolute',inset:0}}>{this.groundLayer(outroWay,1,'outroG')}</div>
+                  <div style={{position:'relative',height:'100%',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',padding:'0 130px',color:ow.ink}}>
+                    <div style={{fontSize:56,textTransform:'uppercase',letterSpacing:'0.165em',lineHeight:1.16,opacity:oFade(0.15)}}>{cfg.outroEpisode}<br/>Now Streaming</div>
+                    <div style={{marginTop:140,fontSize:48,maxWidth:860,lineHeight:1.18,opacity:oFade(0.55)}}>{cfg.outroLine1}</div>
+                    <div style={{marginTop:90,fontSize:48,maxWidth:860,lineHeight:1.24,opacity:oFade(0.95)}}>{cfg.outroLine2}</div>
+                    <img src={symSrc} alt="" style={{width:190,height:190,marginTop:150,opacity:oFade(1.35)}} />
+                  </div>
+                </div>
+              )}
+            </div>
+            {flick>0 && <div style={{position:'absolute',inset:0,background:'#fff',opacity:flick.toFixed(3),pointerEvents:'none'}} />}
           </div>
         </div>
         {!IS_IFRAME && (
