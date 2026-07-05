@@ -25,6 +25,8 @@
 const IS_IFRAME = window.self !== window.top;
 const FPS = 12; // playback throttle + export frame rate (12fps for a stop-motion, documentary feel)
 const SYNC_LEAD = 0.12; // captions lead the audio slightly — compensates fade-in + frame quantisation
+const AUDIO_FADE_IN = 0.4;  // gentle ease-in so the clip doesn't start on a hard transient
+const AUDIO_FADE_OUT = 1.0; // ease-out at the tail
 
 const DEFAULT_SRT = `1
 00:00:00,000 --> 00:00:01,650
@@ -95,14 +97,17 @@ function hexMix(a, b, k) {
 }
 // Deterministic pseudo-random in [0,1) from an integer — keeps grain motion reproducible per frame.
 const frand = (n) => { const x = Math.sin(n*127.1 + 311.7)*43758.5453; return x - Math.floor(x); };
-// Tileable noise as a data URI (v=0 → dark speckles for light grounds, v=1 → light speckles for dark grounds).
-const grainURI = (v) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
-  `<svg xmlns="http://www.w3.org/2000/svg" width="280" height="280"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="matrix" values="0 0 0 0 ${v} 0 0 0 0 ${v} 0 0 0 0 ${v} 0 0 0 0.55 0"/></filter><rect width="280" height="280" filter="url(#n)"/></svg>`);
-const GRAIN_DARK = grainURI(0), GRAIN_LIGHT = grainURI(1);
-// Coarser second octave — paper tooth. Drifts slowly instead of jumping like the grain.
-const paperURI = (v) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
-  `<svg xmlns="http://www.w3.org/2000/svg" width="520" height="520"><filter id="p"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="matrix" values="0 0 0 0 ${v} 0 0 0 0 ${v} 0 0 0 0 ${v} 0 0 0 0.5 0"/></filter><rect width="520" height="520" filter="url(#p)"/></svg>`);
-const PAPER_DARK = paperURI(0), PAPER_LIGHT = paperURI(1);
+// Mid-grey luminance noise, composited with soft-light: values above/below 50% grey push
+// the ground's luminance up/down like a curves adjustment — colours stay saturated instead
+// of being washed by a flat translucent layer.
+const lumNoiseURI = (size, freq, oct, coef, base) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="${freq}" numOctaves="${oct}" stitchTiles="stitch"/><feColorMatrix type="matrix" values="${coef} 0 0 0 ${base} ${coef} 0 0 0 ${base} ${coef} 0 0 0 ${base} 0 0 0 0 1"/></filter><rect width="${size}" height="${size}" filter="url(#n)"/></svg>`);
+// Noise means sit at exactly neutral grey: with overlay compositing, 50% grey is a no-op on
+// every ground, so the palette colour stays true on average and only gains local contrast.
+// Amplitudes stay small: blend-curve convexity lifts dark grounds proportionally to the
+// noise variance, so gentle deviations keep the palette true while still giving tooth.
+const GRAIN_LUM = lumNoiseURI(280, 0.9, 2, 0.28, 0.36);  // fine film grain
+const PAPER_LUM = lumNoiseURI(520, 0.035, 3, 0.22, 0.39); // coarse paper tooth
 
 class AudiogramPlayer extends React.Component {
   state = { t:0, duration:0, playing:false, started:false, scale:calcScale(), cfg:loadCfg(), exporting:false, exportPct:0 };
@@ -361,7 +366,7 @@ class AudiogramPlayer extends React.Component {
     if (a && !a.paused) {
       const dur=isFinite(a.duration)?a.duration:0;
       if (!this.state.duration&&dur) this.setState({duration:dur});
-      if (dur) a.volume=1-Math.min(1,Math.max(0,(a.currentTime-(dur-1)))); // volume fade every frame
+      if (dur) { const ct=a.currentTime; a.volume=clamp01(ct/AUDIO_FADE_IN)*(1-clamp01((ct-(dur-AUDIO_FADE_OUT))/AUDIO_FADE_OUT)); } // fade in + out every frame
       // Throttle React re-render + postMessage to ~FPS (drift/caption fades stay smooth)
       const now = performance.now();
       if (!this._lastTick || now - this._lastTick >= 1000/FPS) {
@@ -416,8 +421,12 @@ class AudiogramPlayer extends React.Component {
     const patOp = breathe ? 0.55+0.45*this.env(t) : 1;
     // Living grain: the noise tile jumps to a new deterministic offset at 6Hz —
     // every-frame reseeding reads as TV static, half-rate reads as film.
-    const f2=Math.floor(Math.floor(t*FPS)/2), lightGround=(w.ink==='#511C14'||w.ink==='#192136');
+    const f2=Math.floor(Math.floor(t*FPS)/2);
     const gx=Math.round(frand(f2)*280), gy=Math.round(frand(f2+9173)*280);
+    // overlay does nothing on pure black — fall back to screen at low strength there
+    const texBlend = w.bg==='#000000' ? 'screen' : 'overlay';
+    const paperOp = w.bg==='#000000' ? 0.07 : 0.4;
+    const grainOp = w.bg==='#000000' ? 0.09 : 0.35;
     return (
       <div key={key} style={{position:'absolute',inset:0,background:w.bg,opacity}}>
         <div style={{position:'absolute',inset:0,transform:`scale(${scale}) translateY(${ty}px)`,transformOrigin:'center',willChange:'transform'}}>
@@ -425,8 +434,8 @@ class AudiogramPlayer extends React.Component {
             (breathe ? <div style={{position:'absolute',inset:0,opacity:patOp}}>{this.panel(way)}</div> : this.panel(way))}
         </div>
         {w.isImage && cfg.illusTint && <div style={{position:'absolute',inset:0,background:'linear-gradient(180deg,rgba(8,10,18,0.42) 0%,rgba(8,10,18,0.30) 42%,rgba(8,10,18,0.66) 100%)'}} />}
-        {cfg.paperTexture!==false && <div style={{position:'absolute',inset:0,backgroundImage:`url("${lightGround?PAPER_DARK:PAPER_LIGHT}")`,backgroundSize:'520px 520px',backgroundPosition:`${(t*4)%520}px ${(t*2.5)%520}px`,opacity:lightGround?0.045:0.06,pointerEvents:'none'}} />}
-        <div style={{position:'absolute',inset:0,backgroundImage:`url("${lightGround?GRAIN_DARK:GRAIN_LIGHT}")`,backgroundSize:'280px 280px',backgroundPosition:`${gx}px ${gy}px`,opacity:lightGround?0.05:0.07,pointerEvents:'none'}} />
+        {cfg.paperTexture!==false && <div style={{position:'absolute',inset:0,backgroundImage:`url("${PAPER_LUM}")`,backgroundSize:'520px 520px',backgroundPosition:`${(t*4)%520}px ${(t*2.5)%520}px`,opacity:paperOp,mixBlendMode:texBlend,pointerEvents:'none'}} />}
+        <div style={{position:'absolute',inset:0,backgroundImage:`url("${GRAIN_LUM}")`,backgroundSize:'280px 280px',backgroundPosition:`${gx}px ${gy}px`,opacity:grainOp,mixBlendMode:texBlend,pointerEvents:'none'}} />
       </div>
     );
   }
@@ -568,7 +577,11 @@ class AudiogramPlayer extends React.Component {
           const aenc = new AudioEncoder({ output: (c, m) => muxer.addAudioChunk(c, m), error: e => console.error('AudioEncoder', e) });
           aenc.configure({ codec: 'mp4a.40.2', sampleRate: sr, numberOfChannels: ch, bitrate: 160_000 });
           const inter = new Float32Array(len * ch); // interleaved f32 for WebCodecs AudioData
-          for (let c = 0; c < ch; c++) { const d = audioBuf.getChannelData(c); for (let i = 0; i < len; i++) inter[i * ch + c] = d[i]; }
+          // Bake the same fade-in/out the live player applies via element volume, so the
+          // exported track eases in and out instead of starting/ending on a hard cut.
+          const durSec = len / sr, fi = Math.max(1, Math.round(AUDIO_FADE_IN * sr)), fo = Math.max(1, Math.round(AUDIO_FADE_OUT * sr));
+          const gainAt = (i) => Math.min(i < fi ? i / fi : 1, i > len - fo ? (len - i) / fo : 1);
+          for (let c = 0; c < ch; c++) { const d = audioBuf.getChannelData(c); for (let i = 0; i < len; i++) inter[i * ch + c] = d[i] * gainAt(i); }
           const CHUNK = 8192;
           for (let off = 0; off < len; off += CHUNK) {
             const n = Math.min(CHUNK, len - off);
@@ -640,16 +653,24 @@ class AudiogramPlayer extends React.Component {
       <div style={{width:'100%',height:'100%',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:IS_IFRAME?0:14,padding:IS_IFRAME?0:20,fontFamily:"'ABC Marist','Iowan Old Style',Georgia,serif"}}>
         <div style={{position:'relative',width:1080*scale,height:1920*scale,flexShrink:0,boxShadow:'0 20px 60px rgba(0,0,0,0.5)'}}>
           <div ref={el=>this.frame=el} style={{position:'absolute',top:0,left:0,width:1080,height:1920,transform:`scale(${scale})`,transformOrigin:'top left',overflow:'hidden',background:'#000',fontFamily:"'ABC Marist','Iowan Old Style',Georgia,serif",lineHeight:1}}>
+            {/* Static displacement field for type: ink edges follow the paper fibre — a fixed
+                distortion, not motion. Lives inside the frame so the export clone carries it. */}
+            <svg width="0" height="0" style={{position:'absolute'}} aria-hidden="true"><defs>
+              <filter id="inkDisp" x="-3%" y="-8%" width="106%" height="116%">
+                <feTurbulence type="fractalNoise" baseFrequency="0.012 0.02" numOctaves="2" seed="7" result="n"/>
+                <feDisplacementMap in="SourceGraphic" in2="n" scale="2.6" xChannelSelector="R" yChannelSelector="G"/>
+              </filter>
+            </defs></svg>
             <div style={{position:'absolute',inset:0,transform:`translate(${wx.toFixed(2)}px,${wy.toFixed(2)}px) rotate(${wr.toFixed(3)}deg) scale(1.006)`,transformOrigin:'center'}}>
               <div style={{position:'absolute',inset:0}}>
                 {gs.k<1 && this.groundLayer(gs.prev,1,'g-prev')}
                 {this.groundLayer(gs.cur,gs.k,'g-cur')}
               </div>
-              <div style={{position:'absolute',top:370,left:0,right:0,textAlign:'center',fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',whiteSpace:'nowrap',padding:'0 60px',color:gs.ink,opacity:chromeOp}}>{cfg.episodeEyebrow}</div>
-              <div style={{position:'absolute',left:86,right:86,top:460,bottom:460,display:'flex',flexDirection:'column',justifyContent:isHi?'center':'flex-start',alignItems:isHi?'center':'flex-start',pointerEvents:'none',transform:`${jit(2,0.6)}scale(${zScale.toFixed(4)})`,transformOrigin:isHi?'50% 50%':'0% 22%'}}>
+              <div style={{position:'absolute',top:370,left:0,right:0,textAlign:'center',fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',whiteSpace:'nowrap',padding:'0 60px',color:gs.ink,opacity:chromeOp,filter:pj?'url(#inkDisp)':'none'}}>{cfg.episodeEyebrow}</div>
+              <div style={{position:'absolute',left:86,right:86,top:460,bottom:460,display:'flex',flexDirection:'column',justifyContent:isHi?'center':'flex-start',alignItems:isHi?'center':'flex-start',pointerEvents:'none',transform:`${jit(2,0.6)}scale(${zScale.toFixed(4)})`,transformOrigin:isHi?'50% 50%':'0% 22%',filter:pj?'url(#inkDisp)':'none'}}>
                 {this.buildCaption(gs.ink,gs.accent,isHi)}
               </div>
-              <div style={{position:'absolute',bottom:370,left:0,right:0,textAlign:'center',fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',whiteSpace:'nowrap',color:gs.ink,opacity:chromeOp}}>MOREMUSLIM.ORG</div>
+              <div style={{position:'absolute',bottom:370,left:0,right:0,textAlign:'center',fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',whiteSpace:'nowrap',color:gs.ink,opacity:chromeOp,filter:pj?'url(#inkDisp)':'none'}}>MOREMUSLIM.ORG</div>
               {oProg>0 && (
                 <div style={{position:'absolute',inset:0,opacity:oProg,pointerEvents:oProg>0.5?'auto':'none'}}>
                   <div style={{position:'absolute',inset:0}}>{this.groundLayer(outroWay,1,'outroG')}</div>
