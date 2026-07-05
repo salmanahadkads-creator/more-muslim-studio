@@ -124,16 +124,16 @@ class AudiogramPlayer extends React.Component {
     terracotta: { bg:'#C15A3A', tile:'6B', ink:'#F6E1C6', accent:'#E2B16D', logo:'beige', grain:0.10, tileOpacity:0.15 },
     coastal:    { bg:'#6185A3', tile:'2B', ink:'#F6E1C6', accent:'#E2B16D', logo:'beige', grain:0.08, tileOpacity:0.12 },
     stone:      { bg:'#3C5065', tile:'5C', ink:'#F6E1C6', accent:'#E2B16D', logo:'beige', grain:0.10, tileOpacity:0.15 },
-    ep1: { bg:'#192136', isImage:true, image:'../../assets/imagery/bg-illus-ep1.jpg', ink:'#F6E1C6', accent:'#E2B16D', logo:'beige' },
-    ep2: { bg:'#192136', isImage:true, image:'../../assets/imagery/bg-illus-ep2.jpg', ink:'#F6E1C6', accent:'#E2B16D', logo:'beige' },
-    ep3: { bg:'#192136', isImage:true, image:'../../assets/imagery/bg-illus-ep3.jpg', ink:'#F6E1C6', accent:'#E2B16D', logo:'beige' },
-    ep4: { bg:'#192136', isImage:true, image:'../../assets/imagery/bg-illus-ep4.jpg', ink:'#F6E1C6', accent:'#E2B16D', logo:'beige' },
-    ep5: { bg:'#192136', isImage:true, image:'../../assets/imagery/bg-illus-ep5.jpg', ink:'#F6E1C6', accent:'#E2B16D', logo:'beige' },
-    ep6: { bg:'#192136', isImage:true, image:'../../assets/imagery/bg-illus-ep6.jpg', ink:'#F6E1C6', accent:'#E2B16D', logo:'beige' },
-    ep7: { bg:'#192136', isImage:true, image:'../../assets/imagery/bg-illus-ep7.jpg', ink:'#F6E1C6', accent:'#E2B16D', logo:'beige' },
-    ep8: { bg:'#192136', isImage:true, image:'../../assets/imagery/bg-illus-ep8.jpg', ink:'#F6E1C6', accent:'#E2B16D', logo:'beige' },
-    ep9: { bg:'#192136', isImage:true, image:'../../assets/imagery/bg-illus-ep9.jpg', ink:'#F6E1C6', accent:'#E2B16D', logo:'beige' },
-    ep10: { bg:'#192136', isImage:true, image:'../../assets/imagery/bg-illus-ep10.jpg', ink:'#F6E1C6', accent:'#E2B16D', logo:'beige' },
+    ep1: { bg:'#192136', isImage:true, image:'../../assets/imagery/illus-ep1.jpg', ink:'#F6E1C6', accent:'#E2B16D', logo:'beige' },
+    ep2: { bg:'#192136', isImage:true, image:'../../assets/imagery/illus-ep2.jpg', ink:'#F6E1C6', accent:'#E2B16D', logo:'beige' },
+    ep3: { bg:'#192136', isImage:true, image:'../../assets/imagery/illus-ep3.jpg', ink:'#F6E1C6', accent:'#E2B16D', logo:'beige' },
+    ep4: { bg:'#192136', isImage:true, image:'../../assets/imagery/illus-ep4.jpg', ink:'#F6E1C6', accent:'#E2B16D', logo:'beige' },
+    ep5: { bg:'#192136', isImage:true, image:'../../assets/imagery/illus-ep5.jpg', ink:'#F6E1C6', accent:'#E2B16D', logo:'beige' },
+    ep6: { bg:'#192136', isImage:true, image:'../../assets/imagery/illus-ep6.jpg', ink:'#F6E1C6', accent:'#E2B16D', logo:'beige' },
+    ep7: { bg:'#192136', isImage:true, image:'../../assets/imagery/illus-ep7.jpg', ink:'#F6E1C6', accent:'#E2B16D', logo:'beige' },
+    ep8: { bg:'#192136', isImage:true, image:'../../assets/imagery/illus-ep8.jpg', ink:'#F6E1C6', accent:'#E2B16D', logo:'beige' },
+    ep9: { bg:'#192136', isImage:true, image:'../../assets/imagery/illus-ep9.jpg', ink:'#F6E1C6', accent:'#E2B16D', logo:'beige' },
+    ep10: { bg:'#192136', isImage:true, image:'../../assets/imagery/illus-ep10.jpg', ink:'#F6E1C6', accent:'#E2B16D', logo:'beige' },
   };
 
   ensureParsed() {
@@ -414,8 +414,12 @@ class AudiogramPlayer extends React.Component {
     // Slow push-in scaled to the clip's actual length — perceptible but calm.
     const total=Math.max(1, this.state.duration || ((this.contentEnd||0)+(cfg.outroDuration||5)));
     const p=clamp01(t/total), motion=cfg.bgDrift!==false;
-    const scale = w.isImage ? (motion ? 1.02+0.08*p : 1.02) : (motion ? 1.08+0.04*p : 1.08);
-    const ty = (w.isImage && motion) ? -12*p : 0;
+    // Illustration grounds get a slow left-right pan (Ken Burns). They're zoomed a little
+    // extra so the pan never slides the frame edge into view: at 1.09 the image overhangs
+    // ~49px each side, comfortably more than the ±24px sweep. Patterns keep the push-in only.
+    const scale = w.isImage ? (motion ? 1.09+0.05*p : 1.09) : (motion ? 1.08+0.04*p : 1.08);
+    const tx = (w.isImage && motion) ? Math.sin(t*0.18)*24 : 0; // ~35s period
+    const ty = (w.isImage && motion) ? -10*p : 0;
     // Pattern tile breathes with the voice (opacity only — the ground colour stays solid).
     const breathe = cfg.breathe!==false && !w.isImage && !cfg.solidBg;
     const patOp = breathe ? 0.55+0.45*this.env(t) : 1;
@@ -429,7 +433,7 @@ class AudiogramPlayer extends React.Component {
     const grainOp = w.bg==='#000000' ? 0.09 : 0.35;
     return (
       <div key={key} style={{position:'absolute',inset:0,background:w.bg,opacity}}>
-        <div style={{position:'absolute',inset:0,transform:`scale(${scale}) translateY(${ty}px)`,transformOrigin:'center',willChange:'transform'}}>
+        <div style={{position:'absolute',inset:0,transform:`scale(${scale}) translate(${tx.toFixed(2)}px,${ty.toFixed(2)}px)`,transformOrigin:'center',willChange:'transform'}}>
           {(cfg.solidBg && !w.isImage) ? null :
             (breathe ? <div style={{position:'absolute',inset:0,opacity:patOp}}>{this.panel(way)}</div> : this.panel(way))}
         </div>
