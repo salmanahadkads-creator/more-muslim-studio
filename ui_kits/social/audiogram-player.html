@@ -414,11 +414,12 @@ class AudiogramPlayer extends React.Component {
     // Slow push-in scaled to the clip's actual length — perceptible but calm.
     const total=Math.max(1, this.state.duration || ((this.contentEnd||0)+(cfg.outroDuration||5)));
     const p=clamp01(t/total), motion=cfg.bgDrift!==false;
-    // Illustration grounds get a slow left-right pan (Ken Burns). They're zoomed a little
-    // extra so the pan never slides the frame edge into view: at 1.09 the image overhangs
-    // ~49px each side, comfortably more than the ±24px sweep. Patterns keep the push-in only.
+    // Slow left-right pan on anything with texture. Illustrations are zoomed a little extra
+    // (1.09 → ~49px overhang each side) so the ±24px sweep never bares an edge; pattern tiles
+    // sit over a solid ground colour so an edge can't show regardless. Pure solids don't pan.
     const scale = w.isImage ? (motion ? 1.09+0.05*p : 1.09) : (motion ? 1.08+0.04*p : 1.08);
-    const tx = (w.isImage && motion) ? Math.sin(t*0.18)*24 : 0; // ~35s period
+    const canPan = motion && (w.isImage || (!cfg.solidBg && !!w.tile));
+    const tx = canPan ? Math.sin(t*0.18)*24 : 0; // ±24px, ~35s period
     const ty = (w.isImage && motion) ? -10*p : 0;
     // Pattern tile breathes with the voice (opacity only — the ground colour stays solid).
     const breathe = cfg.breathe!==false && !w.isImage && !cfg.solidBg;
