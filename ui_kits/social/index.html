@@ -48,20 +48,11 @@
   .uploadbtn:hover { background: rgba(226,177,109,0.2); }
   .uploadbtn.on { border-color: #E2B16D; color: #7a4a0a; }
   .uploadbtn.dragging, .srt-file-btn.dragging { border-color: #511C14; border-style: dashed; background: rgba(226,177,109,0.4); }
-  input[type=file]#imgupload, input[type=file]#audioupload, input[type=file]#srtupload, input[type=file]#srtupload2, input[type=file]#coverimgupload { display: none; }
-  .cover-opts { display:flex; flex-direction:column; gap:2px; margin-bottom:10px; }
-  .cover-opt-btn { text-align:left; padding:7px 10px; border:none; border-left:2px solid transparent; background:transparent; color:#511C14; font-family:'ABCDiatype',sans-serif; font-size:13px; cursor:pointer; transition:all 0.12s; width:100%; }
-  .cover-opt-btn:hover { background:rgba(81,28,20,0.06); }
-  .cover-opt-btn.on { background:rgba(81,28,20,0.09); border-left-color:#511C14; }
-  .cover-tpl-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin:8px 0; }
-  .cover-tpl-opt { cursor:pointer; background:rgba(81,28,20,0.04); border:none; padding:0; overflow:hidden; transition:all 0.12s; display:flex; flex-direction:column; }
-  .cover-tpl-opt:hover { background:rgba(81,28,20,0.08); }
-  .cover-tpl-opt.on { outline:2px solid #511C14; }
-  .cover-tpl-lbl { font-family:'ABCDiatype',sans-serif; font-size:9px; letter-spacing:0.1em; text-transform:uppercase; text-align:center; padding:5px 2px; color:#511C14; }
-  .cover-tpl-opt.on .cover-tpl-lbl { background:#511C14; color:#F6E1C6; }
-  .capture-cover-btn { width:100%; padding:10px; background:rgba(81,28,20,0.07); border:1px solid rgba(81,28,20,0.18); color:#511C14; font-family:'ABCDiatype',sans-serif; font-size:13px; letter-spacing:0.14em; text-transform:uppercase; cursor:pointer; transition:all 0.12s; margin-top:6px; }
-  .capture-cover-btn:hover:not(:disabled) { background:rgba(81,28,20,0.13); }
-  .capture-cover-btn:disabled { opacity:0.35; cursor:wait; }
+  input[type=file]#imgupload, input[type=file]#audioupload, input[type=file]#srtupload, input[type=file]#srtupload2 { display: none; }
+  .hlchips { display:flex; flex-wrap:wrap; gap:4px; }
+  .hlchip { text-align:left; padding:6px 9px; background:rgba(81,28,20,0.05); border:1px solid rgba(81,28,20,0.14); color:#511C14; font-family:'ABCDiatype',sans-serif; font-size:11px; line-height:1.35; cursor:pointer; transition:all 0.12s; max-width:100%; }
+  .hlchip:hover { background:rgba(81,28,20,0.1); }
+  .hlchip.on { background:#511C14; color:#F6E1C6; border-color:#511C14; }
   .srt-file-btn { display:block; width:100%; margin-bottom:6px; padding:7px 10px; background:rgba(226,177,109,0.08); border:1px solid rgba(226,177,109,0.25); color:#7a4a0a; font-family:'ABCDiatype',sans-serif; font-size:13px; letter-spacing:0.02em; text-transform:none; cursor:pointer; text-align:center; transition:all 0.12s; }
   .srt-file-btn:hover { background:rgba(226,177,109,0.15); }
   .srt-file-btn.on { border-color:#E2B16D; background:rgba(226,177,109,0.1); }
@@ -155,7 +146,6 @@
       <button class="sect-head" onclick="toggleSect(this)"><h4 id="illus-label"></h4><span class="chev">⌄</span></button>
       <div class="sect-body"><div class="imgpick" id="imgpick"></div><div id="cropsliders"></div></div>
     </div>
-    <div class="sect" id="cover-sect"></div>
     <div class="sect">
       <button class="sect-head" onclick="toggleSect(this)"><h4>Content</h4><span class="chev">⌄</span></button>
       <div class="sect-body"><div id="textedit"></div></div>
@@ -262,8 +252,11 @@ const DEFAULTS = {
   audiogram: {
     guestWay:       "oak",
     episodeEyebrow: "IN THERAPY, WITH SHEIKHAGPT",
-    coverTitle:     "In Therapy, With SheikhaGPT",
-    coverEpisode:   "S1 \u00b7 E7",
+    highlight:      "auto",
+    speakerSwap:    true,
+    breathe:        true,
+    wordAccent:     true,
+    bgDrift:        true,
     outroEpisode:   "EPISODE 7",
     outroLine1:     "Listen to the full episode at moremuslim.org.",
     outroLine2:     "Or search for \u201CMore Muslim\u201D on Apple Podcasts, Spotify, or wherever you listen to podcasts.",
@@ -291,8 +284,6 @@ const FIELDS = {
   credits:   [{id:'episode',label:'Episode',type:'input'},{id:'credits',label:'Credits',type:'credits'}],
   audiogram: [
     {id:'episodeEyebrow', label:'Episode Eyebrow',  type:'input'},
-    {id:'coverTitle',     label:'Cover Title',       type:'input'},
-    {id:'coverEpisode',   label:'Cover Episode',     type:'input'},
     {id:'outroEpisode',   label:'Outro Episode',     type:'input'},
     {id:'outroLine1',     label:'Outro Line 1',      type:'textarea', rows:2},
     {id:'outroLine2',     label:'Outro Line 2',      type:'textarea', rows:2},
@@ -355,6 +346,34 @@ function buildEpisodeCarousel(ep) {
 }
 
 function fmt(s) { s=Math.max(0,Math.floor(s||0)); return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; }
+
+// Split an SRT into the same sentence blocks the audiogram player renders,
+// so the "Highlight moment" chips line up 1:1 with what plays on screen.
+function parseSrtBlocks(srt) {
+  const norm=(srt||'').replace(/\r\n/g,'\n').replace(/\r/g,'\n').trim();
+  const cues=[];
+  for (const chnk of norm.split(/\n\s*\n/)) {
+    const lines=chnk.split('\n').filter(l=>l.trim());
+    if (lines.length<2) continue;
+    const ti=lines.findIndex(l=>/-->/.test(l));
+    if (ti<0 || !/(\d{2}):(\d{2}):(\d{2})[,.](\d{3})/.test(lines[ti])) continue;
+    let txt=lines.slice(ti+1).join(' ').replace(/\s+/g,' ').trim();
+    let speaker=null;
+    const sm=txt.match(/^([^:]{1,40}):\s+/);
+    if (sm) { const cand=sm[1].trim(), ws=cand.split(/\s+/); if (ws.length<=4 && ws.every(w=>/^[A-Z]/.test(w))) { speaker=cand; txt=txt.slice(sm[0].length); } }
+    cues.push({ text:txt, speaker });
+  }
+  let sp=null; const blocks=[]; let cur=null;
+  for (const c of cues) {
+    if (c.speaker) sp=c.speaker;
+    for (const tok of c.text.split(/\s+/).filter(Boolean)) {
+      if (!cur || cur.speaker!==sp) { cur={speaker:sp,words:[]}; blocks.push(cur); }
+      cur.words.push(tok);
+      if (/[.!?]["')\]]*$/.test(tok)) cur=null;
+    }
+  }
+  return blocks.map(b=>({ speaker:b.speaker, text:b.words.join(' ') }));
+}
 
 function renderTemplate(tpl, way, format, scale, image, cropX, cropY, cropZoom, c, imgOpacity, pattern=true) {
   const common = { scale, way, format, image, cropX, cropY, cropZoom, imgOpacity, pattern };
@@ -485,11 +504,6 @@ function App() {
   const audioFileRef  = React.useRef();
   const srtFileRef    = React.useRef();
   const srtUpload2Ref = React.useRef();
-  const coverImgRef   = React.useRef();
-  const [coverMode,      setCoverMode]      = React.useState('default');
-  const [coverLayoutKey, setCoverLayoutKey] = React.useState('cover');
-  const [coverImage,     setCoverImage]     = React.useState(null);
-  const [capturingCover, setCapturingCover] = React.useState(false);
 
   const doExport = async () => { setExporting(true); try { await exportCarouselFrames(slides); } finally { setExporting(false); } };
   const [savedLabel, setSavedLabel] = React.useState('Save');
@@ -521,37 +535,6 @@ function App() {
     onDrop: e => { e.preventDefault(); e.currentTarget.classList.remove('dragging'); accept(e.dataTransfer.files && e.dataTransfer.files[0]); },
   });
 
-  const handleCoverImgUpload = (e) => {
-    const file=e.target.files[0]; if (!file) return;
-    setCoverImage(URL.createObjectURL(file));
-    setCoverMode('upload');
-  };
-
-  const captureCoverFromLayout = async () => {
-    setCapturingCover(true);
-    try {
-      const sz = S.SIZES['story'];
-      const container = document.createElement('div');
-      container.style.cssText = 'position:fixed;left:-9999px;top:0;z-index:-1;pointer-events:none;';
-      document.body.appendChild(container);
-      const wrapper = document.createElement('div');
-      wrapper.style.cssText = `width:${sz.w}px;height:${sz.h}px;overflow:hidden;flex:none;`;
-      container.appendChild(wrapper);
-      const root2 = ReactDOM.createRoot(wrapper);
-      const cd = content[coverLayoutKey] || content.cover;
-      await new Promise(resolve => {
-        root2.render(renderTemplate(coverLayoutKey, way, 'story', 1, image, cropX, cropY, cropZoom, cd));
-        setTimeout(resolve, 1400);
-      });
-      const canvas = await html2canvas(wrapper, { width:sz.w, height:sz.h, scale:1, useCORS:true, allowTaint:true, logging:false });
-      const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-      setCoverImage(URL.createObjectURL(blob));
-      setCoverMode('upload');
-      root2.unmount();
-      document.body.removeChild(container);
-    } finally { setCapturingCover(false); }
-  };
-
   const audiogramCmd = React.useCallback((type, extra={}) => {
     iframeRef.current?.contentWindow?.postMessage({type,...extra},'*');
   }, []);
@@ -580,17 +563,18 @@ function App() {
   React.useEffect(() => {
     if (tpl !== 'audiogram') return;
     const ac = content.audiogram || {};
-    const coverImg = coverMode==='upload' ? coverImage : undefined;
     const msg = {
       type:'audiogram-config', hostWay:way, guestWay:ac.guestWay||'oak',
       episodeEyebrow:ac.episodeEyebrow, outroEpisode:ac.outroEpisode,
       outroLine1:ac.outroLine1, outroLine2:ac.outroLine2,
-      coverTitle:ac.coverTitle, coverEpisode:ac.coverEpisode,
-      srt:ac.srt, audioSrc, coverImage:coverImg, imgOpacity, solidBg:!!ac.solidBg,
+      highlight: ac.highlight===undefined ? 'auto' : ac.highlight,
+      speakerSwap: ac.speakerSwap!==false, breathe: ac.breathe!==false,
+      wordAccent: ac.wordAccent!==false, bgDrift: ac.bgDrift!==false,
+      srt:ac.srt, audioSrc, imgOpacity, solidBg:!!ac.solidBg,
     };
-    try { const {coverImage:_ci,...storable}=msg; localStorage.setItem('mm-audiogram-cfg', JSON.stringify(storable)); } catch {}
+    try { localStorage.setItem('mm-audiogram-cfg', JSON.stringify(msg)); } catch {}
     iframeRef.current?.contentWindow?.postMessage(msg, '*');
-  }, [tpl, way, content.audiogram, audioSrc, coverMode, coverImage, imgOpacity]);
+  }, [tpl, way, content.audiogram, audioSrc, imgOpacity]);
 
   // Listen for time updates from iframe
   React.useEffect(() => {
@@ -599,7 +583,7 @@ function App() {
       if (m.type === 'audiogram-time') { setAudioT(m.t||0); setAudioDur(m.duration||0); setAudioPlaying(m.playing||false); }
       else if (m.type === 'audiogram-export-progress') { setAgExporting(true); setAgExportPct(m.pct||0); }
       else if (m.type === 'audiogram-export-done') { setAgExporting(false); setAgExportPct(0); }
-      else if (m.type === 'audiogram-export-error') { setAgExporting(false); setAgExportPct(0); alert('Export failed: ' + (m.message||'unknown') + '\n\n4K export needs Chrome or Edge.'); }
+      else if (m.type === 'audiogram-export-error') { setAgExporting(false); setAgExportPct(0); alert('Export failed: ' + (m.message||'unknown') + '\n\nMP4 export needs Chrome or Edge.'); }
     };
     window.addEventListener('message', onMsg);
     return () => window.removeEventListener('message', onMsg);
@@ -685,7 +669,7 @@ function App() {
     const ac=content.audiogram||{};
     const hasAudio = !!audioSrc;
     // Flag 'pending' so the new tab knows to pull the audio from IndexedDB (blob: URLs don't cross tabs).
-    try { localStorage.setItem('mm-audiogram-cfg', JSON.stringify({ hostWay:way, guestWay:ac.guestWay||'oak', episodeEyebrow:ac.episodeEyebrow, outroEpisode:ac.outroEpisode, outroLine1:ac.outroLine1, outroLine2:ac.outroLine2, coverTitle:ac.coverTitle, coverEpisode:ac.coverEpisode, srt:ac.srt, audioSrc: hasAudio ? 'pending' : null, solidBg:!!ac.solidBg })); } catch {}
+    try { localStorage.setItem('mm-audiogram-cfg', JSON.stringify({ hostWay:way, guestWay:ac.guestWay||'oak', episodeEyebrow:ac.episodeEyebrow, outroEpisode:ac.outroEpisode, outroLine1:ac.outroLine1, outroLine2:ac.outroLine2, highlight: ac.highlight===undefined?'auto':ac.highlight, speakerSwap: ac.speakerSwap!==false, breathe: ac.breathe!==false, wordAccent: ac.wordAccent!==false, bgDrift: ac.bgDrift!==false, srt:ac.srt, audioSrc: hasAudio ? 'pending' : null, solidBg:!!ac.solidBg })); } catch {}
     // The player tab is opened by the <a target="_blank"> button (popup-blocker safe); here we only stage config + audio.
     if (hasAudio) {
       fetch(audioSrc).then(r=>r.blob()).then(blob=>{
@@ -832,49 +816,39 @@ function App() {
             }
           </React.Fragment>
         ))}
-      </Mount>
-      <Mount el="cover-sect">
-        {false /* audiogram cover option removed per request — uses auto-generated cover */ && (
-          <React.Fragment>
-            <h4 style={{margin:'0 0 11px',fontSize:13,letterSpacing:'0.165em',textTransform:'uppercase',color:'#511C14',fontWeight:400,fontFamily:"'ABCDiatype',sans-serif"}}>Cover</h4>
-            <div className="cover-opts">
-              {[['default','Auto-generated'],['upload','Upload image'],['template','Create from layout']].map(([k,l])=>(
-                <button key={k} className={'cover-opt-btn'+(coverMode===k?' on':'')} onClick={()=>setCoverMode(k)}>{l}</button>
-              ))}
-            </div>
-            {coverMode==='upload' && (
-              <React.Fragment>
-                <input type="file" id="coverimgupload" ref={coverImgRef} accept="image/*" style={{display:'none'}} onChange={handleCoverImgUpload} />
-                <label htmlFor="coverimgupload" className={'uploadbtn'+(coverImage?' on':'')} style={{gridColumn:'span 3',display:'block',textAlign:'center',cursor:'pointer',marginBottom:8}}>
-                  {coverImage ? '✓ Cover uploaded — click to replace' : '+ Upload cover image'}
-                </label>
-                {coverImage && <img src={coverImage} alt="Cover" style={{width:'100%',aspectRatio:'9/16',objectFit:'cover',marginTop:4}} />}
-              </React.Fragment>
-            )}
-            {coverMode==='template' && (
-              <React.Fragment>
-                <p style={{fontFamily:"'ABCDiatype',sans-serif",fontSize:14,lineHeight:1.5,margin:'8px 0',opacity:0.7}}>Pick a layout to render as the cover frame:</p>
-                <div className="cover-tpl-grid">
-                  {['cover','synopsis','quote','streaming','credits'].map(k=>(
-                    <button key={k} className={'cover-tpl-opt'+(coverLayoutKey===k?' on':'')} onClick={()=>setCoverLayoutKey(k)}>
-                      <div style={{height:55,background:k==='quote'?'#511C14':'#192136',display:'flex',alignItems:'center',justifyContent:'center',fontSize:8,color:'rgba(246,225,198,0.6)',fontFamily:"'ABCDiatype',sans-serif",letterSpacing:'0.1em',textTransform:'uppercase'}}>
-                        {k.toUpperCase()}
-                      </div>
-                      <div className="cover-tpl-lbl">{TEMPLATES[k]?.label||k}</div>
-                    </button>
-                  ))}
-                </div>
-                <button className="capture-cover-btn" onClick={captureCoverFromLayout} disabled={capturingCover}>
-                  {capturingCover ? 'Rendering…' : '↓ Capture as cover'}
-                </button>
-                {coverImage && <img src={coverImage} alt="Captured" style={{width:'100%',aspectRatio:'9/16',objectFit:'cover',marginTop:8}} />}
-              </React.Fragment>
-            )}
-            {coverImage && coverMode!=='default' && (
-              <button className="nonebtn" style={{marginTop:6,gridColumn:'span 3'}} onClick={()=>{setCoverImage(null);setCoverMode('default');}}>Remove cover</button>
-            )}
-          </React.Fragment>
-        )}
+        {tpl==='audiogram' && (() => {
+          const blocks = parseSrtBlocks(c.srt||'');
+          const hv = c.highlight===undefined ? 'auto' : c.highlight;
+          return (
+            <React.Fragment>
+              <span className="txlabel" style={{marginTop:12}}>Highlight moment</span>
+              <p className="hint" style={{fontSize:11,opacity:0.6,margin:'0 0 6px',fontFamily:"'ABCDiatype',sans-serif"}}>
+                One sentence plays as a large italic set piece. Auto lets the player choose; tap a sentence to pick it yourself.
+              </p>
+              <div className="hlchips">
+                <button className={'hlchip'+(hv==='auto'?' on':'')} onClick={()=>upd('highlight','auto')}>Auto</button>
+                <button className={'hlchip'+(hv==='off'?' on':'')} onClick={()=>upd('highlight','off')}>Off</button>
+                {blocks.map((b,i)=>(
+                  <button key={i} className={'hlchip'+(hv===i?' on':'')} title={(b.speaker?b.speaker+': ':'')+b.text}
+                    onClick={()=>upd('highlight', hv===i?'auto':i)}>
+                    {b.text.length>52 ? b.text.slice(0,52)+'…' : b.text}
+                  </button>
+                ))}
+              </div>
+              <span className="txlabel" style={{marginTop:12}}>Motion</span>
+              <p className="hint" style={{fontSize:11,opacity:0.6,margin:'0 0 6px',fontFamily:"'ABCDiatype',sans-serif"}}>
+                Everything is on by default; switch off anything a clip does not need.
+              </p>
+              <div className="hlchips">
+                {[['speakerSwap','Speaker ground swap'],['breathe','Breathing pattern'],['wordAccent','Word accent'],['bgDrift','Background drift']].map(([k,label])=>(
+                  <button key={k} className={'hlchip'+(c[k]!==false?' on':'')} onClick={()=>upd(k, c[k]===false)}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </React.Fragment>
+          );
+        })()}
       </Mount>
       <Mount el="preview">
         {isAudiogram ? (
@@ -882,7 +856,7 @@ function App() {
             style={{width:displayW, height:displayH, border:'none', display:'block'}}
             onLoad={() => {
               const ac=content.audiogram||{};
-              setTimeout(()=>{ iframeRef.current?.contentWindow?.postMessage({ type:'audiogram-config', hostWay:way, guestWay:ac.guestWay||'oak', episodeEyebrow:ac.episodeEyebrow, outroEpisode:ac.outroEpisode, outroLine1:ac.outroLine1, outroLine2:ac.outroLine2, coverTitle:ac.coverTitle, coverEpisode:ac.coverEpisode, srt:ac.srt, audioSrc, solidBg:!!ac.solidBg }, '*'); }, 300);
+              setTimeout(()=>{ iframeRef.current?.contentWindow?.postMessage({ type:'audiogram-config', hostWay:way, guestWay:ac.guestWay||'oak', episodeEyebrow:ac.episodeEyebrow, outroEpisode:ac.outroEpisode, outroLine1:ac.outroLine1, outroLine2:ac.outroLine2, highlight: ac.highlight===undefined?'auto':ac.highlight, speakerSwap: ac.speakerSwap!==false, breathe: ac.breathe!==false, wordAccent: ac.wordAccent!==false, bgDrift: ac.bgDrift!==false, srt:ac.srt, audioSrc, solidBg:!!ac.solidBg }, '*'); }, 300);
             }}
           />
         ) : (
@@ -913,10 +887,10 @@ function App() {
         {isAudiogram ? (
           <React.Fragment>
             <p className="hint" style={{marginBottom:12}}>
-              Renders a 2160×3840 H.264 MP4 with your audio &amp; captions and downloads it straight to your device. Takes a minute or so.
+              Renders a 1080×1920 H.264 MP4 (12fps) with your audio &amp; captions and downloads it straight to your device.
             </p>
             <button className="export-btn" onClick={()=>audiogramCmd('audiogram-export')} disabled={agExporting}>
-              {agExporting ? `Rendering ${agExportPct}%…` : '⬇ Download 4K MP4'}
+              {agExporting ? `Rendering ${agExportPct}%…` : '⬇ Download MP4'}
             </button>
             <a className="export-btn" href="audiogram-player.html" target="_blank" rel="noopener" onClick={openForRecording}
               style={{display:'block',textAlign:'center',textDecoration:'none',background:'transparent',color:'#511C14',border:'1px solid rgba(81,28,20,0.22)',marginTop:6,pointerEvents:agExporting?'none':'auto',opacity:agExporting?0.4:1}}>Open full-screen player ↗</a>
