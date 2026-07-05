@@ -23,6 +23,23 @@ Mode: product
 - Skipped checks: None.
 - Risks: Risk: the Canvas 2D export painter duplicates template layout math and can drift from templates.tsx — covered by fidelityRisks and the image-export browser tests. Risk: Playwright fallback selectors are untested against the rendered runtime DOM until the first test:browser run.
 
+### Iteration 2 — Carousel (multi-slide) port
+
+- Request: Finish the deferred follow-ups; this pass ports the carousel so one project holds multiple slides exported as numbered PNGs.
+- Task type: Toolcraft product feature (layers, schema, export).
+- User-visible result: A Carousel section (episode set select + Add slide / Build episode set actions), the LayersPanel as the slide navigator (select, rename, reorder, hide, delete), per-slide value snapshots swapped on selection, and a sticky Export ZIP action delivering slide-01..NN PNGs for visible layers in layer order.
+- Source/reference checked: Legacy studio carousel model (makeSlide, buildEpisodePostSet, filmstrip) in ../ui_kits/social/index.html.
+- Reference inputs: Legacy studio source only.
+- Docs/contracts read: assembly-workflow.md (layers policy), schema-reference.md, component-rules.md, acceptance-testing.md, performance.md.
+- Contract rules applied: layers enabled only for multiple editable objects; runtime LayersPanel owns selection/reorder/visibility UI instead of a hand-built filmstrip; actions control for section-scoped slide actions; sticky footer owns ZIP delivery; layer acceptance rows for selection/visibility/reorder/grouping; layers.interactions viewport-stability scenario.
+- Decision: Each slide is a runtime layer; per-slide control values snapshot into the carousel.slides value keyed by layer id and are swapped by a null-rendering CarouselSlideSync inside the product tree; ZIP export repaints every visible layer's snapshot through the Canvas 2D painter into a dependency-free store-only ZIP.
+- Alternatives rejected: collectionActions (item controls carry one control type, not a whole slide's值 set); a filmstrip inside canvasContent (navigation is app UI, which canvasContent must not contain); JSZip dependency (PNG bytes are already compressed; STORE zip is 80 lines).
+- State/output mapping: layers.add/select commands plus carousel.slides snapshots drive which values PostRenderer shows; layer order and visibility drive slide numbering in exportCarouselZip; carousel.episode feeds buildEpisodeSetSnapshots (cover/synopsis x2/credits/streaming per the legacy set).
+- Files changed: src/app/carousel.ts, src/app/zip-store.ts, src/app/export-post.ts, src/app/post-renderer.tsx, src/app/app-schema.ts, src/routes/index.tsx, src/app/app-acceptance.ts, src/app/app-product.test.ts, src/app/app-schema.test.ts, src/app/app-performance.ts, e2e/app-product.spec.ts, e2e/app-product-perf.spec.ts.
+- Verification: pnpm typecheck passed; pnpm test passed (269 unit tests); Playwright fallback selectors repaired after the first real run (combobox accessible names are values, select popup portal hides option roles from the test engine) and the acceptance suite re-run.
+- Skipped checks: None.
+- Risks: Risk: layer group flattening order in exportCarouselZip follows state.layers order; grouped slides keep order today but group-nesting semantics should be revisited if groups gain reordering UI.
+
 ## Decisions
 
 ### Renderer

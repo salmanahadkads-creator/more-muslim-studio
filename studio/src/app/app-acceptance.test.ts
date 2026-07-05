@@ -3150,6 +3150,8 @@ describe("Toolcraft template app acceptance coverage", () => {
       "scene.upload",
       "scene.imagePosition",
       "scene.imageZoom",
+      "carousel.episode",
+      "carousel.slides",
       "export.includeBackground",
       "appearance.background",
       "export.image.format",
@@ -7124,7 +7126,10 @@ describe("Toolcraft template app acceptance coverage", () => {
     };
 
     expect(
-      validateToolcraftAcceptanceCoverage(layersSchema, appAcceptance),
+      validateToolcraftAcceptanceCoverage(
+        layersSchema,
+        appAcceptance.filter((entry) => !entry.layerCoverage),
+      ),
     ).toEqual(
       expect.arrayContaining([
         'panels.layers requires a runtime acceptance entry with layerCoverage "selection" proving layer selection behavior.',
@@ -7140,6 +7145,7 @@ describe("Toolcraft template app acceptance coverage", () => {
       ...appSchema,
       panels: {
         ...appSchema.panels,
+        layers: false,
         controls: {
           sections: [
             {

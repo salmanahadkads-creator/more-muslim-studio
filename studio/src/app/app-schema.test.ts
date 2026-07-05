@@ -20,7 +20,7 @@ describe("appSchema", () => {
       target: "canvas.aspectRatio",
       type: "aspectRatio",
     });
-    expect(appSchema.panels.layers).toBeUndefined();
+    expect(appSchema.panels.layers).toBe(true);
     expect(appSchema.panels.timeline).toBeUndefined();
     expect(appSchema.toolbar).toEqual({
       history: true,
@@ -40,6 +40,7 @@ describe("appSchema", () => {
         "Post",
         "Colourway",
         "Scene",
+        "Carousel",
         "Background",
         "Image Export",
       ]),
@@ -59,6 +60,8 @@ describe("appSchema", () => {
       "scene.upload",
       "scene.imagePosition",
       "scene.imageZoom",
+      "carousel.episode",
+      "carousel.slides",
       "export.includeBackground",
       "appearance.background",
       "export.image.format",
@@ -270,5 +273,32 @@ describe("appSchema", () => {
     expect(scenario?.interaction).toBe("control-change");
     expect(scenario?.browserTestName).toBe("browser perf: export.image.resolution change stays within budget");
     expect(Object.keys(scenario?.budget ?? {}).length).toBeGreaterThan(0);
+  });
+
+  it("performance: carousel.episode scenario is declared", () => {
+    const scenario = appPerformance.scenarios.find(
+      (entry) => entry.id === "carousel-episode-change",
+    );
+
+    expect(scenario?.interaction).toBe("control-change");
+    expect(scenario?.target).toBe("carousel.episode");
+  });
+
+  it("performance: carousel.slides scenario is declared", () => {
+    const scenario = appPerformance.scenarios.find(
+      (entry) => entry.id === "carousel-slides-actions",
+    );
+
+    expect(scenario?.interaction).toBe("control-change");
+    expect(scenario?.target).toBe("carousel.slides");
+  });
+
+  it("performance: layer interactions budget is declared", () => {
+    const scenario = appPerformance.scenarios.find(
+      (entry) => entry.id === "layers-interactions-stability",
+    );
+
+    expect(scenario?.interaction).toBe("viewport-stability");
+    expect(scenario?.target).toBe("layers.interactions");
   });
 });

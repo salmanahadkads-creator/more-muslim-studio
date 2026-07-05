@@ -21,6 +21,7 @@ import {
   type PostFormat,
 } from "./brand";
 import type { PostTemplateKey } from "./templates";
+import { createStoredZip } from "./zip-store";
 
 const CAPS_TRACKING_EM = 0.165;
 const MARIST = '"ABC Marist", Georgia, serif';
@@ -184,7 +185,7 @@ type SlidePaintInput = {
   way: ColourwayKey;
 };
 
-async function paintSlide(
+export async function paintSlide(
   context: PaintContext,
   { format, includeBackground, state, template, way }: SlidePaintInput,
 ): Promise<void> {
@@ -507,6 +508,82 @@ export async function exportPostImage(state: ToolcraftState): Promise<void> {
   const anchor = document.createElement("a");
 
   anchor.download = `more-muslim-post-${template}.${imageFormat}`;
+  anchor.href = downloadUrl;
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(downloadUrl), 10_000);
+}
+
+async function paintSlideBytes(state: ToolcraftState): Promise<Uint8Array<ArrayBuffer>> {
+  const format = getPostFormat(state.canvas.size.width, state.canvas.size.height);
+  const native = POST_SIZES[format];
+  const template = (readString(state.values["post.template"], "cover") ||
+    "cover") as PostTemplateKey;
+  const way = (readString(state.values["post.colourway"], "night") ||
+    "night") as ColourwayKey;
+  const includeBackground = state.values["export.includeBackground"] !== false;
+  const canvas = document.createElement("canvas");
+
+  canvas.width = native.w;
+  canvas.height = native.h;
+
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    throw new Error("Carousel export requires a 2D canvas context.");
+  }
+
+  await paintSlide(context, { format, includeBackground, state, template, way });
+
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (result) =>
+        result
+          ? resolve(result)
+          : reject(new Error("Carousel export produced an empty slide.")),
+      "image/png",
+    );
+  });
+
+  return new Uint8Array(await blob.arrayBuffer());
+}
+
+/* Export every visible slide layer as numbered PNGs in one ZIP, in layer
+   order, using each slide's snapshotted values (the selected slide uses the
+   live values). */
+export async function exportCarouselZip(
+  state: ToolcraftState,
+  reportProgress?: (progress: number) => void,
+): Promise<void> {
+  const slides = (state.values["carousel.slides"] ?? {}) as Record<
+    string,
+    Record<string, unknown>
+  >;
+  const layers = state.layers.filter((layer) => layer.visible);
+
+  if (layers.length === 0) {
+    throw new Error("Add at least one slide layer before exporting the carousel.");
+  }
+
+  const entries = [];
+
+  for (const [index, layer] of layers.entries()) {
+    const snapshot = layer.id === state.selectedLayerId ? {} : (slides[layer.id] ?? {});
+    const slideState = {
+      ...state,
+      values: { ...state.values, ...snapshot },
+    } as ToolcraftState;
+
+    entries.push({
+      data: await paintSlideBytes(slideState),
+      name: `slide-${String(index + 1).padStart(2, "0")}.png`,
+    });
+    reportProgress?.((index + 1) / layers.length);
+  }
+
+  const downloadUrl = URL.createObjectURL(createStoredZip(entries));
+  const anchor = document.createElement("a");
+
+  anchor.download = "more-muslim-carousel.zip";
   anchor.href = downloadUrl;
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(downloadUrl), 10_000);

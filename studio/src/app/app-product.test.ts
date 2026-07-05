@@ -10,6 +10,8 @@ import type {
 
 import { COLOURWAY_KEYS, COLOURWAYS, EPISODE_ILLUSTRATIONS } from "./brand";
 import { appSchema } from "./app-schema";
+import { appAcceptance } from "./app-acceptance";
+import { buildEpisodeSetSnapshots, SLIDE_VALUE_TARGETS } from "./carousel";
 
 function findControl(
   schema: ResolvedToolcraftAppSchema,
@@ -230,5 +232,65 @@ describe("More Muslim Social Studio schema", () => {
     expect(persistence.include).toEqual(
       expect.arrayContaining(["values", "canvas", "panels"]),
     );
+  });
+
+  it("schema: carousel.episode lists all ten episode sets", () => {
+    const control = findControl(appSchema, "carousel.episode");
+
+    expect(control?.type).toBe("select");
+    expect(optionValues(control)).toEqual(
+      EPISODE_ILLUSTRATIONS.map((entry) => entry.value),
+    );
+  });
+
+  it("schema: carousel actions add slides and build the episode set", () => {
+    const control = findControl(appSchema, "carousel.slides");
+    const actionValues = (control?.actions ?? []).map((action) =>
+      typeof action === "string" ? action : action.value,
+    );
+
+    expect(control?.type).toBe("actions");
+    expect(actionValues).toEqual(["carousel-add-slide", "carousel-build-episode-set"]);
+
+    const set = buildEpisodeSetSnapshots({}, "ep3");
+
+    expect(set.map((slide) => slide.snapshot["post.template"])).toEqual([
+      "cover",
+      "synopsis",
+      "synopsis",
+      "credits",
+      "streaming",
+    ]);
+    expect(set[0].snapshot["scene.illustration"]).toBe("ep3");
+    expect(set[0].snapshot["content.cover.title"]).toBe("Secret Translators");
+    expect(SLIDE_VALUE_TARGETS).toContain("post.template");
+  });
+
+  it("schema: layers panel is enabled for slide navigation", () => {
+    expect(appSchema.panels.layers).toBe(true);
+    expect(
+      appAcceptance.some((entry) => entry.layerCoverage === "selection"),
+    ).toBe(true);
+  });
+
+  it("schema: hidden slide layers are excluded from the carousel ZIP", () => {
+    const row = appAcceptance.find((entry) => entry.layerCoverage === "visibility");
+
+    expect(row?.evidence).toBe("exported-bytes");
+    expect(row?.expectedObservable).toMatch(/exclud/i);
+  });
+
+  it("schema: slide layer order drives carousel numbering", () => {
+    const row = appAcceptance.find((entry) => entry.layerCoverage === "reorder");
+
+    expect(row?.evidence).toBe("exported-bytes");
+    expect(row?.expectedObservable).toMatch(/slide-NN|position|renumber|order/i);
+  });
+
+  it("schema: slide layers support grouping without breaking export order", () => {
+    const row = appAcceptance.find((entry) => entry.layerCoverage === "grouping");
+
+    expect(row?.evidence).toBe("exported-bytes");
+    expect(row?.expectedObservable).toMatch(/group/i);
   });
 });

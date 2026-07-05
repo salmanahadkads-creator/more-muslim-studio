@@ -3,31 +3,32 @@
    legacy studio at ../ui_kits/social. Only official artwork is referenced —
    never generate or recolour star-lattice patterns. */
 
-import pattern1b from "../../../assets/patterns/pattern-1b.png";
-import pattern2b from "../../../assets/patterns/pattern-2b.png";
-import pattern3a from "../../../assets/patterns/pattern-3a.png";
-import pattern5b from "../../../assets/patterns/pattern-5b.png";
-import pattern5c from "../../../assets/patterns/pattern-5c.png";
-import pattern6a from "../../../assets/patterns/pattern-6a.png";
-import pattern6b from "../../../assets/patterns/pattern-6b.png";
-import pattern6c from "../../../assets/patterns/pattern-6c.png";
+const pattern1b = new URL("../../../assets/patterns/pattern-1b.png", import.meta.url).href;
+const pattern2b = new URL("../../../assets/patterns/pattern-2b.png", import.meta.url).href;
+const pattern3a = new URL("../../../assets/patterns/pattern-3a.png", import.meta.url).href;
+const pattern5b = new URL("../../../assets/patterns/pattern-5b.png", import.meta.url).href;
+const pattern5c = new URL("../../../assets/patterns/pattern-5c.png", import.meta.url).href;
+const pattern6a = new URL("../../../assets/patterns/pattern-6a.png", import.meta.url).href;
+const pattern6b = new URL("../../../assets/patterns/pattern-6b.png", import.meta.url).href;
+const pattern6c = new URL("../../../assets/patterns/pattern-6c.png", import.meta.url).href;
+const illusEp1 = new URL("../../../assets/imagery/illus-ep1.jpg", import.meta.url).href;
+const illusEp2 = new URL("../../../assets/imagery/illus-ep2.jpg", import.meta.url).href;
+const illusEp3 = new URL("../../../assets/imagery/illus-ep3.jpg", import.meta.url).href;
+const illusEp4 = new URL("../../../assets/imagery/illus-ep4.jpg", import.meta.url).href;
+const illusEp5 = new URL("../../../assets/imagery/illus-ep5.jpg", import.meta.url).href;
+const illusEp6 = new URL("../../../assets/imagery/illus-ep6.jpg", import.meta.url).href;
+const illusEp7 = new URL("../../../assets/imagery/illus-ep7.jpg", import.meta.url).href;
+const illusEp8 = new URL("../../../assets/imagery/illus-ep8.jpg", import.meta.url).href;
+const illusEp9 = new URL("../../../assets/imagery/illus-ep9.jpg", import.meta.url).href;
+const illusEp10 = new URL("../../../assets/imagery/illus-ep10.jpg", import.meta.url).href;
+const symbolBeige = new URL("../../../assets/logos/symbol-beige.svg", import.meta.url).href;
+const symbolBlack = new URL("../../../assets/logos/symbol-black.svg", import.meta.url).href;
+const symbolNight = new URL("../../../assets/logos/symbol-night.svg", import.meta.url).href;
+const symbolOak = new URL("../../../assets/logos/symbol-oak.svg", import.meta.url).href;
+const symbolTerracotta = new URL("../../../assets/logos/symbol-terracotta.svg", import.meta.url).href;
 
-import illusEp1 from "../../../assets/imagery/illus-ep1.jpg";
-import illusEp2 from "../../../assets/imagery/illus-ep2.jpg";
-import illusEp3 from "../../../assets/imagery/illus-ep3.jpg";
-import illusEp4 from "../../../assets/imagery/illus-ep4.jpg";
-import illusEp5 from "../../../assets/imagery/illus-ep5.jpg";
-import illusEp6 from "../../../assets/imagery/illus-ep6.jpg";
-import illusEp7 from "../../../assets/imagery/illus-ep7.jpg";
-import illusEp8 from "../../../assets/imagery/illus-ep8.jpg";
-import illusEp9 from "../../../assets/imagery/illus-ep9.jpg";
-import illusEp10 from "../../../assets/imagery/illus-ep10.jpg";
 
-import symbolBeige from "../../../assets/logos/symbol-beige.svg";
-import symbolBlack from "../../../assets/logos/symbol-black.svg";
-import symbolNight from "../../../assets/logos/symbol-night.svg";
-import symbolOak from "../../../assets/logos/symbol-oak.svg";
-import symbolTerracotta from "../../../assets/logos/symbol-terracotta.svg";
+
 
 export type ColourwayKey =
   | "night"

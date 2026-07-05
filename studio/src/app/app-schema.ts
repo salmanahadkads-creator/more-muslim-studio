@@ -28,6 +28,7 @@ export const appSchema = defineToolcraft({
     },
   },
   panels: {
+    layers: true,
     controls: {
       sections: [
         {
@@ -237,6 +238,48 @@ export const appSchema = defineToolcraft({
         },
         {
           controls: {
+            episodeSet: {
+              defaultValue: "ep1",
+              description:
+                "Episode used by Build episode set: cover, two synopsis slides, credits, and now-streaming, one slide layer each.",
+              label: "Episode set",
+              options: [
+                { label: "E1 Side Entrances", value: "ep1" },
+                { label: "E2 Nikkah Loophole", value: "ep2" },
+                { label: "E3 Secret Translators", value: "ep3" },
+                { label: "E4 Recitation Revolution", value: "ep4" },
+                { label: "E5 Hanabneehu", value: "ep5" },
+                { label: "E6 Cape Malay", value: "ep6" },
+                { label: "E7 SheikhaGPT", value: "ep7" },
+                { label: "E8 Travelling Sisterhood", value: "ep8" },
+                { label: "E9 A More Muslim Japan", value: "ep9" },
+                { label: "E10 Washing the Dead", value: "ep10" },
+              ],
+              orderRole: "mode",
+              performanceReason:
+                "Choosing the episode only changes which set the build action creates.",
+              performanceRole: "responsiveness",
+              target: "carousel.episode",
+              type: "select",
+            },
+            slideActions: {
+              actions: [
+                { label: "Add slide", value: "carousel-add-slide" },
+                { label: "Build episode set", value: "carousel-build-episode-set" },
+              ],
+              label: "Slides",
+              orderRole: "action",
+              performanceReason:
+                "Slide actions add layers and write snapshots in one commit each.",
+              performanceRole: "responsiveness",
+              target: "carousel.slides",
+              type: "actions",
+            },
+          },
+          title: "Carousel",
+        },
+        {
+          controls: {
             includeBackground: {
               defaultValue: true,
               label: "Include",
@@ -318,6 +361,11 @@ export const appSchema = defineToolcraft({
                   icon: "upload-simple",
                   label: "Export PNG",
                   value: "export-png",
+                },
+                {
+                  icon: "download-simple",
+                  label: "Export ZIP",
+                  value: "export-zip",
                 },
               ],
               target: "panel.actions",

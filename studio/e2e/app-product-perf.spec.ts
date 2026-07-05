@@ -30,8 +30,20 @@ async function chooseSelectOption(
   label: string,
   optionLabel: string,
 ): Promise<void> {
-  await page.getByRole("combobox", { name: label }).click();
-  await page.getByRole("option", { name: optionLabel, exact: true }).click();
+  const group = page
+    .getByRole("group")
+    .filter({ has: page.getByText(label, { exact: true }) })
+    .last();
+
+  await group.getByRole("combobox").click();
+
+  // The select popup portal does not expose option roles to the test engine;
+  // it renders last in the document, so the last exact-text match is the
+  // popup option.
+  const option = page.getByText(optionLabel, { exact: true }).last();
+
+  await option.waitFor({ state: "visible" });
+  await option.click();
 }
 
 test("browser perf: post.template change stays within budget", async ({ page }) => {
@@ -48,7 +60,11 @@ test("browser perf: content.episode change stays within budget", async ({ page }
   await openStudio(page);
   await chooseSelectOption(page, "Template", "Cover");
 
-  const field = page.getByRole("textbox", { name: "Episode" }).or(page.getByLabel("Episode")).first();
+  const field = page
+    .getByRole("group")
+    .filter({ has: page.getByText("Episode", { exact: true }) })
+    .last()
+    .getByRole("textbox");
 
   await expect(field).toBeVisible();
 
@@ -63,7 +79,11 @@ test("browser perf: content.cover.presents change stays within budget", async ({
   await openStudio(page);
   await chooseSelectOption(page, "Template", "Cover");
 
-  const field = page.getByRole("textbox", { name: "Label" }).or(page.getByLabel("Label")).first();
+  const field = page
+    .getByRole("group")
+    .filter({ has: page.getByText("Label", { exact: true }) })
+    .last()
+    .getByRole("textbox");
 
   await expect(field).toBeVisible();
 
@@ -78,7 +98,11 @@ test("browser perf: content.cover.title change stays within budget", async ({ pa
   await openStudio(page);
   await chooseSelectOption(page, "Template", "Cover");
 
-  const field = page.getByRole("textbox", { name: "Title" }).or(page.getByLabel("Title")).first();
+  const field = page
+    .getByRole("group")
+    .filter({ has: page.getByText("Title", { exact: true }) })
+    .last()
+    .getByRole("textbox");
 
   await expect(field).toBeVisible();
 
@@ -93,7 +117,11 @@ test("browser perf: content.quote.dialogue change stays within budget", async ({
   await openStudio(page);
   await chooseSelectOption(page, "Template", "Quote exchange");
 
-  const field = page.getByRole("textbox", { name: "Dialogue" }).or(page.getByLabel("Dialogue")).first();
+  const field = page
+    .getByRole("group")
+    .filter({ has: page.getByText("Dialogue", { exact: true }) })
+    .last()
+    .getByRole("textbox");
 
   await expect(field).toBeVisible();
 
@@ -108,7 +136,11 @@ test("browser perf: content.synopsis.body change stays within budget", async ({ 
   await openStudio(page);
   await chooseSelectOption(page, "Template", "Synopsis");
 
-  const field = page.getByRole("textbox", { name: "Body" }).or(page.getByLabel("Body")).first();
+  const field = page
+    .getByRole("group")
+    .filter({ has: page.getByText("Body", { exact: true }) })
+    .last()
+    .getByRole("textbox");
 
   await expect(field).toBeVisible();
 
@@ -123,7 +155,11 @@ test("browser perf: content.streaming.lines change stays within budget", async (
   await openStudio(page);
   await chooseSelectOption(page, "Template", "Now streaming");
 
-  const field = page.getByRole("textbox", { name: "Outro" }).or(page.getByLabel("Outro")).first();
+  const field = page
+    .getByRole("group")
+    .filter({ has: page.getByText("Outro", { exact: true }) })
+    .last()
+    .getByRole("textbox");
 
   await expect(field).toBeVisible();
 
@@ -138,7 +174,11 @@ test("browser perf: content.credits.list change stays within budget", async ({ p
   await openStudio(page);
   await chooseSelectOption(page, "Template", "Episode credits");
 
-  const field = page.getByRole("textbox", { name: "Credits" }).or(page.getByLabel("Credits")).first();
+  const field = page
+    .getByRole("group")
+    .filter({ has: page.getByText("Credits", { exact: true }) })
+    .last()
+    .getByRole("textbox");
 
   await expect(field).toBeVisible();
 
@@ -173,7 +213,12 @@ test("browser perf: export.includeBackground change stays within budget", async 
   await openStudio(page);
 
   const result = await measureToolcraftInteraction(page, async () => {
-    await page.getByRole("switch", { name: "Include" }).click();
+    await page
+      .getByRole("group")
+      .filter({ has: page.getByText("Include", { exact: true }) })
+      .last()
+      .getByRole("switch")
+      .click();
   });
 
   expectToolcraftScenarioPerformanceBudget(result, appPerformance, "export-includeBackground-change");
@@ -200,7 +245,7 @@ test("browser perf: scene.imagePosition change stays within budget", async ({ pa
   await openStudio(page);
   await chooseSelectOption(page, "Scene", "Episode illustration");
 
-  const handle = page.locator('[data-slot="vector-pad"]').last();
+  const handle = page.getByLabel("Focus X/Y pad");
 
   await expect(handle).toBeVisible();
 
@@ -245,7 +290,7 @@ test("browser perf: zoom slider drag stays responsive on an illustration slide",
   await openStudio(page);
   await chooseSelectOption(page, "Scene", "Episode illustration");
 
-  const handle = page.locator('[role="slider"]').last();
+  const handle = page.locator('[data-slot="slider"] [role="slider"]').last();
 
   await expect(handle).toBeVisible();
 
@@ -375,4 +420,51 @@ test("browser perf: 8K PNG export completes within budget", async ({ page }) => 
   });
 
   expectToolcraftScenarioPerformanceBudget(result, appPerformance, "png-export-8k");
+});
+
+test("browser perf: carousel.episode change stays within budget", async ({ page }) => {
+  await openStudio(page);
+
+  const result = await measureToolcraftInteraction(page, async () => {
+    await chooseSelectOption(page, "Episode set", "E5 Hanabneehu");
+  });
+
+  expectToolcraftScenarioPerformanceBudget(result, appPerformance, "carousel-episode-change");
+});
+
+test("browser perf: carousel slide actions stay within budget", async ({ page }) => {
+  await openStudio(page);
+
+  const result = await measureToolcraftInteraction(page, async () => {
+    await page.getByRole("button", { name: "Add slide" }).click();
+  });
+
+  expectToolcraftScenarioPerformanceBudget(result, appPerformance, "carousel-slides-actions");
+});
+
+test("browser perf: slide layer interactions keep the canvas stable", async ({ page }) => {
+  await openStudio(page);
+  await page.getByRole("button", { name: "Build episode set" }).click();
+  await expect(page.getByRole("listbox", { name: "Layers" }).getByText("Now Streaming")).toBeVisible();
+
+  const canvas = page.getByRole("application", { name: "Canvas viewport" });
+  const box = await canvas.boundingBox();
+
+  if (!box) {
+    throw new Error("Canvas viewport has no bounding box.");
+  }
+
+  const result = await measureToolcraftInteraction(page, async () => {
+    await page.getByRole("listbox", { name: "Layers" }).getByText("Synopsis 1", { exact: true }).click();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.wheel(0, -300);
+    await page.mouse.wheel(0, 300);
+    await page.getByRole("listbox", { name: "Layers" }).getByText("Cover", { exact: true }).click();
+  });
+
+  expectToolcraftScenarioPerformanceBudget(
+    result,
+    appPerformance,
+    "layers-interactions-stability",
+  );
 });

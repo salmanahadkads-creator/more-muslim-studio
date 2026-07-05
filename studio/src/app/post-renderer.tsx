@@ -15,6 +15,12 @@ import {
   type ColourwayKey,
 } from "./brand";
 import {
+  applySlideValues,
+  captureSlideValues,
+  readCarouselSlides,
+  writeCarouselSlides,
+} from "./carousel";
+import {
   CoverPost,
   CreditsPost,
   NowStreamingPost,
@@ -189,6 +195,39 @@ export function PostSlide({
   }
 }
 
+/* Swaps per-slide control values when the selected slide layer changes.
+   Renders nothing — it only mirrors runtime state, so it is not app UI. */
+function CarouselSlideSync(): null {
+  const { dispatch, state } = useToolcraft();
+  const previousLayerRef = React.useRef<string | null>(state.selectedLayerId);
+
+  React.useEffect(() => {
+    const previousLayerId = previousLayerRef.current;
+    const nextLayerId = state.selectedLayerId;
+
+    if (previousLayerId === nextLayerId) {
+      return;
+    }
+
+    previousLayerRef.current = nextLayerId;
+
+    const slides = readCarouselSlides(state);
+
+    if (previousLayerId && state.layers.some((layer) => layer.id === previousLayerId)) {
+      slides[previousLayerId] = captureSlideValues(state);
+    }
+
+    writeCarouselSlides(dispatch, slides);
+
+    if (nextLayerId && slides[nextLayerId]) {
+      applySlideValues(dispatch, slides[nextLayerId]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.selectedLayerId]);
+
+  return null;
+}
+
 export function PostRenderer(): React.JSX.Element {
   const { scene, state, template, values, way } = usePostSlideValues();
   const canvasWidth = state.canvas.size.width;
@@ -211,6 +250,7 @@ export function PostRenderer(): React.JSX.Element {
         width: "100%",
       }}
     >
+      <CarouselSlideSync />
       <div
         style={{
           flex: "none",

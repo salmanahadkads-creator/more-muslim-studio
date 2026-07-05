@@ -14,6 +14,9 @@ import {
 } from "./product-observable-helpers";
 
 const slideSelector = "#mm-post-slide";
+// Style-only changes (colourway, scene ground) surface on the frame element.
+const frameSelector = "#mm-post-slide [data-mm-post-frame]";
+const layersList = (page: Page) => page.getByRole("listbox", { name: "Layers" });
 
 async function openStudio(page: Page): Promise<void> {
   await page.goto("/");
@@ -25,8 +28,20 @@ async function chooseSelectOption(
   label: string,
   optionLabel: string,
 ): Promise<void> {
-  await page.getByRole("combobox", { name: label }).click();
-  await page.getByRole("option", { name: optionLabel, exact: true }).click();
+  const group = page
+    .getByRole("group")
+    .filter({ has: page.getByText(label, { exact: true }) })
+    .last();
+
+  await group.getByRole("combobox").click();
+
+  // The select popup portal does not expose option roles to the test engine;
+  // it renders last in the document, so the last exact-text match is the
+  // popup option.
+  const option = page.getByText(optionLabel, { exact: true }).last();
+
+  await option.waitFor({ state: "visible" });
+  await option.click();
 }
 
 async function setSceneSource(page: Page, optionLabel: string): Promise<void> {
@@ -98,7 +113,7 @@ test("app controls: colourway select restyles the slide ground and ink", async (
     await expectToolcraftProductObservableToChange(
       page,
       async () => chooseSelectOption(page, "Colourway", colourway),
-      { selector: slideSelector },
+      { selector: frameSelector },
     );
   }
 });
@@ -111,21 +126,21 @@ test("app controls: scene source switches pattern, solid, and image grounds", as
   await expectToolcraftProductObservableToChange(
     page,
     async () => setSceneSource(page, "Solid colour"),
-    { selector: slideSelector },
+    { selector: frameSelector },
   );
-  await expect(page.getByRole("combobox", { name: "Episode" })).toHaveCount(0);
+  await expect(page.getByText("Focus", { exact: true })).toHaveCount(0);
 
   await expectToolcraftProductObservableToChange(
     page,
     async () => setSceneSource(page, "Episode illustration"),
-    { selector: slideSelector },
+    { selector: frameSelector },
   );
   await expect(page.locator(`${slideSelector} img`).first()).toBeVisible();
 
   await expectToolcraftProductObservableToChange(
     page,
     async () => setSceneSource(page, "Pattern"),
-    { selector: slideSelector },
+    { selector: frameSelector },
   );
 });
 
@@ -135,19 +150,19 @@ test("app controls: episode picker swaps the slide illustration", async ({ page 
 
   await expectToolcraftProductObservableToChange(
     page,
-    async () => page.getByRole("button", { name: "E2 Nikkah Loophole" }).click(),
-    { selector: slideSelector },
+    async () => page.getByText("E2 Nikkah Loophole", { exact: true }).last().click(),
+    { selector: frameSelector },
   );
 
   await setSceneSource(page, "Pattern");
-  await expect(page.getByRole("button", { name: "E2 Nikkah Loophole" })).toHaveCount(0);
+  await expect(page.getByText("E2 Nikkah Loophole", { exact: true })).toHaveCount(0);
 });
 
 test("app controls: focus pad moves the image crop on both axes", async ({ page }) => {
   await openStudio(page);
   await setSceneSource(page, "Episode illustration");
 
-  const pad = page.locator('[data-slot="vector-pad"]').first();
+  const pad = page.getByLabel("Focus X/Y pad");
 
   await expect(pad).toBeVisible();
 
@@ -158,7 +173,7 @@ test("app controls: focus pad moves the image crop on both axes", async ({ page 
   }
 
   const before = await getToolcraftProductObservableSnapshot(page, {
-    selector: slideSelector,
+    selector: frameSelector,
   });
 
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
@@ -166,7 +181,7 @@ test("app controls: focus pad moves the image crop on both axes", async ({ page 
   await page.mouse.move(box.x + box.width * 0.8, box.y + box.height * 0.3, { steps: 6 });
 
   const during = await getToolcraftProductObservableSnapshot(page, {
-    selector: slideSelector,
+    selector: frameSelector,
   });
 
   await page.mouse.up();
@@ -179,10 +194,8 @@ test("app controls: zoom slider scales the slide image during drag", async ({ pa
   await setSceneSource(page, "Episode illustration");
 
   const thumb = page
-    .locator('[data-slot="slider"]')
-    .filter({ has: page.locator("visible=true") })
-    .last()
-    .locator('[role="slider"]');
+    .locator('[data-slot="slider"] [role="slider"]')
+    .last();
 
   await expect(thumb).toBeVisible();
 
@@ -193,7 +206,7 @@ test("app controls: zoom slider scales the slide image during drag", async ({ pa
   }
 
   const before = await getToolcraftProductObservableSnapshot(page, {
-    selector: slideSelector,
+    selector: frameSelector,
   });
 
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
@@ -201,7 +214,7 @@ test("app controls: zoom slider scales the slide image during drag", async ({ pa
   await page.mouse.move(box.x + 120, box.y + box.height / 2, { steps: 8 });
 
   const during = await getToolcraftProductObservableSnapshot(page, {
-    selector: slideSelector,
+    selector: frameSelector,
   });
 
   await page.mouse.up();
@@ -290,9 +303,10 @@ for (const { label, name, template, value } of textCases) {
     await chooseSelectOption(page, "Template", template);
 
     const field = page
-      .getByRole("textbox", { name: label })
-      .or(page.getByLabel(label))
-      .first();
+      .getByRole("group")
+      .filter({ has: page.getByText(label, { exact: true }) })
+      .last()
+      .getByRole("textbox");
 
     await expect(field).toBeVisible();
     await expectToolcraftProductObservableToChange(
@@ -316,7 +330,13 @@ test("app controls: include toggle hides the slide ground and exports transparen
 
   await expectToolcraftProductObservableToChange(
     page,
-    async () => page.getByRole("switch", { name: "Include" }).click(),
+    async () =>
+      page
+        .getByRole("group")
+        .filter({ has: page.getByText("Include", { exact: true }) })
+        .last()
+        .getByRole("switch")
+        .click(),
     { selector: slideSelector },
   );
 
@@ -437,4 +457,138 @@ test("runtime: edited settings survive a page reload", async ({ page }) => {
 
   // Terracotta ground #C15A3A
   expect(frameBackground).toBe("rgb(193, 90, 58)");
+});
+
+async function buildEpisodeSet(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Build episode set" }).click();
+  await expect(layersList(page).getByText("Now Streaming")).toBeVisible();
+}
+
+test("app controls: episode set select changes the built carousel", async ({ page }) => {
+  await openStudio(page);
+  await chooseSelectOption(page, "Episode set", "E3 Secret Translators");
+  await buildEpisodeSet(page);
+  await expect(page.locator(slideSelector)).toContainText("Secret Translators", {
+    ignoreCase: true,
+  });
+});
+
+test("app controls: carousel actions create slide layers", async ({ page }) => {
+  await openStudio(page);
+  await page.getByRole("button", { name: "Add slide" }).click();
+  await expect(layersList(page).getByText("Slide 1")).toBeVisible();
+  await buildEpisodeSet(page);
+  await expect(layersList(page).getByText("Cover", { exact: true })).toBeVisible();
+  await expect(layersList(page).getByText("Credits", { exact: true })).toBeVisible();
+});
+
+test("runtime: selecting a slide layer swaps the slide values", async ({ page }) => {
+  await openStudio(page);
+  await buildEpisodeSet(page);
+
+  await expectToolcraftProductObservableToChange(
+    page,
+    async () => layersList(page).getByText("Synopsis 1", { exact: true }).click(),
+    { selector: slideSelector },
+  );
+  await expectToolcraftProductObservableToChange(
+    page,
+    async () => layersList(page).getByText("Cover", { exact: true }).click(),
+    { selector: slideSelector },
+  );
+});
+
+async function downloadZipNames(page: Page): Promise<string[]> {
+  const downloadPromise = page.waitForEvent("download");
+
+  await page.getByRole("button", { name: "Export ZIP" }).click();
+
+  const download = await downloadPromise;
+  const filePath = await download.path();
+
+  if (!filePath) {
+    throw new Error("ZIP download has no path.");
+  }
+
+  const bytes = readFileSync(filePath);
+  const names: string[] = [];
+  let cursor = 0;
+
+  while (cursor < bytes.length - 4) {
+    if (bytes.readUInt32LE(cursor) === 0x04034b50) {
+      const nameLength = bytes.readUInt16LE(cursor + 26);
+      const size = bytes.readUInt32LE(cursor + 18);
+
+      names.push(bytes.subarray(cursor + 30, cursor + 30 + nameLength).toString());
+      cursor += 30 + nameLength + size;
+    } else {
+      break;
+    }
+  }
+
+  return names;
+}
+
+test("runtime: hiding a slide layer removes it from the exported ZIP", async ({
+  page,
+}) => {
+  await openStudio(page);
+  await buildEpisodeSet(page);
+
+  const fullNames = await downloadZipNames(page);
+
+  expect(fullNames).toHaveLength(5);
+
+  const row = layersList(page).getByText("Synopsis 2", { exact: true });
+
+  await row.hover();
+  await page.getByRole("button", { name: "Hide Synopsis 2" }).click();
+
+  const reducedNames = await downloadZipNames(page);
+
+  expect(reducedNames).toHaveLength(4);
+});
+
+test("runtime: reordering slide layers renumbers the exported ZIP", async ({
+  page,
+}) => {
+  await openStudio(page);
+  await buildEpisodeSet(page);
+
+  const before = await downloadZipNames(page);
+
+  expect(before[0]).toBe("slide-01.png");
+
+  const source = layersList(page).getByText("Now Streaming", { exact: true });
+  const target = layersList(page).getByText("Cover", { exact: true });
+  const sourceBox = await source.boundingBox();
+  const targetBox = await target.boundingBox();
+
+  if (!sourceBox || !targetBox) {
+    throw new Error("Layer rows have no bounding boxes.");
+  }
+
+  await page.mouse.move(sourceBox.x + 20, sourceBox.y + sourceBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(targetBox.x + 20, targetBox.y + 2, { steps: 8 });
+  await page.mouse.up();
+
+  const after = await downloadZipNames(page);
+
+  expect(after).toHaveLength(before.length);
+});
+
+test("runtime: grouped slide layers keep their carousel order", async ({ page }) => {
+  await openStudio(page);
+  await buildEpisodeSet(page);
+
+  const names = await downloadZipNames(page);
+
+  expect(names).toEqual([
+    "slide-01.png",
+    "slide-02.png",
+    "slide-03.png",
+    "slide-04.png",
+    "slide-05.png",
+  ]);
 });
