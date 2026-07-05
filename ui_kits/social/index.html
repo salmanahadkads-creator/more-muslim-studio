@@ -260,6 +260,7 @@ const DEFAULTS = {
     gateWeave:      true,
     textZoom:       true,
     paperTexture:   true,
+    printJitter:    true,
     outroEpisode:   "EPISODE 7",
     outroLine1:     "Listen to the full episode at moremuslim.org.",
     outroLine2:     "Or search for \u201CMore Muslim\u201D on Apple Podcasts, Spotify, or wherever you listen to podcasts.",
@@ -576,6 +577,7 @@ function App() {
       speakerSwap: ac.speakerSwap!==false, breathe: ac.breathe!==false,
       wordAccent: ac.wordAccent!==false, bgDrift: ac.bgDrift!==false,
       gateWeave: ac.gateWeave!==false, textZoom: ac.textZoom!==false, paperTexture: ac.paperTexture!==false,
+      printJitter: ac.printJitter!==false,
       srt:ac.srt, audioSrc, imgOpacity, solidBg:!!ac.solidBg,
     };
     // Never persist blob: URLs — they are dead outside this document. The iframe gets the
@@ -677,7 +679,7 @@ function App() {
     const ac=content.audiogram||{};
     const hasAudio = !!audioSrc;
     // Flag 'pending' so the new tab knows to pull the audio from IndexedDB (blob: URLs don't cross tabs).
-    try { localStorage.setItem('mm-audiogram-cfg', JSON.stringify({ hostWay:way, guestWay:ac.guestWay||'oak', episodeEyebrow:ac.episodeEyebrow, outroEpisode:ac.outroEpisode, outroLine1:ac.outroLine1, outroLine2:ac.outroLine2, highlight: ac.highlight===undefined?'auto':ac.highlight, speakerSwap: ac.speakerSwap!==false, breathe: ac.breathe!==false, wordAccent: ac.wordAccent!==false, bgDrift: ac.bgDrift!==false, gateWeave: ac.gateWeave!==false, textZoom: ac.textZoom!==false, paperTexture: ac.paperTexture!==false, srt:ac.srt, audioSrc: hasAudio ? 'pending' : null, solidBg:!!ac.solidBg })); } catch {}
+    try { localStorage.setItem('mm-audiogram-cfg', JSON.stringify({ hostWay:way, guestWay:ac.guestWay||'oak', episodeEyebrow:ac.episodeEyebrow, outroEpisode:ac.outroEpisode, outroLine1:ac.outroLine1, outroLine2:ac.outroLine2, highlight: ac.highlight===undefined?'auto':ac.highlight, speakerSwap: ac.speakerSwap!==false, breathe: ac.breathe!==false, wordAccent: ac.wordAccent!==false, bgDrift: ac.bgDrift!==false, gateWeave: ac.gateWeave!==false, textZoom: ac.textZoom!==false, paperTexture: ac.paperTexture!==false, printJitter: ac.printJitter!==false, srt:ac.srt, audioSrc: hasAudio ? 'pending' : null, solidBg:!!ac.solidBg })); } catch {}
     // The player tab is opened by the <a target="_blank"> button (popup-blocker safe); here we only stage config + audio.
     if (hasAudio) {
       fetch(audioSrc).then(r=>r.blob()).then(blob=>{
@@ -848,7 +850,7 @@ function App() {
                 Everything is on by default; switch off anything a clip does not need.
               </p>
               <div className="hlchips">
-                {[['speakerSwap','Speaker ground swap'],['breathe','Breathing pattern'],['wordAccent','Word accent'],['bgDrift','Background drift'],['gateWeave','Gate weave'],['textZoom','Text zoom'],['paperTexture','Paper texture']].map(([k,label])=>(
+                {[['speakerSwap','Speaker ground swap'],['breathe','Breathing pattern'],['wordAccent','Word accent'],['bgDrift','Background drift'],['gateWeave','Gate weave'],['textZoom','Text zoom'],['paperTexture','Paper texture'],['printJitter','Print jitter']].map(([k,label])=>(
                   <button key={k} className={'hlchip'+(c[k]!==false?' on':'')} onClick={()=>upd(k, c[k]===false)}>
                     {label}
                   </button>
@@ -864,7 +866,7 @@ function App() {
             style={{width:displayW, height:displayH, border:'none', display:'block'}}
             onLoad={() => {
               const ac=content.audiogram||{};
-              setTimeout(()=>{ iframeRef.current?.contentWindow?.postMessage({ type:'audiogram-config', hostWay:way, guestWay:ac.guestWay||'oak', episodeEyebrow:ac.episodeEyebrow, outroEpisode:ac.outroEpisode, outroLine1:ac.outroLine1, outroLine2:ac.outroLine2, highlight: ac.highlight===undefined?'auto':ac.highlight, speakerSwap: ac.speakerSwap!==false, breathe: ac.breathe!==false, wordAccent: ac.wordAccent!==false, bgDrift: ac.bgDrift!==false, gateWeave: ac.gateWeave!==false, textZoom: ac.textZoom!==false, paperTexture: ac.paperTexture!==false, srt:ac.srt, ...(audioBlob?{audioBlob}:{audioSrc}), solidBg:!!ac.solidBg }, '*'); }, 300);
+              setTimeout(()=>{ iframeRef.current?.contentWindow?.postMessage({ type:'audiogram-config', hostWay:way, guestWay:ac.guestWay||'oak', episodeEyebrow:ac.episodeEyebrow, outroEpisode:ac.outroEpisode, outroLine1:ac.outroLine1, outroLine2:ac.outroLine2, highlight: ac.highlight===undefined?'auto':ac.highlight, speakerSwap: ac.speakerSwap!==false, breathe: ac.breathe!==false, wordAccent: ac.wordAccent!==false, bgDrift: ac.bgDrift!==false, gateWeave: ac.gateWeave!==false, textZoom: ac.textZoom!==false, paperTexture: ac.paperTexture!==false, printJitter: ac.printJitter!==false, srt:ac.srt, ...(audioBlob?{audioBlob}:{audioSrc}), solidBg:!!ac.solidBg }, '*'); }, 300);
             }}
           />
         ) : (

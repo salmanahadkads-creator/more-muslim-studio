@@ -62,7 +62,7 @@ const DEFAULT_CFG = {
   showSpeakerLabel:true, bgDrift:true, illusTint:true, solidBg:false,
   highlight:'auto', // 'auto' | 'off' | block index \u2014 one sentence rendered as a large italic set piece
   speakerSwap:true, breathe:true, wordAccent:true,
-  gateWeave:true, textZoom:true, paperTexture:true,
+  gateWeave:true, textZoom:true, paperTexture:true, printJitter:true,
   imgZoom:1, imgCropX:50, imgCropY:50,
   srt:DEFAULT_SRT, audioSrc:null,
 };
@@ -414,9 +414,10 @@ class AudiogramPlayer extends React.Component {
     // Pattern tile breathes with the voice (opacity only — the ground colour stays solid).
     const breathe = cfg.breathe!==false && !w.isImage && !cfg.solidBg;
     const patOp = breathe ? 0.55+0.45*this.env(t) : 1;
-    // Living grain: the noise tile jumps to a new deterministic offset every frame.
-    const f=Math.floor(t*FPS), lightGround=(w.ink==='#511C14'||w.ink==='#192136');
-    const gx=Math.round(frand(f)*280), gy=Math.round(frand(f+9173)*280);
+    // Living grain: the noise tile jumps to a new deterministic offset at 6Hz —
+    // every-frame reseeding reads as TV static, half-rate reads as film.
+    const f2=Math.floor(Math.floor(t*FPS)/2), lightGround=(w.ink==='#511C14'||w.ink==='#192136');
+    const gx=Math.round(frand(f2)*280), gy=Math.round(frand(f2+9173)*280);
     return (
       <div key={key} style={{position:'absolute',inset:0,background:w.bg,opacity}}>
         <div style={{position:'absolute',inset:0,transform:`scale(${scale}) translateY(${ty}px)`,transformOrigin:'center',willChange:'transform'}}>
@@ -610,11 +611,16 @@ class AudiogramPlayer extends React.Component {
     // which clones only the frame — renders identically to the live preview.
     const chromeOp=(1-oProg)*(isHi?0.35:1); // eyebrow/footer recede during the highlight set piece
     // Gate weave: slow filmic wander of the whole frame + a whisper of exposure flicker.
-    const fIdx=Math.floor(t*FPS), weave=cfg.gateWeave!==false;
-    const wx=weave?Math.sin(t*0.9+1.7)*2.2+(frand(fIdx*3+11)*2-1)*0.5:0;
-    const wy=weave?Math.cos(t*0.7+0.4)*2.2+(frand(fIdx*3+77)*2-1)*0.5:0;
-    const wr=weave?Math.sin(t*0.5+2.6)*0.05:0;
-    const flick=weave?frand(fIdx+301)*0.02:0;
+    // Random components re-seed at 6Hz (not per frame) so it drifts rather than trembles.
+    const fIdx=Math.floor(t*FPS), boil=Math.floor(fIdx/2), weave=cfg.gateWeave!==false;
+    const wx=weave?Math.sin(t*0.45+1.7)*1.2+(frand(boil*3+11)*2-1)*0.3:0;
+    const wy=weave?Math.cos(t*0.35+0.4)*1.2+(frand(boil*3+77)*2-1)*0.3:0;
+    const wr=weave?Math.sin(t*0.3+2.6)*0.028:0;
+    const flick=weave?frand(boil+301)*0.011:0;
+    // Print jitter: each text element drifts off-register by a hair, independently —
+    // the ink never sits perfectly still on the page.
+    const pj=cfg.printJitter!==false;
+    const jit=(s,amp)=>pj?`translate(${((frand(s+boil*7)*2-1)*amp).toFixed(2)}px,${((frand(s+53+boil*7)*2-1)*amp).toFixed(2)}px) `:'';
     // Text zoom: a slow push on the live sentence; stronger arc on the highlight.
     let zScale=1;
     if (cfg.textZoom!==false && active) {
@@ -632,11 +638,11 @@ class AudiogramPlayer extends React.Component {
                 {gs.k<1 && this.groundLayer(gs.prev,1,'g-prev')}
                 {this.groundLayer(gs.cur,gs.k,'g-cur')}
               </div>
-              <div style={{position:'absolute',top:370,left:0,right:0,textAlign:'center',fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',whiteSpace:'nowrap',padding:'0 60px',color:gs.ink,opacity:chromeOp}}>{cfg.episodeEyebrow}</div>
-              <div style={{position:'absolute',left:86,right:86,top:460,bottom:460,display:'flex',flexDirection:'column',justifyContent:isHi?'center':'flex-start',alignItems:isHi?'center':'flex-start',pointerEvents:'none',transform:`scale(${zScale.toFixed(4)})`,transformOrigin:isHi?'50% 50%':'0% 22%'}}>
+              <div style={{position:'absolute',top:370,left:0,right:0,textAlign:'center',fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',whiteSpace:'nowrap',padding:'0 60px',color:gs.ink,opacity:chromeOp,transform:jit(1,0.8)||'none'}}>{cfg.episodeEyebrow}</div>
+              <div style={{position:'absolute',left:86,right:86,top:460,bottom:460,display:'flex',flexDirection:'column',justifyContent:isHi?'center':'flex-start',alignItems:isHi?'center':'flex-start',pointerEvents:'none',transform:`${jit(2,1)}scale(${zScale.toFixed(4)})`,transformOrigin:isHi?'50% 50%':'0% 22%'}}>
                 {this.buildCaption(gs.ink,gs.accent,isHi)}
               </div>
-              <div style={{position:'absolute',bottom:370,left:0,right:0,textAlign:'center',fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',whiteSpace:'nowrap',color:gs.ink,opacity:chromeOp}}>MOREMUSLIM.ORG</div>
+              <div style={{position:'absolute',bottom:370,left:0,right:0,textAlign:'center',fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',whiteSpace:'nowrap',color:gs.ink,opacity:chromeOp,transform:jit(3,0.8)||'none'}}>MOREMUSLIM.ORG</div>
               {oProg>0 && (
                 <div style={{position:'absolute',inset:0,opacity:oProg,pointerEvents:oProg>0.5?'auto':'none'}}>
                   <div style={{position:'absolute',inset:0}}>{this.groundLayer(outroWay,1,'outroG')}</div>
