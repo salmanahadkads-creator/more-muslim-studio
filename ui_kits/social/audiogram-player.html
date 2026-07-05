@@ -497,8 +497,9 @@ class AudiogramPlayer extends React.Component {
     return canvas;
   };
 
-  // Offline 1080p (1080×1920) H.264 export. Each frame is rendered deterministically from
-  // state.t, snapshotted to a canvas, and encoded via WebCodecs into an MP4.
+  // Offline 1080p (1080×1920) H.264 export — 24fps container, visuals posterized to 12fps
+  // (each animation frame is held for two output frames, the After Effects "posterize time"
+  // look). Each visual state is rendered deterministically from state.t and snapshotted once.
   exportVideo = async () => {
     if (this.state.exporting) return;
     if (typeof VideoEncoder === 'undefined' || !window.Mp4Muxer) {
@@ -507,11 +508,11 @@ class AudiogramPlayer extends React.Component {
       return;
     }
     this._inlineCache = {}; // re-inline assets fresh for this export
-    const fps = FPS, W = 1080, H = 1920;
+    const animFps = FPS, outFps = FPS * 2, W = 1080, H = 1920;
     const a = this.audio;
     const audioDur = a && isFinite(a.duration) && a.duration ? a.duration : 0;
     const total = Math.max((this.contentEnd || 0) + (this.state.cfg.outroDuration || 5), audioDur);
-    const totalFrames = Math.max(1, Math.ceil(total * fps));
+    const totalFrames = Math.max(1, Math.ceil(total * outFps));
     const wasStarted = this.state.started;
     if (a && !a.paused) a.pause();
 
@@ -534,23 +535,29 @@ class AudiogramPlayer extends React.Component {
     const { Muxer, ArrayBufferTarget } = window.Mp4Muxer;
     const muxer = new Muxer({
       target: new ArrayBufferTarget(),
-      video: { codec: 'avc', width: W, height: H, frameRate: fps },
+      video: { codec: 'avc', width: W, height: H, frameRate: outFps },
       ...(audioBuf ? { audio: { codec: 'aac', sampleRate: audioBuf.sampleRate, numberOfChannels: Math.min(2, audioBuf.numberOfChannels) } } : {}),
       fastStart: 'in-memory',
     });
     const venc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: e => console.error('VideoEncoder', e) });
-    venc.configure({ codec: 'avc1.640028', width: W, height: H, bitrate: 12_000_000, framerate: fps });
+    venc.configure({ codec: 'avc1.640028', width: W, height: H, bitrate: 12_000_000, framerate: outFps });
 
     ReactDOM.flushSync(() => this.setState({ exporting: true, exportPct: 0, started: true, duration: total }));
     try {
+      let lastAnim = -1, canvas = null;
       for (let f = 0; f < totalFrames; f++) {
-        const t = f / fps;
-        ReactDOM.flushSync(() => this.setState({ t })); // commit this frame's DOM synchronously
-        const canvas = await this._snapshot(W, H);       // image-load await yields each frame (works backgrounded, unlike rAF)
-        const frame = new VideoFrame(canvas, { timestamp: Math.round(t * 1e6), duration: Math.round(1e6 / fps) });
-        venc.encode(frame, { keyFrame: f % (fps * 2) === 0 });
+        // Posterize time: the visual state advances on the 12fps grid, held for two 24fps ticks.
+        const animF = Math.floor(f * animFps / outFps);
+        if (animF !== lastAnim) {
+          const t = animF / animFps;
+          ReactDOM.flushSync(() => this.setState({ t })); // commit this frame's DOM synchronously
+          canvas = await this._snapshot(W, H);             // image-load await yields each frame (works backgrounded, unlike rAF)
+          lastAnim = animF;
+        }
+        const frame = new VideoFrame(canvas, { timestamp: Math.round(f * 1e6 / outFps), duration: Math.round(1e6 / outFps) });
+        venc.encode(frame, { keyFrame: f % (outFps * 2) === 0 });
         frame.close();
-        if (f % 3 === 0) { const pct = Math.round((f / totalFrames) * 100); this.setState({ exportPct: pct }); if (IS_IFRAME) window.parent.postMessage({ type:'audiogram-export-progress', pct }, '*'); }
+        if (f % 6 === 0) { const pct = Math.round((f / totalFrames) * 100); this.setState({ exportPct: pct }); if (IS_IFRAME) window.parent.postMessage({ type:'audiogram-export-progress', pct }, '*'); }
         while (venc.encodeQueueSize > 8) await new Promise(r => setTimeout(r, 0));
       }
       await venc.flush();

@@ -897,7 +897,7 @@ function App() {
         {isAudiogram ? (
           <React.Fragment>
             <p className="hint" style={{marginBottom:12}}>
-              Renders a 1080×1920 H.264 MP4 (12fps) with your audio &amp; captions and downloads it straight to your device.
+              Renders a 1080×1920 H.264 MP4 (24fps, animation posterized to 12) with your audio &amp; captions and downloads it straight to your device.
             </p>
             <button className="export-btn" onClick={()=>audiogramCmd('audiogram-export')} disabled={agExporting}>
               {agExporting ? `Rendering ${agExportPct}%…` : '⬇ Download MP4'}
