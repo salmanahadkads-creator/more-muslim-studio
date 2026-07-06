@@ -20,7 +20,15 @@ import {
   type ToolcraftState,
 } from "@/toolcraft/runtime";
 
-import { COLOURWAYS, POST_SIZES, SYMBOLS, TEXT_WIDTH, type ColourwayKey } from "./brand";
+import {
+  COLOURWAYS,
+  getEpisodeIllustration,
+  POST_SIZES,
+  SYMBOLS,
+  TEXT_WIDTH,
+  type ColourwayKey,
+} from "./brand";
+import { readFocusPercent } from "./post-renderer";
 import { activeCaptionAt, parseSrt, type CaptionBlock } from "./srt";
 
 const FPS = 24;
@@ -109,6 +117,12 @@ function wrapLines(context: PaintContext, text: string, maxWidth: number): strin
 }
 
 type AudiogramFrameAssets = {
+  scene: {
+    focusX: number;
+    focusY: number;
+    image: HTMLImageElement;
+    zoom: number;
+  } | null;
   symbol: HTMLImageElement;
   tile: HTMLImageElement | null;
 };
@@ -139,7 +153,20 @@ function paintAudiogramFrame(
   context.fillStyle = c.bg;
   context.fillRect(0, 0, w, h);
 
-  if (assets.tile) {
+  if (assets.scene) {
+    const { focusX, focusY, image, zoom } = assets.scene;
+    const scale = Math.max(w / image.width, h / image.height) * zoom;
+    const drawW = image.width * scale;
+    const drawH = image.height * scale;
+
+    context.drawImage(
+      image,
+      (w - drawW) * (focusX / 100),
+      (h - drawH) * (focusY / 100),
+      drawW,
+      drawH,
+    );
+  } else if (assets.tile) {
     context.save();
     context.globalAlpha = c.tileOpacity;
 
@@ -262,9 +289,36 @@ export async function exportAudiogramVideo(
     throw new Error("Video export must include the product background.");
   }
 
+  const sceneSource =
+    typeof state.values["scene.source"] === "string"
+      ? (state.values["scene.source"] as string)
+      : "pattern";
+  let sceneImageSrc: string | null = null;
+
+  if (sceneSource === "illustration") {
+    sceneImageSrc = getEpisodeIllustration(state.values["scene.illustration"])?.src ?? null;
+  } else if (sceneSource === "upload") {
+    sceneImageSrc =
+      state.mediaAssets.find((asset) => asset.sourceTarget === "scene.upload")?.dataUrl ??
+      null;
+  }
+
+  const focus = readFocusPercent(state.values["scene.imagePosition"]);
   const assets: AudiogramFrameAssets = {
+    scene: sceneImageSrc
+      ? {
+          focusX: focus.x,
+          focusY: focus.y,
+          image: await loadImage(sceneImageSrc),
+          zoom:
+            typeof state.values["scene.imageZoom"] === "number"
+              ? (state.values["scene.imageZoom"] as number)
+              : 1,
+        }
+      : null,
     symbol: await loadImage(SYMBOLS[colourway.logo]),
-    tile: colourway.tile ? await loadImage(colourway.tile) : null,
+    tile:
+      colourway.tile && sceneSource !== "solid" ? await loadImage(colourway.tile) : null,
   };
 
   const slideCanvas = document.createElement("canvas");
