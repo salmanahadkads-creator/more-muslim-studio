@@ -97,7 +97,8 @@ export function SetupWizard(): React.JSX.Element {
         display: "flex",
         flexDirection: "column",
         fontFamily: MARIST,
-        minHeight: "100dvh",
+        height: "100dvh",
+        overflowY: "auto",
       }}
     >
       <header

@@ -21,14 +21,10 @@ function makeLargeTestImage(): Buffer {
 }
 
 async function openStudio(page: Page): Promise<void> {
-  await page.goto("/");
-
-  const skipButton = page.getByRole("button", { name: /skip setup/i });
-
-  if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-    await skipButton.click();
-  }
-
+  // Fresh contexts are redirected to the onboarding wizard; enter through it
+  // deterministically and skip into the studio.
+  await page.goto("/setup");
+  await page.getByRole("button", { name: /skip setup/i }).click();
   await expect(page.locator(slideSelector)).toBeVisible();
 }
 

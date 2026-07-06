@@ -123,7 +123,8 @@ Render Pipeline Inventory: rendererPipeline declares two passes — "slide-dom" 
 - Run: pnpm typecheck passed.
 - Run: pnpm test passed (docs check, integrity check, unit + validator suites).
 - Run: pnpm build passed.
-- Run: browser performance checkpoint passed with agent-browser (Claude Preview controlled Chromium 148; runner agent-browser): template, colourway, scene source, illustration pick, dialogue edit, viewport zoom, and Export PNG interactions responded immediately with no console errors.
+- Run: browser performance checkpoint passed with agent-browser (Claude Preview controlled Chromium 148; runner agent-browser): template, colourway, scene source, illustration pick, dialogue edit, viewport zoom, Export PNG, carousel episode-set build, audiogram template, and the onboarding wizard flow all responded immediately with no console errors.
+- Run: Playwright fallback acceptance suite (e2e/app-product.spec.ts) passed 34/34 against real chromium-headless-shell, including carousel layer flows, audiogram uploads, WebM video export with decoded metadata duration and dimensions, and the onboarding wizard prefill flows; MP4/H.264 export is capability-gated because OSS headless Chromium ships no H.264 encoder.
 
 ## Risks
 
