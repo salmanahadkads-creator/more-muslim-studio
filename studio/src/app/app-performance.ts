@@ -584,16 +584,16 @@ export const appPerformance: ToolcraftPerformanceConfig = defineToolcraftPerform
     },
     {
       automated: true,
-      automatedTestName: "performance: layer interactions budget is declared",
+      automatedTestName: "performance: filmstrip interactions budget is declared",
       browser: true,
-      browserTestName: "browser perf: slide layer interactions keep the canvas stable",
+      browserTestName: "browser perf: carousel filmstrip interactions keep the canvas stable",
       budget: { maxFrameGapMs: 120, maxInteractionMs: 1500, maxLongTaskMs: 200 },
       expectedObservable:
-        "Zoom/radar plus slide layer selection, visibility, and reorder keep the rendered slide and viewport stable within budget.",
-      fixture: "Episode set built so five slide layers exist.",
-      id: "layers-interactions-stability",
+        "Filmstrip slide selection and reorder keep the rendered slide and viewport stable within budget.",
+      fixture: "Episode set built so five carousel slides exist.",
+      id: "filmstrip-interactions-stability",
       interaction: "viewport-stability",
-      target: "layers.interactions",
+      target: "carousel.slides",
       workload: false,
     },
     {

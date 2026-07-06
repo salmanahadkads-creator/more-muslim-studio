@@ -244,14 +244,14 @@ describe("More Muslim Social Studio schema", () => {
     );
   });
 
-  it("schema: carousel actions add slides and build the episode set", () => {
+  it("schema: carousel action builds the episode set", () => {
     const control = findControl(appSchema, "carousel.slides");
     const actionValues = (control?.actions ?? []).map((action) =>
       typeof action === "string" ? action : action.value,
     );
 
     expect(control?.type).toBe("actions");
-    expect(actionValues).toEqual(["carousel-add-slide", "carousel-build-episode-set"]);
+    expect(actionValues).toEqual(["carousel-build-episode-set"]);
 
     const set = buildEpisodeSetSnapshots({}, "ep3");
 
@@ -267,32 +267,21 @@ describe("More Muslim Social Studio schema", () => {
     expect(SLIDE_VALUE_TARGETS).toContain("post.template");
   });
 
-  it("schema: layers panel is enabled for slide navigation", () => {
-    expect(appSchema.panels.layers).toBe(true);
+  it("schema: the carousel uses the filmstrip, not the layers panel", () => {
+    expect(appSchema.panels.layers).toBeUndefined();
     expect(
-      appAcceptance.some((entry) => entry.layerCoverage === "selection"),
+      appAcceptance.some((entry) => entry.id === "runtime.filmstrip.add"),
+    ).toBe(true);
+    expect(
+      appAcceptance.some((entry) => entry.id === "runtime.filmstrip.selection"),
     ).toBe(true);
   });
 
-  it("schema: hidden slide layers are excluded from the carousel ZIP", () => {
-    const row = appAcceptance.find((entry) => entry.layerCoverage === "visibility");
-
-    expect(row?.evidence).toBe("exported-bytes");
-    expect(row?.expectedObservable).toMatch(/exclud/i);
-  });
-
-  it("schema: slide layer order drives carousel numbering", () => {
-    const row = appAcceptance.find((entry) => entry.layerCoverage === "reorder");
+  it("schema: filmstrip reorder drives carousel numbering", () => {
+    const row = appAcceptance.find((entry) => entry.id === "runtime.filmstrip.reorder");
 
     expect(row?.evidence).toBe("exported-bytes");
     expect(row?.expectedObservable).toMatch(/slide-NN|position|renumber|order/i);
-  });
-
-  it("schema: slide layers support grouping without breaking export order", () => {
-    const row = appAcceptance.find((entry) => entry.layerCoverage === "grouping");
-
-    expect(row?.evidence).toBe("exported-bytes");
-    expect(row?.expectedObservable).toMatch(/group/i);
   });
 
   it("schema: audiogram.audio is a single audio fileDrop", () => {
@@ -341,5 +330,28 @@ describe("More Muslim Social Studio schema", () => {
     const row = appAcceptance.find((entry) => entry.id === "runtime.timeline.playback");
 
     expect(row?.timelineCoverage).toBe("playback");
+  });
+
+  it("filmstrip: the add button appends a slide", () => {
+    const row = appAcceptance.find((entry) => entry.id === "runtime.filmstrip.add");
+
+    expect(row?.kind).toBe("runtime");
+    expect(row?.expectedObservable).toMatch(/\+ tile|append|add/i);
+  });
+
+  it("filmstrip: selecting a thumbnail swaps the slide", () => {
+    const row = appAcceptance.find(
+      (entry) => entry.id === "runtime.filmstrip.selection",
+    );
+
+    expect(row?.kind).toBe("runtime");
+    expect(row?.expectedObservable).toMatch(/thumbnail|select/i);
+  });
+
+  it("filmstrip: drag reorder renumbers the carousel ZIP", () => {
+    const row = appAcceptance.find((entry) => entry.id === "runtime.filmstrip.reorder");
+
+    expect(row?.evidence).toBe("exported-bytes");
+    expect(row?.expectedObservable).toMatch(/drag|reorder|position/i);
   });
 });

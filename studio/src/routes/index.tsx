@@ -10,13 +10,22 @@ import {
 } from "../app/carousel";
 import { exportAudiogramVideo } from "../app/export-audiogram";
 import { exportCarouselZip, exportPostImage } from "../app/export-post";
+import { CarouselFilmstrip } from "../app/carousel-filmstrip";
 import { PostRenderer } from "../app/post-renderer";
+import { StudioChrome } from "../app/studio-chrome";
 import "../app/brand.css";
 
 export function AppHome(): React.JSX.Element {
   return (
-    <ToolcraftApp
-      canvasContent={<PostRenderer />}
+    <>
+      <StudioChrome />
+      <ToolcraftApp
+      canvasContent={
+          <>
+            <PostRenderer />
+            <CarouselFilmstrip />
+          </>
+        }
       className="h-dvh min-h-dvh"
       onPanelAction={({ action, dispatch, reportProgress, state }) => {
         if (action.value === "export-png") {
@@ -70,7 +79,8 @@ export function AppHome(): React.JSX.Element {
         }
       }}
       renderDefaultCanvasMedia={false}
-      schema={appSchema}
-    />
+        schema={appSchema}
+      />
+    </>
   );
 }

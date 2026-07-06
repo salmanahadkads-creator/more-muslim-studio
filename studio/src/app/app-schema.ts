@@ -28,7 +28,6 @@ export const appSchema = defineToolcraft({
     },
   },
   panels: {
-    layers: true,
     timeline: { defaultDurationSeconds: 60, mode: "playback" },
     controls: {
       sections: [
@@ -303,7 +302,6 @@ export const appSchema = defineToolcraft({
             },
             slideActions: {
               actions: [
-                { label: "Add slide", value: "carousel-add-slide" },
                 { label: "Build episode set", value: "carousel-build-episode-set" },
               ],
               label: "Slides",

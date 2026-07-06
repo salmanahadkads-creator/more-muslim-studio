@@ -446,10 +446,15 @@ test("browser perf: carousel slide actions stay within budget", async ({ page })
   expectToolcraftScenarioPerformanceBudget(result, appPerformance, "carousel-slides-actions");
 });
 
-test("browser perf: slide layer interactions keep the canvas stable", async ({ page }) => {
+test("browser perf: carousel filmstrip interactions keep the canvas stable", async ({ page }) => {
   await openStudio(page);
   await page.getByRole("button", { name: "Build episode set" }).click();
-  await expect(page.getByRole("listbox", { name: "Layers" }).getByText("Now Streaming")).toBeVisible();
+
+  const slides = page.locator(
+    '[data-testid="carousel-filmstrip"] [data-slide-index]',
+  );
+
+  await expect(slides).toHaveCount(5);
 
   const canvas = page.getByRole("application", { name: "Canvas viewport" });
   const box = await canvas.boundingBox();
@@ -459,17 +464,17 @@ test("browser perf: slide layer interactions keep the canvas stable", async ({ p
   }
 
   const result = await measureToolcraftInteraction(page, async () => {
-    await page.getByRole("listbox", { name: "Layers" }).getByText("Synopsis 1", { exact: true }).click();
+    await slides.nth(1).click();
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.wheel(0, -300);
     await page.mouse.wheel(0, 300);
-    await page.getByRole("listbox", { name: "Layers" }).getByText("Cover", { exact: true }).click();
+    await slides.nth(0).click();
   });
 
   expectToolcraftScenarioPerformanceBudget(
     result,
     appPerformance,
-    "layers-interactions-stability",
+    "filmstrip-interactions-stability",
   );
 });
 

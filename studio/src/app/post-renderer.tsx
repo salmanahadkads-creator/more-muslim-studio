@@ -5,7 +5,10 @@
 
 import * as React from "react";
 
-import { shouldIncludeToolcraftPreviewBackground } from "@/toolcraft/runtime";
+import {
+  shouldIncludeToolcraftPreviewBackground,
+  type ToolcraftState,
+} from "@/toolcraft/runtime";
 import { useToolcraft } from "@/toolcraft/runtime/react";
 
 import {
@@ -111,9 +114,13 @@ function parseDialogue(dialogue: string): { speaker: string; text: string }[] {
   return exchanges;
 }
 
-export function usePostSlideValues() {
-  const { state } = useToolcraft();
-  const values = state.values;
+/* Pure derivation of a slide's render inputs from a values snapshot — used by
+   both the live preview and the filmstrip thumbnails. */
+export function slideViewFromValues(
+  values: Record<string, unknown>,
+  mediaAssets: ToolcraftState["mediaAssets"],
+  includeBackground: boolean,
+): { scene: SceneProps; template: PostTemplateKey; way: ColourwayKey } {
   const template = (readString(values["post.template"], "cover") ||
     "cover") as PostTemplateKey;
   const way = (readString(values["post.colourway"], "night") ||
@@ -133,7 +140,7 @@ export function usePostSlideValues() {
   if (source === "illustration") {
     image = getEpisodeIllustration(values["scene.illustration"])?.src ?? null;
   } else if (source === "upload") {
-    const uploaded = state.mediaAssets.find(
+    const uploaded = mediaAssets.find(
       (asset) => asset.sourceTarget === "scene.upload",
     );
 
@@ -151,11 +158,22 @@ export function usePostSlideValues() {
     imageOffsetX: position.x,
     imageOffsetY: position.y,
     imageZoom: zoom,
-    includeBackground: shouldIncludeToolcraftPreviewBackground({ state }),
+    includeBackground,
     pattern: source !== "solid",
   };
 
-  return { scene, state, template, values, way };
+  return { scene, template, way };
+}
+
+export function usePostSlideValues() {
+  const { state } = useToolcraft();
+  const view = slideViewFromValues(
+    state.values,
+    state.mediaAssets,
+    shouldIncludeToolcraftPreviewBackground({ state }),
+  );
+
+  return { ...view, state, values: state.values };
 }
 
 export function PostSlide({

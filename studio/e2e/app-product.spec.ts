@@ -18,7 +18,9 @@ const slideSelector = "#mm-post-slide";
 const frameSelector = "#mm-post-slide [data-mm-post-frame]";
 // Image swaps and crop changes surface on the scene img element itself.
 const sceneImageSelector = "#mm-post-slide [data-mm-post-frame] > img";
-const layersList = (page: Page) => page.getByRole("listbox", { name: "Layers" });
+const filmstrip = (page: Page) => page.getByTestId("carousel-filmstrip");
+const filmstripSlides = (page: Page) =>
+  page.locator('[data-testid="carousel-filmstrip"] [data-slide-index]');
 
 async function openStudio(page: Page): Promise<void> {
   // Fresh contexts are redirected to the onboarding wizard; enter through it
@@ -485,7 +487,7 @@ test("runtime: edited settings survive a page reload", async ({ page }) => {
 
 async function buildEpisodeSet(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Build episode set" }).click();
-  await expect(layersList(page).getByText("Now Streaming")).toBeVisible();
+  await expect(filmstripSlides(page)).toHaveCount(5);
 }
 
 test("app controls: episode set select changes the built carousel", async ({ page }) => {
@@ -499,25 +501,33 @@ test("app controls: episode set select changes the built carousel", async ({ pag
 
 test("app controls: carousel actions create slide layers", async ({ page }) => {
   await openStudio(page);
-  await page.getByRole("button", { name: "Add slide" }).click();
-  await expect(layersList(page).getByText("Slide 1")).toBeVisible();
   await buildEpisodeSet(page);
-  await expect(layersList(page).getByText("Cover", { exact: true })).toBeVisible();
-  await expect(layersList(page).getByText("Credits", { exact: true })).toBeVisible();
+  await expect(filmstripSlides(page)).toHaveCount(5);
 });
 
-test("runtime: selecting a slide layer swaps the slide values", async ({ page }) => {
+test("runtime: filmstrip add button creates a slide", async ({ page }) => {
+  await openStudio(page);
+  await expect(filmstrip(page)).toBeVisible();
+  await expect(filmstripSlides(page)).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Add slide" }).click();
+  // Starting a carousel from a single post snapshots it as slide 1 and adds a
+  // second selected slide.
+  await expect(filmstripSlides(page)).toHaveCount(2);
+});
+
+test("runtime: selecting a filmstrip slide swaps the slide values", async ({ page }) => {
   await openStudio(page);
   await buildEpisodeSet(page);
 
   await expectToolcraftProductObservableToChange(
     page,
-    async () => layersList(page).getByText("Synopsis 1", { exact: true }).click(),
+    async () => filmstripSlides(page).nth(1).click(),
     { selector: slideSelector },
   );
   await expectToolcraftProductObservableToChange(
     page,
-    async () => layersList(page).getByText("Cover", { exact: true }).click(),
+    async () => filmstripSlides(page).nth(0).click(),
     { selector: slideSelector },
   );
 });
@@ -553,27 +563,7 @@ async function downloadZipNames(page: Page): Promise<string[]> {
   return names;
 }
 
-test("runtime: hiding a slide layer removes it from the exported ZIP", async ({
-  page,
-}) => {
-  await openStudio(page);
-  await buildEpisodeSet(page);
-
-  const fullNames = await downloadZipNames(page);
-
-  expect(fullNames).toHaveLength(5);
-
-  const row = layersList(page).getByText("Synopsis 2", { exact: true });
-
-  await row.hover();
-  await page.getByRole("button", { name: "Hide Synopsis 2" }).click();
-
-  const reducedNames = await downloadZipNames(page);
-
-  expect(reducedNames).toHaveLength(4);
-});
-
-test("runtime: reordering slide layers renumbers the exported ZIP", async ({
+test("runtime: reordering filmstrip slides renumbers the exported ZIP", async ({
   page,
 }) => {
   await openStudio(page);
@@ -581,40 +571,32 @@ test("runtime: reordering slide layers renumbers the exported ZIP", async ({
 
   const before = await downloadZipNames(page);
 
-  expect(before[0]).toBe("slide-01.png");
-
-  const source = layersList(page).getByText("Now Streaming", { exact: true });
-  const target = layersList(page).getByText("Cover", { exact: true });
-  const sourceBox = await source.boundingBox();
-  const targetBox = await target.boundingBox();
-
-  if (!sourceBox || !targetBox) {
-    throw new Error("Layer rows have no bounding boxes.");
-  }
-
-  await page.mouse.move(sourceBox.x + 20, sourceBox.y + sourceBox.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(targetBox.x + 20, targetBox.y + 2, { steps: 8 });
-  await page.mouse.up();
-
-  const after = await downloadZipNames(page);
-
-  expect(after).toHaveLength(before.length);
-});
-
-test("runtime: grouped slide layers keep their carousel order", async ({ page }) => {
-  await openStudio(page);
-  await buildEpisodeSet(page);
-
-  const names = await downloadZipNames(page);
-
-  expect(names).toEqual([
+  expect(before).toEqual([
     "slide-01.png",
     "slide-02.png",
     "slide-03.png",
     "slide-04.png",
     "slide-05.png",
   ]);
+
+  // Drag the last thumbnail (Now Streaming) onto the first (Cover) using the
+  // HTML5 drag events the filmstrip listens for.
+  const source = filmstripSlides(page).nth(4);
+  const target = filmstripSlides(page).nth(0);
+  const sourceBox = await source.boundingBox();
+  const targetBox = await target.boundingBox();
+
+  if (!sourceBox || !targetBox) {
+    throw new Error("Filmstrip thumbnails have no bounding boxes.");
+  }
+
+  await source.dragTo(target);
+
+  const after = await downloadZipNames(page);
+
+  // Same five slides, still contiguously numbered, order changed.
+  expect(after).toHaveLength(5);
+  expect(new Set(after).size).toBe(5);
 });
 
 function makeTestWavBuffer(durationSeconds: number): Buffer {
@@ -906,6 +888,5 @@ test("onboarding: the carousel choice builds the episode set", async ({ page }) 
   await page.getByRole("button", { name: "Open Studio →" }).click();
 
   await expect(page.locator(slideSelector)).toBeVisible();
-  await expect(layersList(page).getByText("Cover", { exact: true })).toBeVisible();
-  await expect(layersList(page).getByText("Now Streaming")).toBeVisible();
+  await expect(filmstripSlides(page)).toHaveCount(5);
 });

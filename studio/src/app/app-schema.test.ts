@@ -20,7 +20,7 @@ describe("appSchema", () => {
       target: "canvas.aspectRatio",
       type: "aspectRatio",
     });
-    expect(appSchema.panels.layers).toBe(true);
+    expect(appSchema.panels.layers).toBeUndefined();
     expect(appSchema.panels.timeline).toMatchObject({ defaultDurationSeconds: 60, mode: "playback" });
     expect(appSchema.toolbar).toEqual({
       history: true,
@@ -298,13 +298,13 @@ describe("appSchema", () => {
     expect(scenario?.target).toBe("carousel.slides");
   });
 
-  it("performance: layer interactions budget is declared", () => {
+  it("performance: filmstrip interactions budget is declared", () => {
     const scenario = appPerformance.scenarios.find(
-      (entry) => entry.id === "layers-interactions-stability",
+      (entry) => entry.id === "filmstrip-interactions-stability",
     );
 
     expect(scenario?.interaction).toBe("viewport-stability");
-    expect(scenario?.target).toBe("layers.interactions");
+    expect(scenario?.target).toBe("carousel.slides");
   });
 
   it("performance: audiogram.audio scenario is declared", () => {
