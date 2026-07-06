@@ -3150,19 +3150,24 @@ describe("Toolcraft template app acceptance coverage", () => {
       "scene.upload",
       "scene.imagePosition",
       "scene.imageZoom",
+      "audiogram.audio",
+      "audiogram.captions",
       "carousel.episode",
       "carousel.slides",
       "export.includeBackground",
       "appearance.background",
       "export.image.format",
       "export.image.resolution",
+      "export.video.format",
+      "export.video.resolution",
     ]);
   });
 
   it("defaults generated apps to new Toolcraft assembly mode", () => {
-    expect(appTransferMode).toEqual({
-      animationIntent: { mode: "none" },
-      mode: "new-toolcraft-app",
+    expect(appTransferMode.mode).toBe("new-toolcraft-app");
+    expect(appTransferMode.animationIntent).toMatchObject({
+      loopDuration: { seconds: 60, source: "product-derived" },
+      mode: "timeline-playback",
     });
   });
 
@@ -8548,7 +8553,7 @@ describe("Toolcraft template app acceptance coverage", () => {
           makeControlAcceptance("shape.kind", "select"),
           makeControlAcceptance("shape.count", "slider"),
         ],
-        appTransferMode,
+        { animationIntent: { mode: "none" }, mode: "new-toolcraft-app" },
         [
           {
             entity: "Shape",
@@ -8616,7 +8621,7 @@ describe("Toolcraft template app acceptance coverage", () => {
           makeControlAcceptance("object.shape.size", "slider"),
           makeControlAcceptance("object.shape.count", "slider"),
         ],
-        appTransferMode,
+        { animationIntent: { mode: "none" }, mode: "new-toolcraft-app" },
         [
           {
             entity: "Object shape",

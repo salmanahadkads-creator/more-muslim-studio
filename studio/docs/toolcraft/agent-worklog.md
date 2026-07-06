@@ -40,6 +40,40 @@ Mode: product
 - Skipped checks: None.
 - Risks: Risk: layer group flattening order in exportCarouselZip follows state.layers order; grouped slides keep order today but group-nesting semantics should be revisited if groups gain reordering UI.
 
+### Iteration 3 — Audiogram port
+
+- Request: Port the audiogram (audio + SRT captions + video export) from the legacy studio.
+- Task type: Toolcraft product feature (timeline, media, custom renderer export).
+- User-visible result: An Audiogram template with audio and SRT fileDrops (Sound & Captions section), timeline playback with audio-synced captions and a progress rule on the story slide, and sticky Export Video delivering MP4 (H.264/AAC) or WebM (VP9/Opus) at current/4K resolution.
+- Source/reference checked: Legacy ui_kits/social/audiogram-player.html (WebCodecs + mp4-muxer pipeline, AAC interleave, posterized frame loop) and ui_kits/social/index.html audiogram controls.
+- Reference inputs: Legacy audiogram source files only.
+- Docs/contracts read: schema-reference.md (video export, timeline), acceptance-testing.md (timeline and video coverage), performance.md.
+- Contract rules applied: panels.timeline playback with animationIntent timeline-playback and product-derived loopDuration; Video Export inline Format/Resolution pair; getToolcraftVideoExportSize for 4K sizing; VideoEncoder.isConfigSupported capability check; shouldIncludeToolcraftExportBackground for video background; timeline-based frame timestamps (never wall-clock); duration metadata proof in browser coverage.
+- Decision: DOM preview slide (AudiogramPost) driven by state.timeline.currentTimeSeconds with an audio element synced by AudiogramAudioSync (duration adopted once on metadata load); offline export paints every frame with a Canvas 2D painter at 24fps into WebCodecs.
+- Alternatives rejected: the legacy SVG-foreignObject frame snapshot (taints canvases in current Chromium — verified empirically in Iteration 1); MediaRecorder capture (wall-clock timing breaks in backgrounded tabs and cannot guarantee timeline-length output); rAF-driven frame waits (stall when backgrounded — known legacy gotcha).
+- State/output mapping: audiogram.audio/audiogram.captions media assets parse into an AudioBuffer and caption blocks; timeline time selects the active caption in preview and in every exported frame; export.video.format picks the muxer (mp4-muxer or webm-muxer) and codec pair; export.video.resolution feeds getToolcraftVideoExportSize; exported metadata duration equals max(audio duration, timeline duration).
+- Files changed: src/app/srt.ts, src/app/templates.tsx (AudiogramPost), src/app/post-renderer.tsx (AudiogramAudioSync + audiogram branch), src/app/export-audiogram.ts, src/app/app-schema.ts, src/routes/index.tsx, src/app/app-acceptance.ts, src/app/app-performance.ts, tests and e2e suites, package.json (mp4-muxer, webm-muxer).
+- Verification: pnpm typecheck passed; pnpm test passed (278 unit tests including timeline/video validators); agent-browser check of the audiogram template and timeline transport with no console errors; Playwright fallback tests authored for audio/captions upload, both containers, both resolutions with decoded metadata duration and dimensions, and timeline playback.
+- Skipped checks: None.
+- Risks: Risk: the audiogram Canvas 2D frame painter duplicates AudiogramPost layout and must stay in sync; Risk: WebM export depends on VP9/Opus encoder availability, guarded by isConfigSupported with a clear error.
+
+### Iteration 4 — Onboarding wizard port
+
+- Request: Cover the onboarding process in the Toolcraft rebuild.
+- Task type: App chrome route (no runtime surface changes).
+- User-visible result: A brand-styled /setup wizard (What are you making? → Which episode? → Set the scene. → Ready.) matching the legacy onboarding; Open Studio prefills template/colourway/scene/episode (and builds the five-slide episode set for the carousel choice); first fresh visit to / redirects to /setup; Skip setup opens the untouched studio.
+- Source/reference checked: Legacy ui_kits/social/onboarding.html steps, options, and prefill semantics.
+- Reference inputs: Legacy onboarding source only.
+- Docs/contracts read: assembly-workflow.md (runtime boundary — wizard is a separate route, not canvas UI), decision-contract.md.
+- Contract rules applied: canvasContent contains no app UI (the wizard lives on its own route; SetupPrefill and the first-run redirect are null-rendering state sync); no direct localStorage access (first-run detection uses runtime state freshness, not storage reads).
+- Decision: Wizard state travels as search params; SetupPrefill applies them once via controls.setValue/layers commands and clears the URL; mode=skip marks an intentional skip.
+- Alternatives rejected: writing prefill directly into the persistence localStorage key (couples app chrome to runtime storage internals and is contract-banned); an in-canvas first-run overlay (canvasContent must not contain app UI).
+- State/output mapping: /setup choices → search params → controls.setValue for post.template/post.colourway/scene.*/content.episode, plus layers.add + carousel.slides snapshots for the episode-set choice → the studio opens rendering the chosen setup.
+- Files changed: src/routes/setup.tsx, src/routes/root.tsx, src/routes/index.tsx, src/app/post-renderer.tsx (SetupPrefill), e2e/app-product.spec.ts (onboarding flow tests), e2e/app-product-perf.spec.ts (wizard-aware openStudio).
+- Verification: pnpm typecheck passed; pnpm test passed (278); agent-browser walkthrough — fresh visit redirected to /setup, the New episode path built the five-layer E2 carousel with the Nikkah Loophole cover prefilled, no console errors; Playwright onboarding tests added to the fallback suite.
+- Skipped checks: None.
+- Risks: Risk: first-run detection treats an untouched default studio as fresh, so reloading a never-edited studio returns to the wizard — matching the legacy entry behavior, but worth revisiting if users find it surprising.
+
 ## Decisions
 
 ### Renderer
@@ -54,9 +88,9 @@ Renderer Layer Inventory: backgroundLayer "slide-ground" (bitmap-media + dense-p
 Render Pipeline Inventory: rendererPipeline declares two passes — "slide-dom" (text-layout, preview, cacheKey runtime-values/media-assets, invalidated by control-change/control-drag/media-import) and "export-raster" (export, cacheKey decoded-images/loaded-fonts, invalidated by export only). interactionInvalidation covers control-change, control-drag, media-import, export, and viewport-zoom (viewport-zoom must not invalidate slide-dom or export-raster).
 
 ### Timeline
-- Decision: No timeline.
-- Reason: Still-output product; no animation, no video export.
-- Evidence: src/app/app-schema.ts (panels.timeline omitted), appTransferMode.animationIntent mode "none".
+- Decision: Playback timeline for the audiogram (defaultDurationSeconds 60; the uploaded audio's duration replaces it once metadata loads).
+- Reason: The audiogram is timeline-driven media; static templates ignore the transport.
+- Evidence: src/app/app-schema.ts panels.timeline, appTransferMode.animationIntent timeline-playback with product-derived loopDuration, AudiogramAudioSync in src/app/post-renderer.tsx.
 
 ### Layers
 - Decision: No layers panel.

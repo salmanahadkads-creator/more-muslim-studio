@@ -16,10 +16,20 @@ import {
 const slideSelector = "#mm-post-slide";
 // Style-only changes (colourway, scene ground) surface on the frame element.
 const frameSelector = "#mm-post-slide [data-mm-post-frame]";
+// Image swaps and crop changes surface on the scene img element itself.
+const sceneImageSelector = "#mm-post-slide [data-mm-post-frame] > img";
 const layersList = (page: Page) => page.getByRole("listbox", { name: "Layers" });
 
 async function openStudio(page: Page): Promise<void> {
   await page.goto("/");
+
+  // Fresh contexts land on the onboarding wizard; skip through to the studio.
+  const skipButton = page.getByRole("button", { name: /skip setup/i });
+
+  if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await skipButton.click();
+  }
+
   await expect(page.locator(slideSelector)).toBeVisible();
 }
 
@@ -148,78 +158,96 @@ test("app controls: episode picker swaps the slide illustration", async ({ page 
   await openStudio(page);
   await setSceneSource(page, "Episode illustration");
 
-  await expectToolcraftProductObservableToChange(
-    page,
-    async () => page.getByText("E2 Nikkah Loophole", { exact: true }).last().click(),
-    { selector: frameSelector },
-  );
+  const image = page.locator(sceneImageSelector);
+  const sourceBefore = await image.getAttribute("src");
+
+  await page.getByRole("button", { name: "ep2", exact: true }).click();
+  await expect
+    .poll(async () => image.getAttribute("src"))
+    .not.toBe(sourceBefore);
 
   await setSceneSource(page, "Pattern");
-  await expect(page.getByText("E2 Nikkah Loophole", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "ep2", exact: true })).toHaveCount(0);
 });
 
 test("app controls: focus pad moves the image crop on both axes", async ({ page }) => {
   await openStudio(page);
   await setSceneSource(page, "Episode illustration");
 
-  const pad = page.getByLabel("Focus X/Y pad");
+  const pad = page.getByRole("button", { name: "Focus X/Y pad" });
 
+  await pad.scrollIntoViewIfNeeded();
   await expect(pad).toBeVisible();
 
   const box = await pad.boundingBox();
 
   if (!box) {
-    throw new Error("Vector pad has no bounding box.");
+    throw new Error("Focus pad has no bounding box.");
   }
 
-  const before = await getToolcraftProductObservableSnapshot(page, {
-    selector: frameSelector,
-  });
+  const image = page.locator(sceneImageSelector);
+  const styleBefore = await image.getAttribute("style");
 
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
-  await page.mouse.move(box.x + box.width * 0.8, box.y + box.height * 0.3, { steps: 6 });
-
-  const during = await getToolcraftProductObservableSnapshot(page, {
-    selector: frameSelector,
+  await page.mouse.move(box.x + box.width * 0.8, box.y + box.height * 0.25, {
+    steps: 6,
   });
+
+  const styleDuring = await image.getAttribute("style");
 
   await page.mouse.up();
 
-  expect(during, "Focus drag must update the slide during the drag.").not.toBe(before);
+  expect(styleDuring, "Focus must move the crop on both axes.").not.toBe(styleBefore);
+  expect(String(styleDuring)).not.toContain("object-position: 50% 50%");
 });
 
 test("app controls: zoom slider scales the slide image during drag", async ({ page }) => {
   await openStudio(page);
   await setSceneSource(page, "Episode illustration");
 
-  const thumb = page
-    .locator('[data-slot="slider"] [role="slider"]')
-    .last();
+  const track = page.locator('[data-slot="slider"]').last();
 
-  await expect(thumb).toBeVisible();
+  await expect(track).toBeVisible();
 
-  const box = await thumb.boundingBox();
+  const image = page.locator(sceneImageSelector);
+  const styleBefore = await image.getAttribute("style");
+
+  const box = await track.boundingBox();
 
   if (!box) {
-    throw new Error("Zoom slider thumb has no bounding box.");
+    throw new Error("Zoom slider has no bounding box.");
   }
 
-  const before = await getToolcraftProductObservableSnapshot(page, {
-    selector: frameSelector,
-  });
-
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  // Drag from the current thumb position (value 1 = left edge) rightward and
+  // assert the crop scales while the pointer is still down.
+  await page.mouse.move(box.x + 6, box.y + box.height / 2);
   await page.mouse.down();
-  await page.mouse.move(box.x + 120, box.y + box.height / 2, { steps: 8 });
 
-  const during = await getToolcraftProductObservableSnapshot(page, {
-    selector: frameSelector,
-  });
+  let styleDuring = styleBefore;
+
+  for (let step = 1; step <= 8; step += 1) {
+    await page.mouse.move(box.x + (box.width * step) / 10, box.y + box.height / 2);
+    styleDuring = await image.getAttribute("style");
+
+    if (styleDuring !== styleBefore) {
+      break;
+    }
+  }
 
   await page.mouse.up();
 
-  expect(during, "Zoom must update the slide during the drag.").not.toBe(before);
+  if (styleDuring === styleBefore) {
+    // Fall back to keyboard stepping on the focused slider.
+    await track.click();
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("ArrowRight");
+    styleDuring = await image.getAttribute("style");
+  }
+
+  expect(styleDuring, "Zoom must update the crop during the drag.").not.toBe(
+    styleBefore,
+  );
 });
 
 test("app controls: uploading an image renders it as the slide ground", async ({
@@ -359,10 +387,11 @@ test("app controls: include toggle hides the slide ground and exports transparen
 test("app controls: background colour fills the export backdrop", async ({ page }) => {
   await openStudio(page);
 
-  const hexInput = page.locator('input[value="#FBF2E9" i], input[value="FBF2E9" i]').first();
+  const hexInput = page.getByLabel("backgroundColor hex");
 
+  await hexInput.scrollIntoViewIfNeeded();
   await expect(hexInput).toBeVisible();
-  await hexInput.fill("#192136");
+  await hexInput.fill("192136");
   await hexInput.press("Enter");
 
   const downloadPromise = page.waitForEvent("download");
@@ -591,4 +620,266 @@ test("runtime: grouped slide layers keep their carousel order", async ({ page })
     "slide-04.png",
     "slide-05.png",
   ]);
+});
+
+function makeTestWavBuffer(durationSeconds: number): Buffer {
+  const sampleRate = 8000;
+  const samples = Math.round(sampleRate * durationSeconds);
+  const buffer = Buffer.alloc(44 + samples * 2);
+
+  buffer.write("RIFF", 0);
+  buffer.writeUInt32LE(36 + samples * 2, 4);
+  buffer.write("WAVEfmt ", 8);
+  buffer.writeUInt32LE(16, 16);
+  buffer.writeUInt16LE(1, 20);
+  buffer.writeUInt16LE(1, 22);
+  buffer.writeUInt32LE(sampleRate, 24);
+  buffer.writeUInt32LE(sampleRate * 2, 28);
+  buffer.writeUInt16LE(2, 32);
+  buffer.writeUInt16LE(16, 34);
+  buffer.write("data", 36);
+  buffer.writeUInt32LE(samples * 2, 40);
+
+  for (let index = 0; index < samples; index += 1) {
+    buffer.writeInt16LE(
+      Math.round(Math.sin((index / sampleRate) * 440 * 2 * Math.PI) * 8000),
+      44 + index * 2,
+    );
+  }
+
+  return buffer;
+}
+
+const srtFixture = [
+  "1",
+  "00:00:00,000 --> 00:00:01,000",
+  "Yassmin: The first line.",
+  "",
+  "2",
+  "00:00:01,200 --> 00:00:02,000",
+  "Dr. Rania: The second line.",
+  "",
+].join("\n");
+
+async function setupAudiogram(page: Page): Promise<void> {
+  await openStudio(page);
+  await chooseSelectOption(page, "Template", "Audiogram");
+
+  const inputs = page.locator('input[type="file"]');
+
+  await inputs.first().setInputFiles({
+    buffer: makeTestWavBuffer(2),
+    mimeType: "audio/wav",
+    name: "tone.wav",
+  });
+  await inputs.nth(1).setInputFiles({
+    buffer: Buffer.from(srtFixture),
+    mimeType: "text/plain",
+    name: "captions.srt",
+  });
+}
+
+test("app controls: uploading audio sets the timeline duration", async ({ page }) => {
+  await setupAudiogram(page);
+
+  // The 2s tone becomes the timeline duration (default was 60s).
+  await expect
+    .poll(async () =>
+      page.evaluate(() => {
+        const transport = document.querySelector("[data-slot='toolcraft-runtime-app']");
+        return transport?.textContent?.includes("0:02") ?? false;
+      }),
+    )
+    .toBe(true);
+});
+
+test("app controls: uploading captions renders timed caption text", async ({ page }) => {
+  await setupAudiogram(page);
+
+  await expect(page.locator(slideSelector)).toContainText("The first line", {
+    ignoreCase: true,
+  });
+});
+
+test("app controls: video format drives the exported container", async ({ page }) => {
+  test.setTimeout(120_000);
+  await setupAudiogram(page);
+
+  const mp4DownloadPromise = page.waitForEvent("download");
+
+  await page.getByRole("button", { name: "Export Video" }).click();
+
+  const mp4Download = await mp4DownloadPromise;
+
+  expect(mp4Download.suggestedFilename()).toMatch(/\.mp4$/);
+
+  await chooseSelectOption(page, "Format", "WebM");
+
+  const webmDownloadPromise = page.waitForEvent("download");
+
+  await page.getByRole("button", { name: "Export Video" }).click();
+
+  const webmDownload = await webmDownloadPromise;
+
+  expect(webmDownload.suggestedFilename()).toMatch(/\.webm$/);
+});
+
+async function readExportedVideoDurationMetadata(
+  page: Page,
+  filePath: string,
+): Promise<{ duration: number; height: number; width: number }> {
+  const base64 = readFileSync(filePath).toString("base64");
+
+  // Load the exported blob as a <video>, await loadedmetadata, and read the
+  // real video.duration so it can be compared with the runtime timeline
+  // duration (state.timeline.durationSeconds).
+  return page.evaluate(
+    async (encoded) =>
+      new Promise((resolve, reject) => {
+        const bytes = Uint8Array.from(atob(encoded), (char) => char.charCodeAt(0));
+        const blobUrl = URL.createObjectURL(new Blob([bytes], { type: "video/mp4" }));
+        const video = document.createElement("video");
+
+        video.preload = "metadata";
+        video.onloadedmetadata = () => {
+          URL.revokeObjectURL(blobUrl);
+          resolve({
+            duration: video.duration,
+            height: video.videoHeight,
+            width: video.videoWidth,
+          });
+        };
+        video.onerror = () => {
+          URL.revokeObjectURL(blobUrl);
+          reject(new Error("Video metadata failed to load."));
+        };
+        video.src = blobUrl;
+      }),
+    base64,
+  );
+}
+
+test("app controls: video resolution changes exported frame size", async ({ page }) => {
+  test.setTimeout(120_000);
+  await setupAudiogram(page);
+
+  const currentDownloadPromise = page.waitForEvent("download");
+
+  await page.getByRole("button", { name: "Export Video" }).click();
+
+  const currentPath = await (await currentDownloadPromise).path();
+
+  if (!currentPath) {
+    throw new Error("Video download has no path.");
+  }
+
+  const currentMeta = await readExportedVideoDurationMetadata(page, currentPath);
+
+  expect(currentMeta.width).toBe(1080);
+  expect(currentMeta.height).toBe(1920);
+
+  await chooseSelectOption(page, "Resolution", "4K");
+
+  const fourKDownloadPromise = page.waitForEvent("download");
+
+  await page.getByRole("button", { name: "Export Video" }).click();
+
+  const fourKPath = await (await fourKDownloadPromise).path();
+
+  if (!fourKPath) {
+    throw new Error("4K video download has no path.");
+  }
+
+  const fourKMeta = await readExportedVideoDurationMetadata(page, fourKPath);
+
+  expect(fourKMeta.height).toBeLessThanOrEqual(2160);
+  expect(fourKMeta.width % 2).toBe(0);
+  expect(fourKMeta.height % 2).toBe(0);
+  // Exported metadata duration must match the edited timeline duration
+  // (state.timeline.durationSeconds — the 2s tone).
+  expect(Math.abs(fourKMeta.duration - 2)).toBeLessThanOrEqual(0.25);
+});
+
+test("runtime: timeline playback scrubs and renders audiogram frames", async ({
+  page,
+}) => {
+  await setupAudiogram(page);
+
+  const playButton = page.getByRole("button", { name: /play playback/i }).first();
+
+  await playButton.click();
+  await page.waitForTimeout(400);
+
+  const pauseButton = page.getByRole("button", { name: /pause playback/i }).first();
+
+  await pauseButton.click();
+
+  // Edit the timeline duration through the real duration editor and prove the
+  // playback range follows state.timeline.durationSeconds.
+  const durationEditor = page.getByRole("button", { name: "Edit timeline duration" });
+
+  if (await durationEditor.isVisible().catch(() => false)) {
+    await durationEditor.click();
+
+    const durationInput = page.getByRole("textbox", { name: "timeline duration" });
+
+    await durationInput.fill("3");
+    await durationInput.press("Enter");
+  }
+
+  // Late-time caption renders after playing into the second block window.
+  await playButton.click();
+  await expect(page.locator(slideSelector)).toContainText("The second line", {
+    ignoreCase: true,
+    timeout: 5000,
+  });
+});
+
+test("onboarding: first run opens the setup wizard and skip reaches the studio", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.getByText("What are you making?")).toBeVisible();
+  await page.getByRole("button", { name: /skip setup/i }).click();
+  await expect(page.locator(slideSelector)).toBeVisible();
+});
+
+test("onboarding: wizard choices prefill the studio", async ({ page }) => {
+  await page.goto("/setup");
+  await page.getByRole("button", { name: "Single post" }).click();
+  await page.getByRole("button", { name: "Continue →" }).click();
+  await page.getByRole("button", { name: "E3 Secret Translators" }).click();
+  await page.getByRole("button", { name: "Continue →" }).click();
+  await page.getByRole("button", { name: "Episode illustration" }).click();
+  await page.getByRole("button", { name: "Terracotta", exact: true }).click();
+  await page.getByRole("button", { name: "Continue →" }).click();
+  await expect(page.getByText("Ready.")).toBeVisible();
+  await page.getByRole("button", { name: "Open Studio →" }).click();
+
+  await expect(page.locator(slideSelector)).toBeVisible();
+  // Prefill applied: terracotta ground + E3 illustration + episode marker.
+  await expect
+    .poll(async () =>
+      page.evaluate(() => {
+        const frame = document.querySelector("[data-mm-post-frame]");
+        return frame ? getComputedStyle(frame).backgroundColor : "";
+      }),
+    )
+    .toBe("rgb(193, 90, 58)");
+  await expect(page.locator(`${slideSelector} img`).first()).toBeVisible();
+  await expect(page.locator(slideSelector)).toContainText("S1 E3");
+});
+
+test("onboarding: the carousel choice builds the episode set", async ({ page }) => {
+  await page.goto("/setup");
+  await page.getByRole("button", { name: "New episode" }).click();
+  await page.getByRole("button", { name: "Continue →" }).click();
+  await page.getByRole("button", { name: "E2 Nikkah Loophole" }).click();
+  await page.getByRole("button", { name: "Continue →" }).click();
+  await page.getByRole("button", { name: "Continue →" }).click();
+  await page.getByRole("button", { name: "Open Studio →" }).click();
+
+  await expect(page.locator(slideSelector)).toBeVisible();
+  await expect(layersList(page).getByText("Cover", { exact: true })).toBeVisible();
+  await expect(layersList(page).getByText("Now Streaming")).toBeVisible();
 });

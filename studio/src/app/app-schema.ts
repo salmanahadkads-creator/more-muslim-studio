@@ -29,6 +29,7 @@ export const appSchema = defineToolcraft({
   },
   panels: {
     layers: true,
+    timeline: { defaultDurationSeconds: 60, mode: "playback" },
     controls: {
       sections: [
         {
@@ -36,7 +37,7 @@ export const appSchema = defineToolcraft({
             template: {
               defaultValue: "cover",
               description:
-                "Five brand layouts: Cover, Quote exchange, Synopsis, Now streaming, and Episode credits.",
+                "Six brand layouts: Cover, Quote exchange, Synopsis, Now streaming, Episode credits, and the timeline-driven Audiogram.",
               label: "Template",
               options: [
                 { label: "Cover", value: "cover" },
@@ -44,6 +45,7 @@ export const appSchema = defineToolcraft({
                 { label: "Synopsis", value: "synopsis" },
                 { label: "Now streaming", value: "streaming" },
                 { label: "Episode credits", value: "credits" },
+                { label: "Audiogram", value: "audiogram" },
               ],
               orderRole: "mode",
               performanceReason:
@@ -207,7 +209,7 @@ export const appSchema = defineToolcraft({
               visibleWhen: { equals: "upload", target: "scene.source" },
             },
             imagePosition: {
-              defaultValue: { x: 50, y: 50 },
+              defaultValue: { x: 0, y: 0 },
               label: "Focus",
               orderRole: "spatial",
               performanceReason:
@@ -235,6 +237,43 @@ export const appSchema = defineToolcraft({
             },
           },
           title: "Scene",
+        },
+        {
+          controls: {
+            audio: {
+              accept: "audio/*",
+              assetKind: "file",
+              defaultValue: [],
+              description:
+                "MP3 or M4A episode audio; its duration becomes the timeline duration.",
+              label: "Audio",
+              multiple: false,
+              orderRole: "input",
+              performanceReason:
+                "Audio uploads decode metadata and set the timeline duration.",
+              performanceRole: "workload",
+              target: "audiogram.audio",
+              type: "fileDrop",
+              visibleWhen: { equals: "audiogram", target: "post.template" },
+            },
+            captions: {
+              accept: ".srt,.txt",
+              assetKind: "file",
+              defaultValue: [],
+              description:
+                "SRT captions; lines like \u201cSpeaker: text\u201d split the speaker out.",
+              label: "Captions",
+              multiple: false,
+              orderRole: "input",
+              performanceReason:
+                "Caption files parse once into timed blocks for the preview.",
+              performanceRole: "workload",
+              target: "audiogram.captions",
+              type: "fileDrop",
+              visibleWhen: { equals: "audiogram", target: "post.template" },
+            },
+          },
+          title: "Sound & Captions",
         },
         {
           controls: {
@@ -353,6 +392,48 @@ export const appSchema = defineToolcraft({
           title: "Image Export",
         },
         {
+          controls: {
+            videoFormat: {
+              defaultValue: "mp4",
+              label: "Format",
+              options: [
+                { label: "MP4", value: "mp4" },
+                { label: "WebM", value: "webm" },
+              ],
+              orderRole: "mode",
+              performanceReason:
+                "Video format selects the WebCodecs container for export.",
+              performanceRole: "workload",
+              target: "export.video.format",
+              type: "select",
+              visibleWhen: { equals: "audiogram", target: "post.template" },
+            },
+            videoResolution: {
+              defaultValue: "current",
+              label: "Resolution",
+              options: [
+                { label: "Current", value: "current" },
+                { label: "4K", value: "4k" },
+              ],
+              orderRole: "mode",
+              performanceReason:
+                "Video resolution scales the encoded frame size.",
+              performanceRole: "workload",
+              target: "export.video.resolution",
+              type: "select",
+              visibleWhen: { equals: "audiogram", target: "post.template" },
+            },
+          },
+          layoutGroups: [
+            {
+              columns: 2,
+              controls: ["videoFormat", "videoResolution"],
+              layout: "inline",
+            },
+          ],
+          title: "Video Export",
+        },
+        {
           actionGroup: "primary",
           controls: {
             exportActions: {
@@ -366,6 +447,11 @@ export const appSchema = defineToolcraft({
                   icon: "download-simple",
                   label: "Export ZIP",
                   value: "export-zip",
+                },
+                {
+                  icon: "upload-simple",
+                  label: "Export Video",
+                  value: "export-video",
                 },
               ],
               target: "panel.actions",

@@ -21,7 +21,7 @@ describe("appSchema", () => {
       type: "aspectRatio",
     });
     expect(appSchema.panels.layers).toBe(true);
-    expect(appSchema.panels.timeline).toBeUndefined();
+    expect(appSchema.panels.timeline).toMatchObject({ defaultDurationSeconds: 60, mode: "playback" });
     expect(appSchema.toolbar).toEqual({
       history: true,
       radar: true,
@@ -40,9 +40,11 @@ describe("appSchema", () => {
         "Post",
         "Colourway",
         "Scene",
+        "Sound & Captions",
         "Carousel",
         "Background",
         "Image Export",
+        "Video Export",
       ]),
     );
     expect(getToolcraftControlOrderTargets(appSchema)).toEqual([
@@ -60,20 +62,23 @@ describe("appSchema", () => {
       "scene.upload",
       "scene.imagePosition",
       "scene.imageZoom",
+      "audiogram.audio",
+      "audiogram.captions",
       "carousel.episode",
       "carousel.slides",
       "export.includeBackground",
       "appearance.background",
       "export.image.format",
       "export.image.resolution",
+      "export.video.format",
+      "export.video.resolution",
     ]);
   });
 
-  it("does not imply timeline behavior for a still-output product", () => {
-    expect(appSchema.assembly.capabilities).not.toContain("timeline.playback");
+  it("enables playback timeline behavior for the audiogram", () => {
+    expect(appSchema.assembly.capabilities).toContain("timeline.playback");
     expect(appSchema.assembly.capabilities).not.toContain("timeline.keyframes");
-    expect(appSchema.assembly.commands).not.toContain("timeline.setCurrentTime");
-    expect(appSchema.assembly.commands).not.toContain("timeline.moveKeyframe");
+    expect(appSchema.assembly.commands).toContain("timeline.setCurrentTime");
   });
 
   it("declares performance coverage for the DOM slide renderer", () => {
@@ -300,5 +305,45 @@ describe("appSchema", () => {
 
     expect(scenario?.interaction).toBe("viewport-stability");
     expect(scenario?.target).toBe("layers.interactions");
+  });
+
+  it("performance: audiogram.audio scenario is declared", () => {
+    const scenario = appPerformance.scenarios.find(
+      (entry) => entry.id === "audiogram-audio-workload",
+    );
+
+    expect(scenario?.interaction).toBe("control-change");
+    expect(scenario?.target).toBe("audiogram.audio");
+    expect(scenario?.workload).toBe(true);
+  });
+
+  it("performance: audiogram.captions scenario is declared", () => {
+    const scenario = appPerformance.scenarios.find(
+      (entry) => entry.id === "audiogram-captions-workload",
+    );
+
+    expect(scenario?.interaction).toBe("control-change");
+    expect(scenario?.target).toBe("audiogram.captions");
+    expect(scenario?.workload).toBe(true);
+  });
+
+  it("performance: export.video.format scenario is declared", () => {
+    const scenario = appPerformance.scenarios.find(
+      (entry) => entry.id === "video-format-workload",
+    );
+
+    expect(scenario?.interaction).toBe("control-change");
+    expect(scenario?.target).toBe("export.video.format");
+    expect(scenario?.workload).toBe(true);
+  });
+
+  it("performance: export.video.resolution scenario is declared", () => {
+    const scenario = appPerformance.scenarios.find(
+      (entry) => entry.id === "video-resolution-workload",
+    );
+
+    expect(scenario?.interaction).toBe("control-change");
+    expect(scenario?.target).toBe("export.video.resolution");
+    expect(scenario?.workload).toBe(true);
   });
 });

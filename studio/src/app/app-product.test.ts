@@ -46,6 +46,7 @@ describe("More Muslim Social Studio schema", () => {
       "synopsis",
       "streaming",
       "credits",
+      "audiogram",
     ]);
   });
 
@@ -108,7 +109,7 @@ describe("More Muslim Social Studio schema", () => {
     const control = findControl(appSchema, "scene.imagePosition");
 
     expect(control?.type).toBe("vector");
-    expect(control?.defaultValue).toEqual({ x: 50, y: 50 });
+    expect(control?.defaultValue).toEqual({ x: 0, y: 0 });
   });
 
   it("schema: scene.imageZoom is a live 1-2 slider", () => {
@@ -292,5 +293,53 @@ describe("More Muslim Social Studio schema", () => {
 
     expect(row?.evidence).toBe("exported-bytes");
     expect(row?.expectedObservable).toMatch(/group/i);
+  });
+
+  it("schema: audiogram.audio is a single audio fileDrop", () => {
+    const control = findControl(appSchema, "audiogram.audio");
+
+    expect(control?.type).toBe("fileDrop");
+    expect(control?.accept).toBe("audio/*");
+    expect(control?.multiple).toBe(false);
+    expect(control?.visibleWhen).toEqual({
+      equals: "audiogram",
+      target: "post.template",
+    });
+  });
+
+  it("schema: audiogram.captions is an SRT fileDrop", () => {
+    const control = findControl(appSchema, "audiogram.captions");
+
+    expect(control?.type).toBe("fileDrop");
+    expect(control?.accept).toBe(".srt,.txt");
+    expect(control?.visibleWhen).toEqual({
+      equals: "audiogram",
+      target: "post.template",
+    });
+  });
+
+  it("schema: export.video.format offers mp4 and webm containers", () => {
+    const control = findControl(appSchema, "export.video.format");
+
+    expect(optionValues(control)).toEqual(["mp4", "webm"]);
+    expect(control?.defaultValue).toBe("mp4");
+  });
+
+  it("schema: export.video.resolution offers current and 4k", () => {
+    const control = findControl(appSchema, "export.video.resolution");
+
+    expect(optionValues(control)).toEqual(["current", "4k"]);
+    expect(control?.defaultValue).toBe("current");
+  });
+
+  it("schema: timeline playback drives the audiogram frame", () => {
+    expect(appSchema.panels.timeline).toMatchObject({
+      defaultDurationSeconds: 60,
+      mode: "playback",
+    });
+
+    const row = appAcceptance.find((entry) => entry.id === "runtime.timeline.playback");
+
+    expect(row?.timelineCoverage).toBe("playback");
   });
 });

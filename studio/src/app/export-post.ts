@@ -20,6 +20,7 @@ import {
   type ColourwayKey,
   type PostFormat,
 } from "./brand";
+import { readFocusPercent } from "./post-renderer";
 import type { PostTemplateKey } from "./templates";
 import { createStoredZip } from "./zip-store";
 
@@ -222,25 +223,13 @@ export async function paintSlide(
     }
 
     if (sceneImage) {
-      const position =
-        values["scene.imagePosition"] &&
-        typeof values["scene.imagePosition"] === "object"
-          ? (values["scene.imagePosition"] as { x?: number; y?: number })
-          : {};
+      const position = readFocusPercent(values["scene.imagePosition"]);
       const zoom =
         typeof values["scene.imageZoom"] === "number"
           ? (values["scene.imageZoom"] as number)
           : 1;
 
-      drawCoverImage(
-        context,
-        sceneImage,
-        w,
-        h,
-        typeof position.x === "number" ? position.x : 50,
-        typeof position.y === "number" ? position.y : 50,
-        zoom,
-      );
+      drawCoverImage(context, sceneImage, w, h, position.x, position.y, zoom);
     } else {
       if (source !== "solid" && c.tile) {
         const tile = await loadImage(c.tile);

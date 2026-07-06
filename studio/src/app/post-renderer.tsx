@@ -16,11 +16,15 @@ import {
 } from "./brand";
 import {
   applySlideValues,
+  buildEpisodeSetSnapshots,
   captureSlideValues,
+  makeSlideLayerId,
   readCarouselSlides,
   writeCarouselSlides,
 } from "./carousel";
+import { activeCaptionAt, parseSrt } from "./srt";
 import {
+  AudiogramPost,
   CoverPost,
   CreditsPost,
   NowStreamingPost,
@@ -32,6 +36,53 @@ import {
 
 function readString(value: unknown, fallback = ""): string {
   return typeof value === "string" ? value : fallback;
+}
+
+/* fileDrop stores files as data URLs; captions need the decoded text. */
+function decodeCaptionAsset(dataUrl: string): string {
+  const commaIndex = dataUrl.indexOf(",");
+
+  if (commaIndex === -1) {
+    return "";
+  }
+
+  const payload = dataUrl.slice(commaIndex + 1);
+
+  try {
+    if (/;base64/i.test(dataUrl.slice(0, commaIndex))) {
+      const bytes = atob(payload);
+
+      return decodeURIComponent(
+        Array.from(bytes, (char) =>
+          `%${char.charCodeAt(0).toString(16).padStart(2, "0")}`,
+        ).join(""),
+      );
+    }
+
+    return decodeURIComponent(payload);
+  } catch {
+    return "";
+  }
+}
+
+/* The vector pad writes -1..1 per axis (as strings while dragging); the crop
+   focus is a 0..100 object-position percentage. */
+export function readFocusPercent(value: unknown): { x: number; y: number } {
+  const raw =
+    value && typeof value === "object"
+      ? (value as { x?: unknown; y?: unknown })
+      : {};
+  const toPercent = (axis: unknown): number => {
+    const parsed = typeof axis === "string" ? Number.parseFloat(axis) : axis;
+
+    if (typeof parsed !== "number" || Number.isNaN(parsed)) {
+      return 50;
+    }
+
+    return Math.min(100, Math.max(0, (parsed + 1) * 50));
+  };
+
+  return { x: toPercent(raw.x), y: toPercent(raw.y) };
 }
 
 /* "Speaker: quote" per line -> exchange list; lines without a speaker
@@ -68,11 +119,7 @@ export function usePostSlideValues() {
   const way = (readString(values["post.colourway"], "night") ||
     "night") as ColourwayKey;
   const source = readString(values["scene.source"], "pattern") || "pattern";
-  const position =
-    values["scene.imagePosition"] &&
-    typeof values["scene.imagePosition"] === "object"
-      ? (values["scene.imagePosition"] as { x?: number; y?: number })
-      : { x: 50, y: 50 };
+  const position = readFocusPercent(values["scene.imagePosition"]);
   const zoom =
     typeof values["scene.imageZoom"] === "number"
       ? (values["scene.imageZoom"] as number)
@@ -101,8 +148,8 @@ export function usePostSlideValues() {
     imageFlipHorizontal,
     imageFlipVertical,
     imageRotation,
-    imageOffsetX: typeof position.x === "number" ? position.x : 50,
-    imageOffsetY: typeof position.y === "number" ? position.y : 50,
+    imageOffsetX: position.x,
+    imageOffsetY: position.y,
     imageZoom: zoom,
     includeBackground: shouldIncludeToolcraftPreviewBackground({ state }),
     pattern: source !== "solid",
@@ -195,6 +242,186 @@ export function PostSlide({
   }
 }
 
+/* Plays the uploaded audio in lockstep with the runtime timeline while the
+   audiogram template is active, and adopts the audio duration as the timeline
+   duration once metadata loads. Renders nothing. */
+function AudiogramAudioSync(): null {
+  const { dispatch, state } = useToolcraft();
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
+  const isAudiogram = state.values["post.template"] === "audiogram";
+  const audioAsset = state.mediaAssets.find(
+    (asset) => asset.sourceTarget === "audiogram.audio",
+  );
+  const audioUrl = isAudiogram ? (audioAsset?.dataUrl ?? null) : null;
+
+  // Adopts the uploaded audio's duration once, when its metadata loads —
+  // initialization only; the renderer never resyncs from
+  // state.timeline.durationSeconds.
+  const adoptAudioDuration = React.useCallback(
+    (audio: HTMLAudioElement) => {
+      if (Number.isFinite(audio.duration) && audio.duration > 0) {
+        dispatch({ durationSeconds: audio.duration, type: "timeline.setDuration" });
+      }
+    },
+    [dispatch],
+  );
+
+  React.useEffect(() => {
+    if (!audioUrl) {
+      audioRef.current?.pause();
+      audioRef.current = null;
+      return;
+    }
+
+    const audio = new Audio(audioUrl);
+
+    audioRef.current = audio;
+    audio.preload = "auto";
+
+    const handleMetadata = () => adoptAudioDuration(audio);
+
+    audio.addEventListener("loadedmetadata", handleMetadata);
+
+    return () => {
+      audio.removeEventListener("loadedmetadata", handleMetadata);
+      audio.pause();
+      audioRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audioUrl]);
+
+  React.useEffect(() => {
+    const audio = audioRef.current;
+
+    if (!audio) {
+      return;
+    }
+
+    if (state.timeline.isPlaying) {
+      if (Math.abs(audio.currentTime - state.timeline.currentTimeSeconds) > 0.35) {
+        audio.currentTime = state.timeline.currentTimeSeconds;
+      }
+
+      void audio.play().catch(() => undefined);
+    } else {
+      audio.pause();
+
+      if (Math.abs(audio.currentTime - state.timeline.currentTimeSeconds) > 0.1) {
+        audio.currentTime = state.timeline.currentTimeSeconds;
+      }
+    }
+  }, [state.timeline.isPlaying, state.timeline.currentTimeSeconds]);
+
+  return null;
+}
+
+/* Applies the onboarding wizard's prefill search params once, then clears
+   them from the URL. Renders nothing — app chrome stays out of the canvas. */
+function SetupPrefill(): null {
+  const { dispatch, state } = useToolcraft();
+  const appliedRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (appliedRef.current) {
+      return;
+    }
+
+    appliedRef.current = true;
+
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get("mode");
+
+    if (!mode) {
+      // First run: nothing persisted or edited yet — open the guided setup,
+      // matching the legacy onboarding entry point.
+      const isFreshState =
+        state.layers.length === 0 &&
+        state.mediaAssets.length === 0 &&
+        state.values["post.template"] === "cover" &&
+        state.values["content.cover.title"] === "Side Entrances" &&
+        state.values["post.colourway"] === "night";
+
+      if (isFreshState && window.location.pathname === "/") {
+        window.location.replace("/setup");
+      }
+
+      return;
+    }
+
+    if (mode === "skip") {
+      window.history.replaceState(null, "", window.location.pathname);
+      return;
+    }
+
+    const episode = params.get("episode") ?? "general";
+    const scene = params.get("scene") ?? "pattern";
+    const way = params.get("way") ?? "night";
+    const setValue = (target: string, value: unknown) =>
+      dispatch({ historyGroup: "setup-prefill", target, type: "controls.setValue", value });
+
+    setValue("post.colourway", way);
+
+    const episodeEntry =
+      episode !== "general"
+        ? { marker: `S1 E${episode.replace(/^ep/, "")}`, value: episode }
+        : null;
+
+    if (episodeEntry && scene === "illustration") {
+      setValue("scene.source", "illustration");
+      setValue("scene.illustration", episodeEntry.value);
+    } else {
+      setValue("scene.source", scene === "solid" ? "solid" : "pattern");
+    }
+
+    if (episodeEntry) {
+      setValue("content.episode", episodeEntry.marker);
+    }
+
+    if (mode === "audiogram") {
+      setValue("post.template", "audiogram");
+    } else if (mode === "carousel") {
+      const slides = readCarouselSlides(state);
+      const set = buildEpisodeSetSnapshots(
+        captureSlideValues(state),
+        episodeEntry?.value ?? "ep1",
+      );
+      let firstLayerId: string | null = null;
+
+      setValue("carousel.episode", episodeEntry?.value ?? "ep1");
+
+      for (const { name, snapshot } of set) {
+        const layerId = makeSlideLayerId();
+
+        firstLayerId ??= layerId;
+        slides[layerId] = { ...snapshot, "post.colourway": snapshot["post.colourway"] };
+        dispatch({ layer: { id: layerId, name }, type: "layers.add" });
+      }
+
+      writeCarouselSlides(dispatch, slides);
+
+      if (firstLayerId) {
+        dispatch({ layerId: firstLayerId, type: "layers.select" });
+        applySlideValues(dispatch, set[0].snapshot);
+      }
+    } else {
+      setValue("post.template", "cover");
+
+      if (episodeEntry) {
+        const label = params.get("title");
+
+        if (label) {
+          setValue("content.cover.title", label);
+        }
+      }
+    }
+
+    window.history.replaceState(null, "", window.location.pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return null;
+}
+
 /* Swaps per-slide control values when the selected slide layer changes.
    Renders nothing — it only mirrors runtime state, so it is not app UI. */
 function CarouselSlideSync(): null {
@@ -232,9 +459,29 @@ export function PostRenderer(): React.JSX.Element {
   const { scene, state, template, values, way } = usePostSlideValues();
   const canvasWidth = state.canvas.size.width;
   const canvasHeight = state.canvas.size.height;
-  const format = getPostFormat(canvasWidth, canvasHeight);
+  const isAudiogram = template === "audiogram";
+  const format = isAudiogram ? "story" : getPostFormat(canvasWidth, canvasHeight);
   const native = POST_SIZES[format];
   const scale = Math.min(canvasWidth / native.w, canvasHeight / native.h);
+  const captions = React.useMemo(
+    () =>
+      isAudiogram
+        ? parseSrt(
+            String(
+              state.mediaAssets.find(
+                (asset) => asset.sourceTarget === "audiogram.captions",
+              )?.dataUrl
+                ? decodeCaptionAsset(
+                    state.mediaAssets.find(
+                      (asset) => asset.sourceTarget === "audiogram.captions",
+                    )?.dataUrl ?? "",
+                  )
+                : "",
+            ),
+          )
+        : [],
+    [isAudiogram, state.mediaAssets],
+  );
 
   return (
     <div
@@ -250,7 +497,9 @@ export function PostRenderer(): React.JSX.Element {
         width: "100%",
       }}
     >
+      <SetupPrefill />
       <CarouselSlideSync />
+      <AudiogramAudioSync />
       <div
         style={{
           flex: "none",
@@ -260,13 +509,31 @@ export function PostRenderer(): React.JSX.Element {
           width: native.w,
         }}
       >
-        <PostSlide
-          format={format}
-          scene={scene}
-          template={template}
-          values={values}
-          way={way}
-        />
+        {isAudiogram ? (
+          <AudiogramPost
+            scene={scene}
+            values={{
+              caption: activeCaptionAt(captions, state.timeline.currentTimeSeconds),
+              episode:
+                typeof values["content.episode"] === "string"
+                  ? (values["content.episode"] as string)
+                  : "",
+              progress:
+                state.timeline.durationSeconds > 0
+                  ? state.timeline.currentTimeSeconds / state.timeline.durationSeconds
+                  : 0,
+            }}
+            way={way}
+          />
+        ) : (
+          <PostSlide
+            format={format}
+            scene={scene}
+            template={template}
+            values={values}
+            way={way}
+          />
+        )}
       </div>
     </div>
   );

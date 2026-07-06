@@ -23,7 +23,8 @@ export type PostTemplateKey =
   | "quote"
   | "synopsis"
   | "streaming"
-  | "credits";
+  | "credits"
+  | "audiogram";
 
 export type SceneProps = {
   grainSeed?: number;
@@ -486,6 +487,83 @@ export function CreditsPost({
         }}
       >
         {values.episode}
+      </div>
+    </PostFrame>
+  );
+}
+
+export type AudiogramValues = {
+  caption: { speaker: string; text: string } | null;
+  episode: string;
+  progress: number;
+};
+
+/* Timeline-synced audiogram slide (story format): eyebrow, active caption,
+   progress rule, and the brand symbol. The visual state is a pure function of
+   the runtime timeline time so preview and export stay deterministic. */
+export function AudiogramPost({
+  scene,
+  values,
+  way,
+}: {
+  scene: SceneProps;
+  values: AudiogramValues;
+  way: ColourwayKey;
+}): React.JSX.Element {
+  const c = COLOURWAYS[way];
+
+  return (
+    <PostFrame format="story" padBottom={370} padTop={370} way={way} {...scene}>
+      <Eyebrow ink={c.ink} text={values.episode} />
+      <div
+        style={{
+          alignItems: "center",
+          display: "flex",
+          flex: 1,
+          flexDirection: "column",
+          gap: 48,
+          justifyContent: "center",
+          textAlign: "center",
+        }}
+      >
+        {values.caption?.speaker ? (
+          <div
+            data-toolcraft-product-text=""
+            style={{ fontSize: 64, letterSpacing: CAPS_TRACKING, textTransform: "uppercase", whiteSpace: "nowrap" }}
+          >
+            {values.caption.speaker}
+          </div>
+        ) : null}
+        <div
+          data-toolcraft-product-text=""
+          style={{
+            fontSize: 56,
+            fontStyle: "italic",
+            maxWidth: TEXT_WIDTH.story,
+            minHeight: 140,
+            textAlign: "center",
+          }}
+        >
+          {values.caption?.text ?? ""}
+        </div>
+      </div>
+      <div style={{ alignItems: "center", display: "flex", flexDirection: "column", gap: 40, marginTop: "auto" }}>
+        <div
+          aria-hidden="true"
+          style={{ background: c.sub, height: 3, position: "relative", width: TEXT_WIDTH.story }}
+        >
+          <div
+            style={{
+              background: c.ink,
+              height: 3,
+              left: 0,
+              position: "absolute",
+              top: 0,
+              width: `${Math.min(100, Math.max(0, values.progress * 100))}%`,
+            }}
+          />
+        </div>
+        <img alt="" src={SYMBOLS[c.logo]} style={{ height: 160, width: 160 }} />
       </div>
     </PostFrame>
   );

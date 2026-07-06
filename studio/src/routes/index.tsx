@@ -8,6 +8,7 @@ import {
   readCarouselSlides,
   writeCarouselSlides,
 } from "../app/carousel";
+import { exportAudiogramVideo } from "../app/export-audiogram";
 import { exportCarouselZip, exportPostImage } from "../app/export-post";
 import { PostRenderer } from "../app/post-renderer";
 import "../app/brand.css";
@@ -24,6 +25,10 @@ export function AppHome(): React.JSX.Element {
 
         if (action.value === "export-zip") {
           return exportCarouselZip(state, reportProgress);
+        }
+
+        if (action.value === "export-video") {
+          return exportAudiogramVideo(state, reportProgress);
         }
 
         if (action.value === "carousel-add-slide") {

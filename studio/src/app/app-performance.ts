@@ -3,6 +3,14 @@ import {
   type ToolcraftPerformanceConfig,
 } from "@/toolcraft/runtime";
 
+/* 1000-block feature-length SRT (50k+ chars): the heaviest realistic caption
+   upload, shared by the load profile and browser stress tests. */
+const heavyCaptionFixture = Array.from(
+  { length: 1000 },
+  (_, index) =>
+    `${index + 1}\n00:${String(Math.floor(index / 60)).padStart(2, "0")}:${String(index % 60).padStart(2, "0")},000 --> 00:${String(Math.floor((index + 1) / 60)).padStart(2, "0")}:${String((index + 1) % 60).padStart(2, "0")},000\nSpeaker: Caption block ${index + 1} with enough words to wrap.`,
+).join("\n\n");
+
 /* The product renderer is DOM text over one decoded background image (or a
    pattern tile) at 1080×1350/1920 — low primitive count, so DOM stays the
    preview strategy and export repaints the slide through a Canvas 2D painter. */
@@ -42,12 +50,23 @@ export const appPerformance: ToolcraftPerformanceConfig = defineToolcraftPerform
       {
         interaction: "media-import",
         invalidates: ["slide-dom"],
-        targets: ["scene.upload"],
+        targets: ["scene.upload", "audiogram.audio", "audiogram.captions"],
+      },
+      {
+        interaction: "timeline-playback",
+        invalidates: ["audiogram-caption"],
+        mustNotInvalidate: ["slide-dom", "export-raster"],
+        targets: ["timeline.currentTime"],
       },
       {
         interaction: "export",
         invalidates: ["export-raster"],
-        targets: ["export.image.format", "export.image.resolution"],
+        targets: [
+          "export.image.format",
+          "export.image.resolution",
+          "export.video.format",
+          "export.video.resolution",
+        ],
       },
       {
         interaction: "viewport-zoom",
@@ -63,6 +82,16 @@ export const appPerformance: ToolcraftPerformanceConfig = defineToolcraftPerform
         inputs: ["runtime-values", "media-assets"],
         invalidatedBy: ["control-change", "control-drag", "media-import"],
         kind: "text-layout",
+        output: "preview",
+        quality: "full",
+        runsOn: "main",
+      },
+      {
+        cacheKey: ["caption-blocks"],
+        id: "audiogram-caption",
+        inputs: ["caption-blocks", "timeline-time"],
+        invalidatedBy: ["timeline-playback", "media-import"],
+        kind: "composite",
         output: "preview",
         quality: "full",
         runsOn: "main",
@@ -680,6 +709,133 @@ export const appPerformance: ToolcraftPerformanceConfig = defineToolcraftPerform
     },
     {
       automated: true,
+      automatedTestName: "performance: audiogram.audio scenario is declared",
+      browser: true,
+      browserTestName: "browser perf: audiogram.audio change stays within budget",
+      budget: { maxFrameGapMs: 120, maxInteractionMs: 2000, maxLongTaskMs: 200 },
+      controlLabel: "Audio",
+      expectedObservable:
+        "Attaching episode audio decodes metadata and sets the timeline duration within budget.",
+      fixture: "Audiogram template with a short test tone.",
+      id: "audiogram-audio-workload",
+      interaction: "control-change",
+      stress: true,
+      stressFixture: {
+        kind: "media",
+        loadProfile: {
+          hardLimit: { height: 1, width: 5292000 },
+          metric: "custom",
+          smoothTarget: { height: 1, width: 5292000 },
+          smoothTargetRatio: 1,
+          target: "audiogram.audio",
+          userFacingRange: "fully-guaranteed",
+        },
+        reason: "A two-minute 44.1kHz audio file is the realistic heavy source.",
+        value: { height: 1, width: 5292000 },
+      },
+      target: "audiogram.audio",
+      values: {
+        default: { height: 1, width: 5292000 },
+        max: { height: 1, width: 5292000 },
+        min: { height: 1, width: 44100 },
+      },
+      workload: true,
+    },
+    {
+      automated: true,
+      automatedTestName: "performance: audiogram.captions scenario is declared",
+      browser: true,
+      browserTestName: "browser perf: audiogram.captions change stays within budget",
+      budget: { maxFrameGapMs: 120, maxInteractionMs: 1000, maxLongTaskMs: 200 },
+      controlLabel: "Captions",
+      expectedObservable:
+        "Attaching an SRT parses caption blocks and renders the active caption within budget.",
+      fixture: "Audiogram template with a 200-block SRT.",
+      id: "audiogram-captions-workload",
+      interaction: "control-change",
+      stress: true,
+      stressFixture: {
+        kind: "large-text",
+        loadProfile: {
+          hardLimit: heavyCaptionFixture,
+          metric: "text-length",
+          smoothTarget: heavyCaptionFixture,
+          smoothTargetRatio: 1,
+          target: "audiogram.captions",
+          userFacingRange: "fully-guaranteed",
+        },
+        minChars: 50000,
+        minLines: 1000,
+        reason:
+          "A 1000-block feature-length SRT (50k+ characters) is the heaviest realistic caption file.",
+        value: heavyCaptionFixture,
+      },
+      target: "audiogram.captions",
+      values: { default: 20, max: 1000, min: 2 },
+      workload: true,
+    },
+    {
+      automated: true,
+      automatedTestName: "performance: export.video.format scenario is declared",
+      browser: true,
+      browserTestName: "browser perf: export.video.format change stays within budget",
+      budget: { maxFrameGapMs: 120, maxInteractionMs: 500, maxLongTaskMs: 200 },
+      controlLabel: "Format",
+      expectedObservable:
+        "Choosing the video format updates runtime state within budget.",
+      fixture: "Audiogram template active.",
+      id: "video-format-workload",
+      interaction: "control-change",
+      stress: true,
+      stressFixture: {
+        kind: "max-value",
+        loadProfile: {
+          hardLimit: "mp4",
+          metric: "custom",
+          smoothTarget: "mp4",
+          smoothTargetRatio: 1,
+          target: "export.video.format",
+          userFacingRange: "fully-guaranteed",
+        },
+        reason: "MP4 is the WebCodecs container used for delivery.",
+        value: "mp4",
+      },
+      target: "export.video.format",
+      values: { default: "mp4", max: "mp4", min: "mp4" },
+      workload: true,
+    },
+    {
+      automated: true,
+      automatedTestName: "performance: export.video.resolution scenario is declared",
+      browser: true,
+      browserTestName: "browser perf: export.video.resolution change stays within budget",
+      budget: { maxFrameGapMs: 120, maxInteractionMs: 500, maxLongTaskMs: 200 },
+      controlLabel: "Resolution",
+      expectedObservable:
+        "Choosing the video resolution updates runtime state within budget.",
+      fixture: "Audiogram template active.",
+      id: "video-resolution-workload",
+      interaction: "control-change",
+      stress: true,
+      stressFixture: {
+        kind: "max-value",
+        loadProfile: {
+          hardLimit: "4k",
+          metric: "custom",
+          smoothTarget: "4k",
+          smoothTargetRatio: 1,
+          target: "export.video.resolution",
+          userFacingRange: "fully-guaranteed",
+        },
+        reason: "4K is the heaviest encoded frame size.",
+        value: "4k",
+      },
+      target: "export.video.resolution",
+      values: { default: "current", max: "4k", min: "current" },
+      workload: true,
+    },
+    {
+      automated: true,
       automatedTestName: "performance: export budget is declared for 8K PNG delivery",
       browser: true,
       browserTestName: "browser perf: 8K PNG export completes within budget",
@@ -727,5 +883,9 @@ export const appPerformance: ToolcraftPerformanceConfig = defineToolcraftPerform
     "scene.upload",
     "export.image.format",
     "export.image.resolution",
+    "audiogram.audio",
+    "audiogram.captions",
+    "export.video.format",
+    "export.video.resolution",
   ],
 });

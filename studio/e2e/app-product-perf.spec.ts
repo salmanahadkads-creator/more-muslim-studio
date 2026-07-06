@@ -22,6 +22,13 @@ function makeLargeTestImage(): Buffer {
 
 async function openStudio(page: Page): Promise<void> {
   await page.goto("/");
+
+  const skipButton = page.getByRole("button", { name: /skip setup/i });
+
+  if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await skipButton.click();
+  }
+
   await expect(page.locator(slideSelector)).toBeVisible();
 }
 
@@ -227,10 +234,9 @@ test("browser perf: export.includeBackground change stays within budget", async 
 test("browser perf: appearance.background change stays within budget", async ({ page }) => {
   await openStudio(page);
 
-  const hexInput = page
-    .locator('input[value="#FBF2E9" i], input[value="FBF2E9" i]')
-    .first();
+  const hexInput = page.getByLabel("backgroundColor hex");
 
+  await hexInput.scrollIntoViewIfNeeded();
   await expect(hexInput).toBeVisible();
 
   const result = await measureToolcraftInteraction(page, async () => {
@@ -245,7 +251,9 @@ test("browser perf: scene.imagePosition change stays within budget", async ({ pa
   await openStudio(page);
   await chooseSelectOption(page, "Scene", "Episode illustration");
 
-  const handle = page.getByLabel("Focus X/Y pad");
+  const handle = page.getByRole("button", { name: "Focus X/Y pad" });
+
+  await handle.scrollIntoViewIfNeeded();
 
   await expect(handle).toBeVisible();
 
@@ -270,7 +278,7 @@ test("browser perf: scene.illustration change stays within budget", async ({ pag
   await chooseSelectOption(page, "Scene", "Episode illustration");
 
   const result = await measureToolcraftInteraction(page, async () => {
-    await page.getByRole("button", { name: "E3 Secret Translators" }).click();
+    await page.getByRole("button", { name: "ep3", exact: true }).click();
   });
 
   expectToolcraftScenarioPerformanceBudget(result, appPerformance, "illustration-workload");
@@ -313,7 +321,7 @@ test("browser perf: zoom slider drag stays responsive on an illustration slide",
 test("browser perf: preview render stays within budget at the largest canvas", async ({ page }) => {
   await openStudio(page);
   await chooseSelectOption(page, "Scene", "Episode illustration");
-  await page.getByRole("button", { name: "E3 Secret Translators" }).click();
+  await page.getByRole("button", { name: "ep3", exact: true }).click();
 
   const result = await measureToolcraftInteraction(page, async () => {
     await chooseSelectOption(page, "Template", "Synopsis");
@@ -466,5 +474,99 @@ test("browser perf: slide layer interactions keep the canvas stable", async ({ p
     result,
     appPerformance,
     "layers-interactions-stability",
+  );
+});
+
+function makePerfWav(): Buffer {
+  const sampleRate = 8000;
+  const samples = sampleRate * 2;
+  const buffer = Buffer.alloc(44 + samples * 2);
+
+  buffer.write("RIFF", 0);
+  buffer.writeUInt32LE(36 + samples * 2, 4);
+  buffer.write("WAVEfmt ", 8);
+  buffer.writeUInt32LE(16, 16);
+  buffer.writeUInt16LE(1, 20);
+  buffer.writeUInt16LE(1, 22);
+  buffer.writeUInt32LE(sampleRate, 24);
+  buffer.writeUInt32LE(sampleRate * 2, 28);
+  buffer.writeUInt16LE(2, 32);
+  buffer.writeUInt16LE(16, 34);
+  buffer.write("data", 36);
+  buffer.writeUInt32LE(samples * 2, 40);
+
+  return buffer;
+}
+
+test("browser perf: audiogram.audio change stays within budget", async ({ page }) => {
+  await openStudio(page);
+  await chooseSelectOption(page, "Template", "Audiogram");
+
+  const result = await measureToolcraftInteraction(page, async () => {
+    await page.locator('input[type="file"]').first().setInputFiles({
+      buffer: makePerfWav(),
+      mimeType: "audio/wav",
+      name: "perf-tone.wav",
+    });
+  });
+
+  expectToolcraftScenarioPerformanceBudget(result, appPerformance, "audiogram-audio-workload");
+});
+
+test("browser perf: audiogram.captions change stays within budget", async ({ page }) => {
+  await openStudio(page);
+  await chooseSelectOption(page, "Template", "Audiogram");
+
+  const blocks: string[] = [];
+
+  for (let index = 0; index < 200; index += 1) {
+    blocks.push(
+      `${index + 1}`,
+      `00:00:${String(index % 60).padStart(2, "0")},000 --> 00:00:${String((index % 60) + 1).padStart(2, "0")},000`,
+      `Speaker: Caption block number ${index + 1}.`,
+      "",
+    );
+  }
+
+  const result = await measureToolcraftInteraction(page, async () => {
+    await page.locator('input[type="file"]').nth(1).setInputFiles({
+      buffer: Buffer.from(blocks.join("\n")),
+      mimeType: "text/plain",
+      name: "perf-captions.srt",
+    });
+  });
+
+  expectToolcraftScenarioPerformanceBudget(
+    result,
+    appPerformance,
+    "audiogram-captions-workload",
+  );
+});
+
+test("browser perf: export.video.format change stays within budget", async ({ page }) => {
+  await openStudio(page);
+  await chooseSelectOption(page, "Template", "Audiogram");
+
+  const result = await measureToolcraftInteraction(page, async () => {
+    await chooseSelectOption(page, "Format", "MP4");
+  });
+
+  expectToolcraftScenarioPerformanceBudget(result, appPerformance, "video-format-workload");
+});
+
+test("browser perf: export.video.resolution change stays within budget", async ({
+  page,
+}) => {
+  await openStudio(page);
+  await chooseSelectOption(page, "Template", "Audiogram");
+
+  const result = await measureToolcraftInteraction(page, async () => {
+    await chooseSelectOption(page, "Resolution", "4K");
+  });
+
+  expectToolcraftScenarioPerformanceBudget(
+    result,
+    appPerformance,
+    "video-resolution-workload",
   );
 });

@@ -1,6 +1,7 @@
 import { Outlet, createRootRoute, createRoute } from "@tanstack/react-router";
 
 import { AppHome } from "./index";
+import { SetupWizard } from "./setup";
 
 function RootLayout(): React.JSX.Element {
   return <Outlet />;
@@ -16,4 +17,10 @@ const indexRoute = createRoute({
   path: "/",
 });
 
-export const routeTree = rootRoute.addChildren([indexRoute]);
+const setupRoute = createRoute({
+  component: SetupWizard,
+  getParentRoute: () => rootRoute,
+  path: "/setup",
+});
+
+export const routeTree = rootRoute.addChildren([indexRoute, setupRoute]);

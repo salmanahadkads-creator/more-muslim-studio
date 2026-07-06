@@ -351,7 +351,15 @@ export type ToolcraftControlSectionInventoryEntry = {
 };
 
 export const appTransferMode: ToolcraftTransferMode = {
-  animationIntent: { mode: "none" },
+  animationIntent: {
+    loopDuration: {
+      evidence:
+        "The audiogram plays the uploaded episode audio once; 60s is the default timeline before an upload replaces it with the real audio duration via timeline.setDuration.",
+      seconds: 60,
+      source: "product-derived",
+    },
+    mode: "timeline-playback",
+  },
   mode: "new-toolcraft-app",
 };
 
@@ -398,7 +406,7 @@ export const appAcceptance: readonly ToolcraftComponentAcceptance[] = [
     fixture: "Default cover post on the night colourway.",
     id: "post.template.select",
     kind: "control",
-    optionCoverage: ["cover", "quote", "synopsis", "streaming", "credits"],
+    optionCoverage: ["cover", "quote", "synopsis", "streaming", "credits", "audiogram"],
     target: "post.template",
     userAction: "Open the Template select and choose each layout.",
   },
@@ -615,7 +623,7 @@ export const appAcceptance: readonly ToolcraftComponentAcceptance[] = [
     userAction: "Choose each resolution and export.",
   },
   {
-    actionCoverage: ["export-png", "export-zip"],
+    actionCoverage: ["export-png", "export-zip", "export-video"],
     automated: true,
     automatedTestName: "schema: sticky footer exposes the Export PNG action",
     browser: true,
@@ -623,7 +631,7 @@ export const appAcceptance: readonly ToolcraftComponentAcceptance[] = [
     componentType: "panelActions",
     evidence: "exported-bytes",
     expectedObservable:
-      "Export PNG downloads an image of the current slide; Export ZIP downloads numbered PNGs for every visible slide layer, with the accent indicator while each export promise runs.",
+      "Export PNG downloads an image of the current slide; Export ZIP downloads numbered PNGs for every visible slide layer; Export Video downloads an MP4 whose metadata duration matches the runtime timeline duration, with the accent indicator advancing while each export promise runs.",
     fixture: "Default cover post.",
     id: "panel.actions.export",
     kind: "control",
@@ -735,6 +743,90 @@ export const appAcceptance: readonly ToolcraftComponentAcceptance[] = [
   },
   {
     automated: true,
+    automatedTestName: "schema: audiogram.audio is a single audio fileDrop",
+    browser: true,
+    browserTestName: "app controls: uploading audio sets the timeline duration",
+    componentType: "fileDrop",
+    evidence: "media-lifecycle",
+    expectedObservable:
+      "An uploaded audio file plays with the timeline and its duration becomes the timeline duration; removing it stops playback; Reset clears it; the uploader is visible only while the audiogram template is selected and hidden for other templates.",
+    fixture: "Audiogram template with a short test tone.",
+    id: "audiogram.audio.fileDrop",
+    kind: "control",
+    target: "audiogram.audio",
+    userAction: "Upload an audio file, play the timeline, then remove the file.",
+  },
+  {
+    automated: true,
+    automatedTestName: "schema: audiogram.captions is an SRT fileDrop",
+    browser: true,
+    browserTestName: "app controls: uploading captions renders timed caption text",
+    componentType: "fileDrop",
+    evidence: "media-lifecycle",
+    expectedObservable:
+      "Uploaded SRT blocks render as the active caption at their timestamps while scrubbing; removing the file clears captions; Reset restores the empty state; the uploader is visible only while the audiogram template is selected and hidden for other templates.",
+    fixture: "Audiogram template with a two-block SRT fixture.",
+    id: "audiogram.captions.fileDrop",
+    kind: "control",
+    target: "audiogram.captions",
+    userAction: "Upload an SRT file, scrub the timeline across both blocks, then remove it.",
+  },
+  {
+    automated: true,
+    automatedTestName: "schema: export.video.format offers mp4 and webm containers",
+    browser: true,
+    browserTestName: "app controls: video format drives the exported container",
+    componentType: "select",
+    evidence: "exported-bytes",
+    expectedObservable:
+      "MP4 exports video/mp4 bytes via H.264/AAC and WebM exports video/webm bytes via VP9/Opus through WebCodecs, with unsupported configurations rejected safely; the control is visible only for the audiogram template.",
+    fixture: "Audiogram with audio ready to export.",
+    id: "export.video.format.select",
+    kind: "control",
+    optionCoverage: ["mp4", "webm"],
+    target: "export.video.format",
+    userAction: "Choose the format and export video.",
+  },
+  {
+    automated: true,
+    automatedTestName: "schema: export.video.resolution offers current and 4k",
+    browser: true,
+    browserTestName: "app controls: video resolution changes exported frame size",
+    componentType: "select",
+    evidence: "exported-bytes",
+    expectedObservable:
+      "Current exports 1080x1920 frames; 4K fits inside 3840x2160 with even dimensions via getToolcraftVideoExportSize; the control is visible only for the audiogram template.",
+    fixture: "Audiogram exported at both resolutions.",
+    id: "export.video.resolution.select",
+    kind: "control",
+    optionCoverage: ["current", "4k"],
+    target: "export.video.resolution",
+    userAction: "Choose each resolution and export video.",
+  },
+  {
+    automated: true,
+    automatedTestName: "schema: timeline playback drives the audiogram frame",
+    browser: true,
+    browserTestName: "runtime: timeline playback scrubs and renders audiogram frames",
+    componentType: "runtime",
+    evidence: "timeline-output",
+    expectedObservable:
+      "Play advances captions and the progress rule; pause holds the frame; scrubbing to a caption's window renders that caption; editing the timeline duration changes the playback range and the progress rule maps 0..state.timeline.durationSeconds; looping restarts with motion advancing in one direction and no mirror, no yoyo, no ping-pong, and no reverse fallback — the frame is a pure function of time, so the wrapped first frame equals the t=0 frame and the ground and caption layers stitch first and last frames without a visible jump, and the same seam holds after changing the timeline duration.",
+    fixture: "Audiogram with a two-block SRT fixture and short audio.",
+    id: "runtime.timeline.playback",
+    kind: "runtime",
+    timelineCoverage: "playback",
+    timelinePlaybackCoverage: [
+      "duration",
+      "loop",
+      "pause-resume",
+      "rendered-frame",
+      "scrub",
+    ],
+    userAction: "Play, pause, scrub, and edit the timeline duration.",
+  },
+  {
+    automated: true,
     automatedTestName: "schema: persistence stores values, canvas, and panels in localStorage",
     browser: true,
     browserTestName: "runtime: edited settings survive a page reload",
@@ -795,11 +887,24 @@ export const starterControlSectionInventory: readonly ToolcraftControlSectionInv
     title: "Carousel",
   },
   {
+    entity: "Audiogram sound sources",
+    groupingReason:
+      "Episode audio and its SRT captions are the audiogram's source material and parse together into the timed playback.",
+    targets: ["audiogram.audio", "audiogram.captions"],
+    title: "Sound & Captions",
+  },
+  {
     entity: "Export background",
     groupingReason:
       "The required background row pairs the Include toggle with the export backdrop colour.",
     targets: ["export.includeBackground", "appearance.background"],
     title: "Background",
+  },
+  {
+    entity: "Video export settings",
+    groupingReason: "Format and resolution tune the same WebCodecs MP4 delivery pass.",
+    targets: ["export.video.format", "export.video.resolution"],
+    title: "Video Export",
   },
   {
     entity: "Image export settings",
@@ -3499,7 +3604,7 @@ export function getToolcraftControlOrderTargets(
 export function validateToolcraftAcceptanceCoverage(
   schema: ResolvedToolcraftAppSchema = appSchema,
   acceptance: readonly ToolcraftComponentAcceptance[] | null = null,
-  transferMode: ToolcraftTransferMode = appTransferMode,
+  transferMode: ToolcraftTransferMode | null = null,
   // The product inventory only describes the real app schema; fixture schemas
   // in tests validate against their own (empty) inventory.
   sectionInventory: readonly ToolcraftControlSectionInventoryEntry[] = schema === appSchema
@@ -3507,6 +3612,10 @@ export function validateToolcraftAcceptanceCoverage(
     : [],
 ): string[] {
   acceptance ??= schema === appSchema ? appAcceptance : [];
+  transferMode ??=
+    schema === appSchema
+      ? appTransferMode
+      : { animationIntent: { mode: "none" }, mode: "new-toolcraft-app" };
   const errors: string[] = [];
   const controls = collectToolcraftVisibleControls(schema);
   const controlAcceptance = new Map(

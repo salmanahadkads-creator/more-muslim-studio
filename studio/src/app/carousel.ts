@@ -91,7 +91,7 @@ export function buildEpisodeSetSnapshots(
   const marker = `S1 E${episodeNumber}`;
   const illustrationScene = {
     "scene.illustration": episodeValue,
-    "scene.imagePosition": { x: 50, y: 50 },
+    "scene.imagePosition": { x: 0, y: 0 },
     "scene.imageZoom": 1,
     "scene.source": "illustration",
   };
