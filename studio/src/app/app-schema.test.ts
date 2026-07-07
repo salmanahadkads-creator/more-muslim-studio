@@ -64,6 +64,7 @@ describe("appSchema", () => {
       "scene.imageZoom",
       "audiogram.audio",
       "audiogram.captions",
+      "audiogram.guestColourway",
       "carousel.episode",
       "carousel.slides",
       "export.includeBackground",
@@ -197,6 +198,18 @@ describe("appSchema", () => {
 
     expect(scenario?.interaction).toBe("control-change");
     expect(scenario?.browserTestName).toBe("browser perf: post.colourway change stays within budget");
+    expect(Object.keys(scenario?.budget ?? {}).length).toBeGreaterThan(0);
+  });
+
+  it("performance: audiogram.guestColourway scenario is declared", () => {
+    const scenario = appPerformance.scenarios.find(
+      (entry) => entry.id === "audiogram-guest-colourway-change",
+    );
+
+    expect(scenario?.interaction).toBe("control-change");
+    expect(scenario?.browserTestName).toBe(
+      "browser perf: audiogram.guestColourway change stays within budget",
+    );
     expect(Object.keys(scenario?.budget ?? {}).length).toBeGreaterThan(0);
   });
 

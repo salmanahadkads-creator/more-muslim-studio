@@ -681,6 +681,58 @@ test("app controls: uploading captions renders timed caption text", async ({ pag
   });
 });
 
+test("app controls: guest colourway crossfades the audiogram ground", async ({ page }) => {
+  test.setTimeout(60_000);
+  await setupAudiogram(page);
+
+  // Host stays on the default night ground; give the guest speaker a distinct
+  // ivory-beige ground so the crossfade is measurable on the frame background.
+  await chooseSelectOption(page, "Guest colourway", "Ivory Beige");
+
+  const guestSelect = page
+    .getByRole("group")
+    .filter({ has: page.getByText("Guest colourway", { exact: true }) })
+    .last()
+    .getByRole("combobox");
+
+  await expect(guestSelect).toContainText("Ivory Beige");
+
+  const frameBackground = () =>
+    page.evaluate(() => {
+      const frame = document.querySelector("#mm-post-slide [data-mm-post-frame]");
+
+      return frame ? getComputedStyle(frame).backgroundColor : "";
+    });
+
+  // At the head of the clip the host (night) ground shows.
+  await expect.poll(frameBackground).toBe("rgb(25, 33, 54)");
+
+  const transport = page.getByRole("button", { name: /(play|pause) playback/i }).first();
+
+  await expect(transport).toBeVisible();
+
+  // Normalise to paused, widen the timeline so the guest block sits comfortably
+  // inside the playback range, then play into the guest speaker's block.
+  if (/pause/i.test((await transport.getAttribute("aria-label")) ?? "")) {
+    await transport.click();
+  }
+
+  const durationEditor = page.getByRole("button", { name: "Edit timeline duration" });
+
+  if (await durationEditor.isVisible().catch(() => false)) {
+    await durationEditor.click();
+
+    const durationInput = page.getByRole("textbox", { name: "timeline duration" });
+
+    await durationInput.fill("3");
+    await durationInput.press("Enter");
+  }
+
+  // Playing into the guest speaker's block crossfades the ground to ivory beige.
+  await transport.click();
+  await expect.poll(frameBackground, { timeout: 12_000 }).toBe("rgb(251, 242, 233)");
+});
+
 test("app controls: video format drives the exported container", async ({ page }) => {
   test.setTimeout(120_000);
   await setupAudiogram(page);

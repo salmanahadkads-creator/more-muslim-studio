@@ -755,6 +755,32 @@ export const appAcceptance: readonly ToolcraftComponentAcceptance[] = [
   },
   {
     automated: true,
+    automatedTestName: "schema: audiogram.guestColourway offers all nine colourways",
+    browser: true,
+    browserTestName: "app controls: guest colourway crossfades the audiogram ground",
+    componentType: "select",
+    evidence: "product-output",
+    expectedObservable:
+      "Choosing a guest colourway makes the audiogram ground crossfade between the host (post colourway) and guest grounds as speakers alternate; matching it to the host colourway disables the swap; the control is visible only for the audiogram template.",
+    fixture: "Audiogram with a two-speaker SRT fixture.",
+    id: "audiogram.guestColourway.select",
+    kind: "control",
+    optionCoverage: [
+      "night",
+      "oak",
+      "beige",
+      "harvest",
+      "terracotta",
+      "mist",
+      "coastal",
+      "stone",
+      "black",
+    ],
+    target: "audiogram.guestColourway",
+    userAction: "Choose a guest colourway and scrub across a speaker change.",
+  },
+  {
+    automated: true,
     automatedTestName: "schema: export.video.format offers mp4 and webm containers",
     browser: true,
     browserTestName: "app controls: video format drives the exported container",
@@ -874,6 +900,13 @@ export const starterControlSectionInventory: readonly ToolcraftControlSectionInv
       "Episode audio and its SRT captions are the audiogram's source material and parse together into the timed playback.",
     targets: ["audiogram.audio", "audiogram.captions"],
     title: "Sound & Captions",
+  },
+  {
+    entity: "Audiogram speaker grounds",
+    groupingReason:
+      "The guest colourway is a single whole-slide brand entity — the second ground the audiogram's speaker crossfade blends into as speakers alternate — so it stands apart from the sound source uploads.",
+    targets: ["audiogram.guestColourway"],
+    title: "Speaker Grounds",
   },
   {
     entity: "Export background",

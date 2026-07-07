@@ -276,6 +276,25 @@ export const appSchema = defineToolcraft({
         },
         {
           controls: {
+            guestColourway: {
+              defaultValue: "oak",
+              description:
+                "Ground colourway for the guest speaker; the audiogram crossfades between the post colourway (host) and this one as speakers alternate. Set it to the host colourway to disable the swap.",
+              label: "Guest colourway",
+              options: colourwayOptions,
+              orderRole: "mode",
+              performanceReason:
+                "The guest colourway only reblends the ground crossfade per frame from timeline time.",
+              performanceRole: "responsiveness",
+              target: "audiogram.guestColourway",
+              type: "select",
+              visibleWhen: { equals: "audiogram", target: "post.template" },
+            },
+          },
+          title: "Speaker Grounds",
+        },
+        {
+          controls: {
             episodeSet: {
               defaultValue: "ep1",
               description:

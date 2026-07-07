@@ -44,6 +44,7 @@ export type ColourwayKey =
 export type PostFormat = "portrait" | "story";
 
 export type Colourway = {
+  accent: string;
   bg: string;
   grain: number;
   ink: string;
@@ -65,15 +66,15 @@ export const SYMBOLS = {
 /* Nine approved ground × ink pairings. Tiles are the official ZAINA
    star-lattice PNGs matched to each ground family. */
 export const COLOURWAYS: Record<ColourwayKey, Colourway> = {
-  night: { bg: "#192136", grain: 0.10, ink: "#F6E1C6", label: "Night Blue", logo: "beige", sub: "rgba(246,225,198,0.62)", tile: pattern5c, tileOpacity: 0.15 },
-  oak: { bg: "#511C14", grain: 0.10, ink: "#F6E1C6", label: "Oak Brown", logo: "beige", sub: "rgba(246,225,198,0.66)", tile: pattern6b, tileOpacity: 0.15 },
-  beige: { bg: "#FBF2E9", grain: 0.06, ink: "#511C14", label: "Ivory Beige", logo: "oak", sub: "rgba(81,28,20,0.62)", tile: pattern6a, tileOpacity: 0.10 },
-  harvest: { bg: "#E2B16D", grain: 0.08, ink: "#511C14", label: "Harvest Yellow", logo: "oak", sub: "rgba(81,28,20,0.62)", tile: pattern3a, tileOpacity: 0.10 },
-  terracotta: { bg: "#C15A3A", grain: 0.10, ink: "#F6E1C6", label: "Terracotta", logo: "beige", sub: "rgba(246,225,198,0.66)", tile: pattern5b, tileOpacity: 0.15 },
-  mist: { bg: "#9FBCCC", grain: 0.07, ink: "#192136", label: "Mist Blue", logo: "night", sub: "rgba(25,33,54,0.7)", tile: pattern2b, tileOpacity: 0.10 },
-  coastal: { bg: "#6185A3", grain: 0.08, ink: "#F6E1C6", label: "Coastal Blue", logo: "beige", sub: "rgba(246,225,198,0.66)", tile: pattern2b, tileOpacity: 0.12 },
-  stone: { bg: "#3C5065", grain: 0.10, ink: "#F6E1C6", label: "Stone Blue", logo: "beige", sub: "rgba(246,225,198,0.66)", tile: pattern5c, tileOpacity: 0.15 },
-  black: { bg: "#000000", grain: 0.14, ink: "#FBF2E9", label: "Black", logo: "beige", sub: "rgba(251,242,233,0.62)", tile: null, tileOpacity: 0 },
+  night: { accent: "#E2B16D", bg: "#192136", grain: 0.10, ink: "#F6E1C6", label: "Night Blue", logo: "beige", sub: "rgba(246,225,198,0.62)", tile: pattern5c, tileOpacity: 0.15 },
+  oak: { accent: "#E2B16D", bg: "#511C14", grain: 0.10, ink: "#F6E1C6", label: "Oak Brown", logo: "beige", sub: "rgba(246,225,198,0.66)", tile: pattern6b, tileOpacity: 0.15 },
+  beige: { accent: "#C15A3A", bg: "#FBF2E9", grain: 0.06, ink: "#511C14", label: "Ivory Beige", logo: "oak", sub: "rgba(81,28,20,0.62)", tile: pattern6a, tileOpacity: 0.10 },
+  harvest: { accent: "#C15A3A", bg: "#E2B16D", grain: 0.08, ink: "#511C14", label: "Harvest Yellow", logo: "oak", sub: "rgba(81,28,20,0.62)", tile: pattern3a, tileOpacity: 0.10 },
+  terracotta: { accent: "#E2B16D", bg: "#C15A3A", grain: 0.10, ink: "#F6E1C6", label: "Terracotta", logo: "beige", sub: "rgba(246,225,198,0.66)", tile: pattern5b, tileOpacity: 0.15 },
+  mist: { accent: "#C15A3A", bg: "#9FBCCC", grain: 0.07, ink: "#192136", label: "Mist Blue", logo: "night", sub: "rgba(25,33,54,0.7)", tile: pattern2b, tileOpacity: 0.10 },
+  coastal: { accent: "#E2B16D", bg: "#6185A3", grain: 0.08, ink: "#F6E1C6", label: "Coastal Blue", logo: "beige", sub: "rgba(246,225,198,0.66)", tile: pattern2b, tileOpacity: 0.12 },
+  stone: { accent: "#E2B16D", bg: "#3C5065", grain: 0.10, ink: "#F6E1C6", label: "Stone Blue", logo: "beige", sub: "rgba(246,225,198,0.66)", tile: pattern5c, tileOpacity: 0.15 },
+  black: { accent: "#E2B16D", bg: "#000000", grain: 0.14, ink: "#FBF2E9", label: "Black", logo: "beige", sub: "rgba(251,242,233,0.62)", tile: null, tileOpacity: 0 },
 };
 
 export const COLOURWAY_KEYS = Object.keys(COLOURWAYS) as readonly ColourwayKey[];

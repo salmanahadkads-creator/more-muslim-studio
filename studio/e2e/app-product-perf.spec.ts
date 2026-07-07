@@ -202,6 +202,23 @@ test("browser perf: post.colourway change stays within budget", async ({ page })
   expectToolcraftScenarioPerformanceBudget(result, appPerformance, "post-colourway-change");
 });
 
+test("browser perf: audiogram.guestColourway change stays within budget", async ({
+  page,
+}) => {
+  await openStudio(page);
+  await chooseSelectOption(page, "Template", "Audiogram");
+
+  const result = await measureToolcraftInteraction(page, async () => {
+    await chooseSelectOption(page, "Guest colourway", "Terracotta");
+  });
+
+  expectToolcraftScenarioPerformanceBudget(
+    result,
+    appPerformance,
+    "audiogram-guest-colourway-change",
+  );
+});
+
 test("browser perf: scene.source change stays within budget", async ({ page }) => {
   await openStudio(page);
 

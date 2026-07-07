@@ -25,7 +25,13 @@ import {
   readCarouselSlides,
   writeCarouselSlides,
 } from "./carousel";
-import { activeCaptionAt, parseSrt } from "./srt";
+import {
+  buildSpeechBlocks,
+  computeAudioEnvelope,
+  speakersOf,
+  type AudiogramMotionConfig,
+} from "./audiogram-motion";
+import { parseSrt } from "./srt";
 import {
   AudiogramPost,
   CoverPost,
@@ -473,6 +479,62 @@ function CarouselSlideSync(): null {
   return null;
 }
 
+/* Decodes the uploaded audio once into a per-frame loudness envelope (feature 3
+   breathing). Cached by data URL so scrubbing/replays never re-decode, and
+   shared conceptually with the export path, which recomputes the same envelope
+   from its own decoded buffer. */
+const audioEnvelopeCache = new Map<string, Float32Array | null>();
+
+function useAudioEnvelope(audioUrl: string | null): Float32Array | null {
+  const [envelope, setEnvelope] = React.useState<Float32Array | null>(() =>
+    audioUrl ? (audioEnvelopeCache.get(audioUrl) ?? null) : null,
+  );
+
+  React.useEffect(() => {
+    if (!audioUrl) {
+      setEnvelope(null);
+      return;
+    }
+
+    if (audioEnvelopeCache.has(audioUrl)) {
+      setEnvelope(audioEnvelopeCache.get(audioUrl) ?? null);
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const bytes = await (await fetch(audioUrl)).arrayBuffer();
+        const audioContext = new AudioContext();
+        const buffer = await audioContext.decodeAudioData(bytes);
+
+        await audioContext.close();
+
+        const computed = computeAudioEnvelope(buffer);
+
+        audioEnvelopeCache.set(audioUrl, computed);
+
+        if (!cancelled) {
+          setEnvelope(computed);
+        }
+      } catch {
+        audioEnvelopeCache.set(audioUrl, null);
+
+        if (!cancelled) {
+          setEnvelope(null);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [audioUrl]);
+
+  return envelope;
+}
+
 export function PostRenderer(): React.JSX.Element {
   const { scene, state, template, values, way } = usePostSlideValues();
   const canvasWidth = state.canvas.size.width;
@@ -504,6 +566,24 @@ export function PostRenderer(): React.JSX.Element {
         : [],
     [isAudiogram, state.mediaAssets],
   );
+  const speechBlocks = React.useMemo(() => buildSpeechBlocks(captions), [captions]);
+  const guest = React.useMemo(() => speakersOf(speechBlocks).guest, [speechBlocks]);
+  const audioUrl = isAudiogram
+    ? (state.mediaAssets.find((asset) => asset.sourceTarget === "audiogram.audio")?.dataUrl ??
+      null)
+    : null;
+  const envelope = useAudioEnvelope(audioUrl);
+  const audiogramConfig: AudiogramMotionConfig = {
+    bgDrift: true,
+    breathe: true,
+    guestWay: (readString(values["audiogram.guestColourway"], way) || way) as ColourwayKey,
+    hasImage: !!scene.image,
+    highlight: "auto",
+    hostWay: way,
+    solid: !scene.image && scene.pattern === false,
+    speakerSwap: true,
+    wordAccent: true,
+  };
 
   return (
     <div
@@ -533,15 +613,16 @@ export function PostRenderer(): React.JSX.Element {
       >
         {isAudiogram ? (
           <AudiogramPost
-            scene={scene}
-            values={{
-              caption: activeCaptionAt(captions, timelineTime),
-              episode:
-                typeof values["content.episode"] === "string"
-                  ? (values["content.episode"] as string)
-                  : "",
-              progress: timelineDuration > 0 ? timelineTime / timelineDuration : 0,
+            motion={{
+              blocks: speechBlocks,
+              config: audiogramConfig,
+              durationSeconds: timelineDuration,
+              envelope,
+              episode: readString(values["content.episode"]),
+              guest,
+              timeSeconds: timelineTime,
             }}
+            scene={scene}
             way={way}
           />
         ) : (

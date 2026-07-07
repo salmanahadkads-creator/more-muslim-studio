@@ -14,6 +14,25 @@ import {
   type ColourwayKey,
   type PostFormat,
 } from "./brand";
+import {
+  activeBlockIndex,
+  breatheOpacity,
+  firstName,
+  GRAIN_DATA_URI,
+  GRAIN_TILE_SIZE,
+  grainCompositing,
+  groundMotion,
+  groundState,
+  highlightIndex,
+  livingGrainOffset,
+  outroFadeAt,
+  OUTRO_FADE_DELAYS,
+  outroProgress,
+  outroStartAt,
+  wordVisual,
+  type AudiogramMotionConfig,
+  type AudiogramSpeechBlock,
+} from "./audiogram-motion";
 
 const CAPS_TRACKING = "0.165em";
 const MARIST = '"ABC Marist", Georgia, serif';
@@ -492,79 +511,339 @@ export function CreditsPost({
   );
 }
 
-export type AudiogramValues = {
-  caption: { speaker: string; text: string } | null;
+export type AudiogramMotionProps = {
+  blocks: readonly AudiogramSpeechBlock[];
+  config: AudiogramMotionConfig;
+  durationSeconds: number;
+  envelope: Float32Array | null;
   episode: string;
-  progress: number;
+  guest: string;
+  timeSeconds: number;
 };
 
-/* Timeline-synced audiogram slide (story format): eyebrow, active caption,
-   progress rule, and the brand symbol. The visual state is a pure function of
-   the runtime timeline time so preview and export stay deterministic. */
-export function AudiogramPost({
-  scene,
-  values,
+const OUTRO_LINE_1 = "Listen to the full episode at moremuslim.org.";
+const OUTRO_LINE_2 =
+  "Or search for “More Muslim” wherever you get your podcasts.";
+
+/* One textured (pattern/solid) ground layer with the slow push-in + pan
+   (feature 10), the audio-envelope breathing tile (feature 3), and the living
+   grain overlay (feature 4). Illustration grounds take the image path instead. */
+function AudiogramGround({
+  config,
+  envelope,
+  opacity,
+  timeSeconds,
+  durationSeconds,
   way,
 }: {
-  scene: SceneProps;
-  values: AudiogramValues;
+  config: AudiogramMotionConfig;
+  envelope: Float32Array | null;
+  opacity: number;
+  timeSeconds: number;
+  durationSeconds: number;
   way: ColourwayKey;
 }): React.JSX.Element {
   const c = COLOURWAYS[way];
+  const move = groundMotion(config, timeSeconds, durationSeconds);
+  const grainOffset = livingGrainOffset(timeSeconds);
+  const grain = grainCompositing(c.bg);
+  const patternOpacity = breatheOpacity(config, envelope, timeSeconds);
+  const showTile = !config.solid && !!c.tile;
 
   return (
-    <PostFrame format="story" padBottom={370} padTop={370} way={way} {...scene}>
-      <Eyebrow ink={c.ink} text={values.episode} />
+    <div style={{ background: c.bg, inset: 0, opacity, position: "absolute" }}>
       <div
         style={{
-          alignItems: "center",
-          display: "flex",
-          flex: 1,
-          flexDirection: "column",
-          gap: 48,
-          justifyContent: "center",
-          textAlign: "center",
+          inset: 0,
+          position: "absolute",
+          transform: `scale(${move.scale}) translate(${move.tx.toFixed(2)}px, ${move.ty.toFixed(2)}px)`,
+          transformOrigin: "center",
+          willChange: "transform",
         }}
       >
-        {values.caption?.speaker ? (
+        {showTile ? (
           <div
-            data-toolcraft-product-text=""
-            style={{ fontSize: 64, letterSpacing: CAPS_TRACKING, textTransform: "uppercase", whiteSpace: "nowrap" }}
-          >
-            {values.caption.speaker}
-          </div>
-        ) : null}
-        <div
-          data-toolcraft-product-text=""
-          style={{
-            fontSize: 56,
-            fontStyle: "italic",
-            maxWidth: TEXT_WIDTH.story,
-            minHeight: 140,
-            textAlign: "center",
-          }}
-        >
-          {values.caption?.text ?? ""}
-        </div>
-      </div>
-      <div style={{ alignItems: "center", display: "flex", flexDirection: "column", gap: 40, marginTop: "auto" }}>
-        <div
-          aria-hidden="true"
-          style={{ background: c.sub, height: 3, position: "relative", width: TEXT_WIDTH.story }}
-        >
-          <div
+            aria-hidden="true"
             style={{
-              background: c.ink,
-              height: 3,
-              left: 0,
+              backgroundImage: `url("${c.tile}")`,
+              backgroundPosition: "center",
+              backgroundSize: "cover",
+              inset: 0,
+              opacity: c.tileOpacity * patternOpacity,
               position: "absolute",
-              top: 0,
-              width: `${Math.min(100, Math.max(0, values.progress * 100))}%`,
             }}
           />
-        </div>
-        <img alt="" src={SYMBOLS[c.logo]} style={{ height: 160, width: 160 }} />
+        ) : null}
       </div>
-    </PostFrame>
+      <div
+        aria-hidden="true"
+        style={{
+          backgroundImage: `url("${GRAIN_DATA_URI}")`,
+          backgroundPosition: `${grainOffset.gx}px ${grainOffset.gy}px`,
+          backgroundSize: `${GRAIN_TILE_SIZE}px ${GRAIN_TILE_SIZE}px`,
+          inset: 0,
+          mixBlendMode: grain.blend as React.CSSProperties["mixBlendMode"],
+          opacity: grain.opacity,
+          pointerEvents: "none",
+          position: "absolute",
+        }}
+      />
+    </div>
+  );
+}
+
+/* Timeline-synced audiogram slide (story format) with the full design-dynamics
+   motion system: speaker ground crossfade, breathing pattern, living grain,
+   active-word accent, pull-quote highlight, ground pan / Ken Burns, and the
+   staggered fade outro. Every value is a pure function of timeSeconds so the
+   live preview and the offline export stay frame-identical. */
+export function AudiogramPost({
+  motion,
+  scene,
+  way,
+}: {
+  motion: AudiogramMotionProps;
+  scene: SceneProps;
+  way: ColourwayKey;
+}): React.JSX.Element {
+  const { blocks, config, durationSeconds, envelope, episode, guest, timeSeconds } = motion;
+  const hasImage = !!scene.image;
+  const ground = groundState(blocks, guest, config, timeSeconds);
+  const activeIndex = activeBlockIndex(blocks, timeSeconds);
+  const active = activeIndex >= 0 ? blocks[activeIndex] : null;
+  const highlight = highlightIndex(blocks, config);
+  const isHighlight = highlight >= 0 && activeIndex === highlight;
+
+  const contentEnd = blocks.length ? blocks[blocks.length - 1].end : 0;
+  const outroStart = outroStartAt(durationSeconds, contentEnd);
+  const outroProg = outroProgress(timeSeconds, outroStart);
+  const chromeOp = (1 - outroProg) * (isHighlight ? 0.35 : 1);
+
+  const ink = ground.ink;
+  const accent = ground.accent;
+  const captionSize = isHighlight ? 82 : 69;
+  const outroWay = config.hostWay;
+  const outroColour = COLOURWAYS[outroWay];
+
+  const words = active?.words ?? [];
+  const speakerLabel = active ? firstName(active.speaker) : "";
+
+  return (
+    <div
+      data-mm-post-frame=""
+      style={{
+        // Base fill behind the full-cover ground layers; it tracks the current
+        // speaker's settled ground so the crossfade (rendered by the layers) is
+        // never seen against a stale base.
+        background: hasImage ? COLOURWAYS[way].bg : COLOURWAYS[ground.curWay].bg,
+        color: ink,
+        fontFamily: MARIST,
+        height: POST_SIZES.story.h,
+        lineHeight: 1,
+        overflow: "hidden",
+        position: "relative",
+        width: POST_SIZES.story.w,
+      }}
+    >
+      {scene.includeBackground ? (
+        hasImage ? (
+          <img
+            alt=""
+            src={scene.image ?? undefined}
+            style={{
+              height: "100%",
+              inset: 0,
+              objectFit: "cover",
+              objectPosition: `${scene.imageOffsetX ?? 50}% ${scene.imageOffsetY ?? 50}%`,
+              position: "absolute",
+              transform: `scale(${(scene.imageZoom ?? 1) * groundMotion(config, timeSeconds, durationSeconds).scale}) rotate(${scene.imageRotation ?? 0}deg) scale(${scene.imageFlipHorizontal ? -1 : 1}, ${scene.imageFlipVertical ? -1 : 1})`,
+              transformOrigin: `${scene.imageOffsetX ?? 50}% ${scene.imageOffsetY ?? 50}%`,
+              width: "100%",
+            }}
+          />
+        ) : (
+          <>
+            {ground.k < 1 ? (
+              <AudiogramGround
+                config={config}
+                durationSeconds={durationSeconds}
+                envelope={envelope}
+                opacity={1}
+                timeSeconds={timeSeconds}
+                way={ground.prevWay}
+              />
+            ) : null}
+            <AudiogramGround
+              config={config}
+              durationSeconds={durationSeconds}
+              envelope={envelope}
+              opacity={ground.k}
+              timeSeconds={timeSeconds}
+              way={ground.curWay}
+            />
+          </>
+        )
+      ) : null}
+
+      {/* Eyebrow */}
+      <div
+        data-toolcraft-product-text=""
+        style={{
+          color: ink,
+          fontSize: 32,
+          left: 0,
+          letterSpacing: CAPS_TRACKING,
+          opacity: chromeOp,
+          padding: "0 60px",
+          position: "absolute",
+          right: 0,
+          textAlign: "center",
+          textTransform: "uppercase",
+          top: 370,
+          whiteSpace: "nowrap",
+        }}
+      >
+        {episode}
+      </div>
+
+      {/* Active caption */}
+      <div
+        style={{
+          alignItems: isHighlight ? "center" : "flex-start",
+          bottom: 460,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: isHighlight ? "center" : "flex-start",
+          left: 86,
+          pointerEvents: "none",
+          position: "absolute",
+          right: 86,
+          top: 460,
+        }}
+      >
+        {active ? (
+          <div style={{ color: ink, textAlign: isHighlight ? "center" : "left", width: isHighlight ? "100%" : "auto" }}>
+            {config.speakerSwap === false || isHighlight || !speakerLabel ? null : (
+              <div
+                data-toolcraft-product-text=""
+                style={{ color: accent, fontSize: 32, letterSpacing: "0.165em", marginBottom: 28, textTransform: "uppercase" }}
+              >
+                {speakerLabel}
+              </div>
+            )}
+            <div
+              data-toolcraft-product-text=""
+              style={{
+                fontSize: captionSize,
+                fontStyle: isHighlight ? "italic" : "normal",
+                lineHeight: 1.06,
+                margin: isHighlight ? "0 auto" : 0,
+                maxWidth: isHighlight ? 880 : TEXT_WIDTH.story,
+              }}
+            >
+              {words.map((word, index) => {
+                const nextStart = index < words.length - 1 ? words[index + 1].start : active.end;
+                const visual = wordVisual(word, nextStart, timeSeconds, ink, accent, config.wordAccent);
+
+                // Every word stays in the DOM (opacity carries the entrance) so
+                // the full caption is present for copy/accessibility even before
+                // it is spoken; the export skips fully-transparent words. A real
+                // space text node separates words so the caption reads as words,
+                // not a run-on string, in copy and tests.
+                return (
+                  <React.Fragment key={index}>
+                    <span
+                      style={{
+                        color: visual.color,
+                        display: "inline-block",
+                        opacity: visual.opacity,
+                        transform: `translateY(${visual.rise.toFixed(2)}px)`,
+                      }}
+                    >
+                      {word.text}
+                    </span>{" "}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      {/* Footer mark */}
+      <div
+        data-toolcraft-product-text=""
+        style={{
+          bottom: 370,
+          color: ink,
+          fontSize: 32,
+          left: 0,
+          letterSpacing: CAPS_TRACKING,
+          opacity: chromeOp,
+          position: "absolute",
+          right: 0,
+          textAlign: "center",
+          textTransform: "uppercase",
+          whiteSpace: "nowrap",
+        }}
+      >
+        MOREMUSLIM.ORG
+      </div>
+
+      {/* Staggered fade outro */}
+      {outroProg > 0 ? (
+        <div style={{ inset: 0, opacity: outroProg, position: "absolute" }}>
+          {scene.includeBackground ? (
+            <AudiogramGround
+              config={{ ...config, hasImage: false }}
+              durationSeconds={durationSeconds}
+              envelope={envelope}
+              opacity={1}
+              timeSeconds={timeSeconds}
+              way={outroWay}
+            />
+          ) : null}
+          <div
+            style={{
+              alignItems: "center",
+              color: outroColour.ink,
+              display: "flex",
+              flexDirection: "column",
+              height: "100%",
+              justifyContent: "center",
+              padding: "0 130px",
+              position: "relative",
+              textAlign: "center",
+            }}
+          >
+            <div
+              data-toolcraft-product-text=""
+              style={{ fontSize: 56, letterSpacing: "0.165em", lineHeight: 1.16, opacity: outroFadeAt(timeSeconds, outroStart, OUTRO_FADE_DELAYS.title), textTransform: "uppercase" }}
+            >
+              {episode}
+              <br />
+              Now Streaming
+            </div>
+            <div
+              data-toolcraft-product-text=""
+              style={{ fontSize: 48, lineHeight: 1.18, marginTop: 140, maxWidth: 860, opacity: outroFadeAt(timeSeconds, outroStart, OUTRO_FADE_DELAYS.line1) }}
+            >
+              {OUTRO_LINE_1}
+            </div>
+            <div
+              data-toolcraft-product-text=""
+              style={{ fontSize: 48, lineHeight: 1.24, marginTop: 90, maxWidth: 860, opacity: outroFadeAt(timeSeconds, outroStart, OUTRO_FADE_DELAYS.line2) }}
+            >
+              {OUTRO_LINE_2}
+            </div>
+            <img
+              alt=""
+              src={SYMBOLS[outroColour.logo]}
+              style={{ height: 190, marginTop: 150, opacity: outroFadeAt(timeSeconds, outroStart, OUTRO_FADE_DELAYS.symbol), width: 190 }}
+            />
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }

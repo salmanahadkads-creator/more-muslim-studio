@@ -3152,6 +3152,7 @@ describe("Toolcraft template app acceptance coverage", () => {
       "scene.imageZoom",
       "audiogram.audio",
       "audiogram.captions",
+      "audiogram.guestColourway",
       "carousel.episode",
       "carousel.slides",
       "export.includeBackground",

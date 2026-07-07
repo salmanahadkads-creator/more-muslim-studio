@@ -290,6 +290,21 @@ export const appPerformance: ToolcraftPerformanceConfig = defineToolcraftPerform
     },
     {
       automated: true,
+      automatedTestName: "performance: audiogram.guestColourway scenario is declared",
+      browser: true,
+      browserTestName: "browser perf: audiogram.guestColourway change stays within budget",
+      budget: { maxFrameGapMs: 120, maxInteractionMs: 500, maxLongTaskMs: 200 },
+      controlLabel: "Guest colourway",
+      expectedObservable:
+        "Changing the guest colourway reblends the audiogram ground crossfade within the responsiveness budget.",
+      fixture: "Audiogram template with a two-speaker SRT fixture.",
+      id: "audiogram-guest-colourway-change",
+      interaction: "control-change",
+      target: "audiogram.guestColourway",
+      workload: false,
+    },
+    {
+      automated: true,
       automatedTestName: "performance: scene.source scenario is declared",
       browser: true,
       browserTestName: "browser perf: scene.source change stays within budget",

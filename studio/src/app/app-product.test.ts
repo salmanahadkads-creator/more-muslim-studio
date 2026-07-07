@@ -307,6 +307,17 @@ describe("More Muslim Social Studio schema", () => {
     });
   });
 
+  it("schema: audiogram.guestColourway offers all nine colourways", () => {
+    const control = findControl(appSchema, "audiogram.guestColourway");
+
+    expect(control?.type).toBe("select");
+    expect(optionValues(control)).toEqual([...COLOURWAY_KEYS]);
+    expect(control?.visibleWhen).toEqual({
+      equals: "audiogram",
+      target: "post.template",
+    });
+  });
+
   it("schema: export.video.format offers mp4 and webm containers", () => {
     const control = findControl(appSchema, "export.video.format");
 

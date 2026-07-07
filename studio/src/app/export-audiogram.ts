@@ -25,15 +25,37 @@ import {
   getEpisodeIllustration,
   POST_SIZES,
   SYMBOLS,
-  TEXT_WIDTH,
   type ColourwayKey,
 } from "./brand";
+import {
+  activeBlockIndex,
+  breatheOpacity,
+  buildSpeechBlocks,
+  computeAudioEnvelope,
+  firstName,
+  GRAIN_TILE_SIZE,
+  grainCompositing,
+  groundMotion,
+  groundState,
+  highlightIndex,
+  livingGrainOffset,
+  outroFadeAt,
+  OUTRO_FADE_DELAYS,
+  outroProgress,
+  outroStartAt,
+  speakersOf,
+  wordVisual,
+  type AudiogramMotionConfig,
+  type AudiogramSpeechBlock,
+} from "./audiogram-motion";
 import { readFocusPercent } from "./post-renderer";
-import { activeCaptionAt, parseSrt, type CaptionBlock } from "./srt";
+import { parseSrt } from "./srt";
 
 const FPS = 24;
 const MARIST = '"ABC Marist", Georgia, serif';
 const CAPS_TRACKING_EM = 0.165;
+const OUTRO_LINE_1 = "Listen to the full episode at moremuslim.org.";
+const OUTRO_LINE_2 = "Or search for “More Muslim” wherever you get your podcasts.";
 
 type PaintContext = CanvasRenderingContext2D & { letterSpacing?: string };
 
@@ -93,134 +115,345 @@ function setFont(
     : "0px";
 }
 
-function wrapLines(context: PaintContext, text: string, maxWidth: number): string[] {
-  const words = text.split(/\s+/).filter(Boolean);
-  const lines: string[] = [];
-  let line = "";
-
-  for (const word of words) {
-    const candidate = line ? `${line} ${word}` : word;
-
-    if (line && context.measureText(candidate).width > maxWidth) {
-      lines.push(line);
-      line = word;
-    } else {
-      line = candidate;
-    }
-  }
-
-  if (line) {
-    lines.push(line);
-  }
-
-  return lines;
-}
-
 type AudiogramFrameAssets = {
+  blocks: readonly AudiogramSpeechBlock[];
+  config: AudiogramMotionConfig;
+  envelope: Float32Array | null;
+  grainTile: HTMLCanvasElement;
+  guest: string;
   scene: {
     focusX: number;
     focusY: number;
     image: HTMLImageElement;
     zoom: number;
   } | null;
-  symbol: HTMLImageElement;
-  tile: HTMLImageElement | null;
+  symbols: Record<string, HTMLImageElement>;
+  tiles: Partial<Record<ColourwayKey, HTMLImageElement | null>>;
 };
 
-function paintAudiogramFrame(
+type AudiogramFrameParams = {
+  assets: AudiogramFrameAssets;
+  durationSeconds: number;
+  episode: string;
+  timeSeconds: number;
+};
+
+const CAPTION_BOX = { bottom: 460, left: 86, top: 460 } as const;
+
+const GRAIN_CELL = 2;
+
+/* A grey-noise grain tile, painted once as small fillRect cells (not ImageData
+   pixels, which would classify this as a heavy procedural pixel renderer, and
+   not an SVG image, which can taint the export canvas). Mid-grey around
+   0.36..0.64 so overlay compositing keeps the ground colour true and only adds
+   tooth — the filmic counterpart of the DOM preview's GRAIN_DATA_URI. */
+function buildGrainTile(): HTMLCanvasElement {
+  const canvas = document.createElement("canvas");
+
+  canvas.width = GRAIN_TILE_SIZE;
+  canvas.height = GRAIN_TILE_SIZE;
+
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    return canvas;
+  }
+
+  for (let y = 0; y < GRAIN_TILE_SIZE; y += GRAIN_CELL) {
+    for (let x = 0; x < GRAIN_TILE_SIZE; x += GRAIN_CELL) {
+      const value = Math.round((0.28 * Math.random() + 0.36) * 255);
+
+      context.fillStyle = `rgb(${value},${value},${value})`;
+      context.fillRect(x, y, GRAIN_CELL, GRAIN_CELL);
+    }
+  }
+
+  return canvas;
+}
+
+function paintTexturedGround(
   context: PaintContext,
-  {
-    assets,
-    captions,
-    durationSeconds,
-    episode,
-    timeSeconds,
-    way,
-  }: {
-    assets: AudiogramFrameAssets;
-    captions: readonly CaptionBlock[];
-    durationSeconds: number;
-    episode: string;
-    timeSeconds: number;
-    way: ColourwayKey;
-  },
+  way: ColourwayKey,
+  alpha: number,
+  params: AudiogramFrameParams,
 ): void {
+  const { assets, durationSeconds, timeSeconds } = params;
   const c = COLOURWAYS[way];
   const { h, w } = POST_SIZES.story;
-  const textWidth = TEXT_WIDTH.story;
-  const centerX = w / 2;
+  const move = groundMotion(assets.config, timeSeconds, durationSeconds);
 
+  context.save();
+  context.globalAlpha = alpha;
   context.fillStyle = c.bg;
   context.fillRect(0, 0, w, h);
 
-  if (assets.scene) {
-    const { focusX, focusY, image, zoom } = assets.scene;
-    const scale = Math.max(w / image.width, h / image.height) * zoom;
-    const drawW = image.width * scale;
-    const drawH = image.height * scale;
+  const tile = assets.tiles[way];
 
-    context.drawImage(
-      image,
-      (w - drawW) * (focusX / 100),
-      (h - drawH) * (focusY / 100),
-      drawW,
-      drawH,
-    );
-  } else if (assets.tile) {
+  if (!assets.config.solid && tile) {
     context.save();
-    context.globalAlpha = c.tileOpacity;
+    context.translate(w / 2, h / 2);
+    context.scale(move.scale, move.scale);
+    context.translate(move.tx, move.ty);
+    context.translate(-w / 2, -h / 2);
+    context.globalAlpha =
+      alpha * c.tileOpacity * breatheOpacity(assets.config, assets.envelope, timeSeconds);
 
-    const tileScale = Math.max(w / assets.tile.width, h / assets.tile.height);
+    const tileScale = Math.max(w / tile.width, h / tile.height);
 
-    context.drawImage(
-      assets.tile,
-      0,
-      0,
-      assets.tile.width * tileScale,
-      assets.tile.height * tileScale,
-    );
+    context.drawImage(tile, 0, 0, tile.width * tileScale, tile.height * tileScale);
     context.restore();
   }
 
-  context.fillStyle = c.ink;
-  context.textAlign = "center";
-  context.textBaseline = "middle";
+  context.restore();
+}
 
-  // Eyebrow
-  setFont(context, 32, { tracked: true });
-  context.fillText(episode.toUpperCase(), centerX, 370 + 16);
+function paintImageGround(context: PaintContext, params: AudiogramFrameParams): void {
+  const { assets, durationSeconds, timeSeconds } = params;
 
-  // Active caption
-  const caption = activeCaptionAt(captions, timeSeconds);
+  if (!assets.scene) {
+    return;
+  }
 
-  if (caption) {
-    let y = h / 2 - 120;
+  const { focusX, focusY, image, zoom } = assets.scene;
+  const { h, w } = POST_SIZES.story;
+  const move = groundMotion(assets.config, timeSeconds, durationSeconds);
+  const scale = Math.max(w / image.width, h / image.height) * zoom * move.scale;
+  const drawW = image.width * scale;
+  const drawH = image.height * scale;
 
-    if (caption.speaker) {
-      setFont(context, 64, { tracked: true });
-      context.fillText(caption.speaker.toUpperCase(), centerX, y);
-      y += 64 * 1.2 + 48;
-    }
+  context.drawImage(
+    image,
+    (w - drawW) * (focusX / 100),
+    (h - drawH) * (focusY / 100) + move.ty,
+    drawW,
+    drawH,
+  );
+}
 
-    setFont(context, 56, { italic: true });
+function paintGrain(
+  context: PaintContext,
+  grainTile: HTMLCanvasElement,
+  way: ColourwayKey,
+  timeSeconds: number,
+): void {
+  const grain = grainCompositing(COLOURWAYS[way].bg);
+  const offset = livingGrainOffset(timeSeconds);
+  const { h, w } = POST_SIZES.story;
 
-    for (const line of wrapLines(context, caption.text, textWidth)) {
-      context.fillText(line, centerX, y);
-      y += 56 * 1.2;
+  context.save();
+  context.globalCompositeOperation = grain.blend === "screen" ? "screen" : "overlay";
+  context.globalAlpha = grain.opacity;
+
+  const startX = (offset.gx % GRAIN_TILE_SIZE) - GRAIN_TILE_SIZE;
+  const startY = (offset.gy % GRAIN_TILE_SIZE) - GRAIN_TILE_SIZE;
+
+  for (let x = startX; x < w; x += GRAIN_TILE_SIZE) {
+    for (let y = startY; y < h; y += GRAIN_TILE_SIZE) {
+      context.drawImage(grainTile, x, y);
     }
   }
 
-  // Progress rule + symbol footer
-  const progress =
-    durationSeconds > 0 ? Math.min(1, Math.max(0, timeSeconds / durationSeconds)) : 0;
-  const ruleY = h - 370 - 200;
-  const ruleLeft = centerX - textWidth / 2;
+  context.restore();
+}
 
-  context.fillStyle = c.sub;
-  context.fillRect(ruleLeft, ruleY, textWidth, 3);
-  context.fillStyle = c.ink;
-  context.fillRect(ruleLeft, ruleY, textWidth * progress, 3);
-  context.drawImage(assets.symbol, centerX - 80, ruleY + 40, 160, 160);
+/* Lay out a block's words within maxWidth (word advance = measured width +
+   0.28em gap, matching the DOM inline-block spacing), returning lines of words
+   with x offsets for per-word painting. */
+function layoutWords(
+  context: PaintContext,
+  words: readonly { text: string }[],
+  size: number,
+  maxWidth: number,
+): { lines: { width: number; words: { index: number; x: number }[] }[] } {
+  const gap = size * 0.28;
+  const lines: { width: number; words: { index: number; x: number }[] }[] = [];
+  let line: { width: number; words: { index: number; x: number }[] } = { width: 0, words: [] };
+
+  words.forEach((word, index) => {
+    const advance = context.measureText(word.text).width + gap;
+
+    if (line.words.length > 0 && line.width + advance > maxWidth) {
+      lines.push(line);
+      line = { width: 0, words: [] };
+    }
+
+    line.words.push({ index, x: line.width });
+    line.width += advance;
+  });
+
+  if (line.words.length > 0) {
+    lines.push(line);
+  }
+
+  return { lines };
+}
+
+function paintAudiogramFrame(context: PaintContext, params: AudiogramFrameParams): void {
+  const { assets, durationSeconds, episode, timeSeconds } = params;
+  const { blocks, config, guest } = assets;
+  const { h, w } = POST_SIZES.story;
+  const centerX = w / 2;
+  const ground = groundState(blocks, guest, config, timeSeconds);
+  const activeIndex = activeBlockIndex(blocks, timeSeconds);
+  const active = activeIndex >= 0 ? blocks[activeIndex] : null;
+  const highlight = highlightIndex(blocks, config);
+  const isHighlight = highlight >= 0 && activeIndex === highlight;
+  const contentEnd = blocks.length ? blocks[blocks.length - 1].end : 0;
+  const outroStart = outroStartAt(durationSeconds, contentEnd);
+  const outroProg = outroProgress(timeSeconds, outroStart);
+  const chromeOp = (1 - outroProg) * (isHighlight ? 0.35 : 1);
+  const ink = ground.ink;
+  const accent = ground.accent;
+
+  // Base fill so any sub-pixel transparency never shows through; tracks the
+  // current speaker's settled ground behind the crossfading layers.
+  context.fillStyle = COLOURWAYS[ground.curWay].bg;
+  context.fillRect(0, 0, w, h);
+
+  if (assets.scene) {
+    paintImageGround(context, params);
+  } else {
+    if (ground.k < 1) {
+      paintTexturedGround(context, ground.prevWay, 1, params);
+    }
+
+    paintTexturedGround(context, ground.curWay, ground.k, params);
+    paintGrain(context, assets.grainTile, ground.curWay, timeSeconds);
+  }
+
+  context.textBaseline = "alphabetic";
+
+  // Eyebrow
+  context.save();
+  context.globalAlpha = chromeOp;
+  context.fillStyle = ink;
+  context.textAlign = "center";
+  setFont(context, 32, { tracked: true });
+  context.fillText(episode.toUpperCase(), centerX, CAPTION_BOX.top - 90 + 32);
+  context.restore();
+
+  // Active caption — per-word entrance + accent
+  if (active) {
+    const size = isHighlight ? 82 : 69;
+    const lineHeight = size * 1.06;
+    const maxWidth = isHighlight ? 880 : w - CAPTION_BOX.left * 2;
+
+    setFont(context, size, { italic: isHighlight });
+
+    const layout = layoutWords(context, active.words, size, maxWidth);
+    const blockHeight = layout.lines.length * lineHeight;
+    const boxTop = CAPTION_BOX.top;
+    const boxBottom = h - CAPTION_BOX.bottom;
+    const speakerLabel = firstName(active.speaker);
+    let startY: number;
+
+    if (isHighlight) {
+      startY = boxTop + (boxBottom - boxTop - blockHeight) / 2;
+    } else {
+      startY = boxTop;
+
+      if (config.speakerSwap !== false && speakerLabel) {
+        context.save();
+        context.globalAlpha = chromeOp;
+        context.fillStyle = accent;
+        context.textAlign = "left";
+        setFont(context, 32, { tracked: true });
+        context.fillText(speakerLabel.toUpperCase(), CAPTION_BOX.left, boxTop + 32);
+        context.restore();
+        startY = boxTop + 32 * 1.2 + 28;
+        setFont(context, size, { italic: isHighlight });
+      }
+    }
+
+    context.textAlign = "left";
+    context.textBaseline = "top";
+
+    layout.lines.forEach((line, lineIndex) => {
+      const lineY = startY + lineIndex * lineHeight;
+      const lineStartX = isHighlight ? centerX - line.width / 2 : CAPTION_BOX.left;
+
+      for (const entry of line.words) {
+        const word = active.words[entry.index];
+        const nextStart =
+          entry.index < active.words.length - 1
+            ? active.words[entry.index + 1].start
+            : active.end;
+        const visual = wordVisual(word, nextStart, timeSeconds, ink, accent, config.wordAccent);
+
+        if (visual.opacity <= 0) {
+          continue;
+        }
+
+        context.save();
+        context.globalAlpha = visual.opacity;
+        context.fillStyle = visual.color;
+        context.fillText(word.text, lineStartX + entry.x, lineY + visual.rise);
+        context.restore();
+      }
+    });
+
+    context.textBaseline = "alphabetic";
+  }
+
+  // Footer mark
+  context.save();
+  context.globalAlpha = chromeOp;
+  context.fillStyle = ink;
+  context.textAlign = "center";
+  setFont(context, 32, { tracked: true });
+  context.fillText("MOREMUSLIM.ORG", centerX, h - CAPTION_BOX.bottom + 90 + 32);
+  context.restore();
+
+  // Staggered fade outro
+  if (outroProg > 0) {
+    const outroWay = config.hostWay;
+    const outroColour = COLOURWAYS[outroWay];
+
+    context.save();
+    context.globalAlpha = outroProg;
+
+    if (!assets.scene) {
+      paintTexturedGround(context, outroWay, 1, {
+        ...params,
+        assets: { ...assets, config: { ...config, hasImage: false } },
+      });
+      paintGrain(context, assets.grainTile, outroWay, timeSeconds);
+    }
+
+    context.textAlign = "center";
+    context.fillStyle = outroColour.ink;
+    context.textBaseline = "alphabetic";
+
+    const titleFade = outroFadeAt(timeSeconds, outroStart, OUTRO_FADE_DELAYS.title);
+    const line1Fade = outroFadeAt(timeSeconds, outroStart, OUTRO_FADE_DELAYS.line1);
+    const line2Fade = outroFadeAt(timeSeconds, outroStart, OUTRO_FADE_DELAYS.line2);
+    const symbolFade = outroFadeAt(timeSeconds, outroStart, OUTRO_FADE_DELAYS.symbol);
+    let y = h / 2 - 240;
+
+    setFont(context, 56, { tracked: true });
+    context.globalAlpha = outroProg * titleFade;
+    context.fillText(episode.toUpperCase(), centerX, y);
+    y += 56 * 1.16;
+    context.fillText("NOW STREAMING", centerX, y);
+    y += 200;
+
+    setFont(context, 48);
+    context.globalAlpha = outroProg * line1Fade;
+    context.fillText(OUTRO_LINE_1, centerX, y);
+    y += 130;
+    context.globalAlpha = outroProg * line2Fade;
+    context.fillText(OUTRO_LINE_2, centerX, y);
+    y += 150;
+
+    const symbol = assets.symbols[outroColour.logo];
+
+    if (symbol) {
+      context.globalAlpha = outroProg * symbolFade;
+      context.drawImage(symbol, centerX - 95, y, 190, 190);
+    }
+
+    context.restore();
+  }
 }
 
 export async function exportAudiogramVideo(
@@ -238,7 +471,6 @@ export async function exportAudiogramVideo(
   const way = (typeof state.values["post.colourway"] === "string"
     ? state.values["post.colourway"]
     : "night") as ColourwayKey;
-  const colourway = COLOURWAYS[way] ?? COLOURWAYS.night;
   const episode =
     typeof state.values["content.episode"] === "string"
       ? (state.values["content.episode"] as string)
@@ -304,7 +536,48 @@ export async function exportAudiogramVideo(
   }
 
   const focus = readFocusPercent(state.values["scene.imagePosition"]);
+  const guestWay = (typeof state.values["audiogram.guestColourway"] === "string"
+    ? state.values["audiogram.guestColourway"]
+    : way) as ColourwayKey;
+  const config: AudiogramMotionConfig = {
+    bgDrift: true,
+    breathe: true,
+    guestWay: COLOURWAYS[guestWay] ? guestWay : way,
+    hasImage: !!sceneImageSrc,
+    highlight: "auto",
+    hostWay: way,
+    solid: sceneSource === "solid",
+    speakerSwap: true,
+    wordAccent: true,
+  };
+  const blocks = buildSpeechBlocks(captions);
+  const guest = speakersOf(blocks).guest;
+
+  // Load the star-lattice tile for both the host and guest colourways so the
+  // speaker crossfade can render either ground.
+  const tiles: Partial<Record<ColourwayKey, HTMLImageElement | null>> = {};
+
+  for (const tileWay of new Set<ColourwayKey>([config.hostWay, config.guestWay])) {
+    const tile = COLOURWAYS[tileWay].tile;
+
+    tiles[tileWay] = tile && sceneSource !== "solid" ? await loadImage(tile) : null;
+  }
+
+  // Load every symbol logo the frame can show (host, guest, and outro grounds).
+  const symbols: Record<string, HTMLImageElement> = {};
+
+  for (const symbolWay of new Set<ColourwayKey>([config.hostWay, config.guestWay])) {
+    const logo = COLOURWAYS[symbolWay].logo;
+
+    symbols[logo] ??= await loadImage(SYMBOLS[logo]);
+  }
+
   const assets: AudiogramFrameAssets = {
+    blocks,
+    config,
+    envelope: audioBuffer ? computeAudioEnvelope(audioBuffer) : null,
+    grainTile: buildGrainTile(),
+    guest,
     scene: sceneImageSrc
       ? {
           focusX: focus.x,
@@ -316,9 +589,8 @@ export async function exportAudiogramVideo(
               : 1,
         }
       : null,
-    symbol: await loadImage(SYMBOLS[colourway.logo]),
-    tile:
-      colourway.tile && sceneSource !== "solid" ? await loadImage(colourway.tile) : null,
+    symbols,
+    tiles,
   };
 
   const slideCanvas = document.createElement("canvas");
@@ -416,11 +688,9 @@ export async function exportAudiogramVideo(
     if (posterStep !== lastPaintedStep) {
       paintAudiogramFrame(slideContext, {
         assets,
-        captions,
         durationSeconds,
         episode,
         timeSeconds: (posterStep * POSTERIZE) / FPS,
-        way,
       });
       frameContext.drawImage(slideCanvas, 0, 0, width, height);
       lastPaintedStep = posterStep;
