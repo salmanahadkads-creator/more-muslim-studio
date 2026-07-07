@@ -135,7 +135,8 @@ test("app controls: scene source switches pattern, solid, and image grounds", as
     async () => setSceneSource(page, "Solid colour"),
     { selector: frameSelector },
   );
-  await expect(page.getByText("Focus", { exact: true })).toHaveCount(0);
+  // The on-canvas crop/zoom overlay only exists for image scenes.
+  await expect(page.locator("[data-scene-drag]")).toHaveCount(0);
 
   await expectToolcraftProductObservableToChange(
     page,
@@ -167,24 +168,24 @@ test("app controls: episode picker swaps the slide illustration", async ({ page 
   await expect(page.getByRole("button", { name: "ep2", exact: true })).toHaveCount(0);
 });
 
-test("app controls: focus pad moves the image crop on both axes", async ({ page }) => {
+test("runtime: dragging the preview image moves the crop on both axes", async ({ page }) => {
   await openStudio(page);
   await setSceneSource(page, "Episode illustration");
 
-  const pad = page.getByRole("button", { name: "Focus X/Y pad" });
+  const surface = page.locator("[data-scene-drag]");
 
-  await pad.scrollIntoViewIfNeeded();
-  await expect(pad).toBeVisible();
+  await expect(surface).toBeVisible();
 
-  const box = await pad.boundingBox();
+  const box = await surface.boundingBox();
 
   if (!box) {
-    throw new Error("Focus pad has no bounding box.");
+    throw new Error("Scene drag surface has no bounding box.");
   }
 
   const image = page.locator(sceneImageSelector);
   const styleBefore = await image.getAttribute("style");
 
+  // Drag directly on the preview image to move the cover-crop focus.
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
   await page.mouse.move(box.x + box.width * 0.8, box.y + box.height * 0.25, {
@@ -195,56 +196,31 @@ test("app controls: focus pad moves the image crop on both axes", async ({ page 
 
   await page.mouse.up();
 
-  expect(styleDuring, "Focus must move the crop on both axes.").not.toBe(styleBefore);
+  expect(styleDuring, "Dragging must move the crop on both axes.").not.toBe(styleBefore);
   expect(String(styleDuring)).not.toContain("object-position: 50% 50%");
 });
 
-test("app controls: zoom slider scales the slide image during drag", async ({ page }) => {
+test("runtime: the under-image zoom slider scales the preview image", async ({ page }) => {
   await openStudio(page);
   await setSceneSource(page, "Episode illustration");
 
-  const track = page.locator('[data-slot="slider"]').last();
+  const zoom = page.locator("[data-scene-zoom]");
 
-  await expect(track).toBeVisible();
+  await expect(zoom).toBeVisible();
 
-  const image = page.locator(sceneImageSelector);
-  const styleBefore = await image.getAttribute("style");
-
-  const box = await track.boundingBox();
+  const box = await zoom.boundingBox();
 
   if (!box) {
     throw new Error("Zoom slider has no bounding box.");
   }
 
-  // Drag from the current thumb position (value 1 = left edge) rightward and
-  // assert the crop scales while the pointer is still down.
-  await page.mouse.move(box.x + 6, box.y + box.height / 2);
+  const image = page.locator(sceneImageSelector);
+  const styleBefore = await image.getAttribute("style");
+
+  await page.mouse.move(box.x + box.width * 0.85, box.y + box.height / 2);
   await page.mouse.down();
-
-  let styleDuring = styleBefore;
-
-  for (let step = 1; step <= 8; step += 1) {
-    await page.mouse.move(box.x + (box.width * step) / 10, box.y + box.height / 2);
-    styleDuring = await image.getAttribute("style");
-
-    if (styleDuring !== styleBefore) {
-      break;
-    }
-  }
-
   await page.mouse.up();
-
-  if (styleDuring === styleBefore) {
-    // Fall back to keyboard stepping on the focused slider.
-    await track.click();
-    await page.keyboard.press("ArrowRight");
-    await page.keyboard.press("ArrowRight");
-    styleDuring = await image.getAttribute("style");
-  }
-
-  expect(styleDuring, "Zoom must update the crop during the drag.").not.toBe(
-    styleBefore,
-  );
+  await expect.poll(async () => image.getAttribute("style")).not.toBe(styleBefore);
 });
 
 test("app controls: uploading an image renders it as the slide ground", async ({
@@ -470,14 +446,14 @@ test("app controls: export png downloads the rendered slide", async ({ page }) =
 test("runtime: edited settings survive a page reload", async ({ page }) => {
   await openStudio(page);
 
-  await chooseSelectOption(page, "Colourway", "Terracotta");
+  await page.getByRole("button", { name: "Terracotta", exact: true }).click();
   // Give persistence a moment to write.
   await page.waitForTimeout(400);
   await page.reload();
   await expect(page.locator(slideSelector)).toBeVisible();
 
   const frameBackground = await page.evaluate(() => {
-    const frame = document.querySelector("[data-mm-post-frame]");
+    const frame = document.querySelector("#mm-post-slide [data-mm-post-frame]");
     return frame ? getComputedStyle(frame).backgroundColor : "";
   });
 
@@ -832,6 +808,9 @@ test("app controls: video resolution changes exported frame size", async ({ page
   // VP9/WebM is the encoder available across environments (H.264 is absent in
   // OSS headless Chromium).
   await chooseSelectOption(page, "Format", "WebM");
+
+  // Current resolution exports the native 1080x1920 story frame.
+  await chooseSelectOption(page, "Resolution", "Current");
 
   const currentDownloadPromise = page.waitForEvent("download");
 

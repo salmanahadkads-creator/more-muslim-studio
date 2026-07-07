@@ -12,6 +12,7 @@ import { exportAudiogramVideo } from "../app/export-audiogram";
 import { exportCarouselZip, exportPostImage } from "../app/export-post";
 import { CarouselFilmstrip } from "../app/carousel-filmstrip";
 import { PostRenderer } from "../app/post-renderer";
+import { SceneImageControls } from "../app/scene-image-controls";
 import { StudioChrome } from "../app/studio-chrome";
 import "../app/brand.css";
 
@@ -24,6 +25,7 @@ export function AppHome(): React.JSX.Element {
           <>
             <PostRenderer />
             <CarouselFilmstrip />
+            <SceneImageControls />
           </>
         }
       className="h-dvh min-h-dvh"

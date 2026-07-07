@@ -63,12 +63,10 @@ describe("More Muslim Social Studio schema", () => {
     }
   });
 
-  it("schema: scene.source gates illustration, upload, and crop controls", () => {
+  it("schema: scene.source gates illustration and upload controls", () => {
     const source = findControl(appSchema, "scene.source");
     const illustration = findControl(appSchema, "scene.illustration");
     const upload = findControl(appSchema, "scene.upload");
-    const position = findControl(appSchema, "scene.imagePosition");
-    const zoom = findControl(appSchema, "scene.imageZoom");
 
     expect(optionValues(source)).toEqual([
       "pattern",
@@ -82,14 +80,24 @@ describe("More Muslim Social Studio schema", () => {
       target: "scene.source",
     });
     expect(upload?.visibleWhen).toEqual({ equals: "upload", target: "scene.source" });
-    expect(position?.visibleWhen).toEqual({
-      oneOf: ["illustration", "upload"],
-      target: "scene.source",
-    });
-    expect(zoom?.visibleWhen).toEqual({
-      oneOf: ["illustration", "upload"],
-      target: "scene.source",
-    });
+
+    // Crop + zoom are no longer panel controls — they live on the canvas.
+    expect(findControl(appSchema, "scene.imagePosition")).toBeNull();
+    expect(findControl(appSchema, "scene.imageZoom")).toBeNull();
+  });
+
+  it("runtime: dragging the image repositions its crop", () => {
+    const row = appAcceptance.find((entry) => entry.id === "runtime.sceneImage.crop");
+
+    expect(row?.kind).toBe("runtime");
+    expect(row?.expectedObservable).toMatch(/drag.*image|crop/i);
+  });
+
+  it("runtime: the under-image zoom slider scales the image", () => {
+    const row = appAcceptance.find((entry) => entry.id === "runtime.sceneImage.zoom");
+
+    expect(row?.kind).toBe("runtime");
+    expect(row?.expectedObservable).toMatch(/zoom|scale/i);
   });
 
   it("schema: scene.illustration lists all ten episode artworks", () => {
@@ -103,22 +111,6 @@ describe("More Muslim Social Studio schema", () => {
     for (const entry of EPISODE_ILLUSTRATIONS) {
       expect(entry.src).toBeTruthy();
     }
-  });
-
-  it("schema: scene.imagePosition is a screen-space vector with 50/50 default", () => {
-    const control = findControl(appSchema, "scene.imagePosition");
-
-    expect(control?.type).toBe("vector");
-    expect(control?.defaultValue).toEqual({ x: 0, y: 0 });
-  });
-
-  it("schema: scene.imageZoom is a live 1-2 slider", () => {
-    const control = findControl(appSchema, "scene.imageZoom");
-
-    expect(control?.type).toBe("slider");
-    expect(control?.min).toBe(1);
-    expect(control?.max).toBe(2);
-    expect(control?.defaultValue).toBe(1);
   });
 
   it("schema: scene.upload is a single-image fileDrop", () => {

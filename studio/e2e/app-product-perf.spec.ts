@@ -260,32 +260,6 @@ test("browser perf: appearance.background change stays within budget", async ({ 
   expectToolcraftScenarioPerformanceBudget(result, appPerformance, "appearance-background-change");
 });
 
-test("browser perf: scene.imagePosition change stays within budget", async ({ page }) => {
-  await openStudio(page);
-  await chooseSelectOption(page, "Scene", "Episode illustration");
-
-  const handle = page.getByRole("button", { name: "Focus X/Y pad" });
-
-  await handle.scrollIntoViewIfNeeded();
-
-  await expect(handle).toBeVisible();
-
-  const box = await handle.boundingBox();
-
-  if (!box) {
-    throw new Error("Drag handle has no bounding box.");
-  }
-
-  const result = await measureToolcraftInteraction(page, async () => {
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(box.x + box.width / 2 + 90, box.y + box.height / 2 - 20, { steps: 8 });
-    await page.mouse.up();
-  });
-
-  expectToolcraftScenarioPerformanceBudget(result, appPerformance, "focus-drag");
-});
-
 test("browser perf: scene.illustration change stays within budget", async ({ page }) => {
   await openStudio(page);
   await chooseSelectOption(page, "Scene", "Episode illustration");
@@ -307,28 +281,52 @@ test("browser perf: export.image.format change stays within budget", async ({ pa
   expectToolcraftScenarioPerformanceBudget(result, appPerformance, "format-workload");
 });
 
-test("browser perf: zoom slider drag stays responsive on an illustration slide", async ({ page }) => {
+test("browser perf: dragging the image crop stays responsive", async ({ page }) => {
   await openStudio(page);
   await chooseSelectOption(page, "Scene", "Episode illustration");
 
-  const handle = page.locator('[data-slot="slider"] [role="slider"]').last();
+  const surface = page.locator("[data-scene-drag]");
 
-  await expect(handle).toBeVisible();
+  await expect(surface).toBeVisible();
 
-  const box = await handle.boundingBox();
+  const box = await surface.boundingBox();
 
   if (!box) {
-    throw new Error("Drag handle has no bounding box.");
+    throw new Error("Scene drag surface has no bounding box.");
   }
 
   const result = await measureToolcraftInteraction(page, async () => {
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();
-    await page.mouse.move(box.x + box.width / 2 + 90, box.y + box.height / 2 - 20, { steps: 8 });
+    await page.mouse.move(box.x + box.width * 0.8, box.y + box.height * 0.3, { steps: 8 });
     await page.mouse.up();
   });
 
-  expectToolcraftScenarioPerformanceBudget(result, appPerformance, "image-zoom-drag");
+  expectToolcraftScenarioPerformanceBudget(result, appPerformance, "scene-image-crop-stability");
+});
+
+test("browser perf: the under-image zoom slider stays responsive", async ({ page }) => {
+  await openStudio(page);
+  await chooseSelectOption(page, "Scene", "Episode illustration");
+
+  const zoom = page.locator("[data-scene-zoom]");
+
+  await expect(zoom).toBeVisible();
+
+  const box = await zoom.boundingBox();
+
+  if (!box) {
+    throw new Error("Zoom slider has no bounding box.");
+  }
+
+  const result = await measureToolcraftInteraction(page, async () => {
+    await page.mouse.move(box.x + 6, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width * 0.9, box.y + box.height / 2, { steps: 8 });
+    await page.mouse.up();
+  });
+
+  expectToolcraftScenarioPerformanceBudget(result, appPerformance, "scene-image-zoom-stability");
 });
 
 test("browser perf: preview render stays within budget at the largest canvas", async ({ page }) => {

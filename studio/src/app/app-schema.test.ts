@@ -60,8 +60,6 @@ describe("appSchema", () => {
       "scene.source",
       "scene.illustration",
       "scene.upload",
-      "scene.imagePosition",
-      "scene.imageZoom",
       "audiogram.audio",
       "audiogram.captions",
       "audiogram.guestColourway",
@@ -88,16 +86,24 @@ describe("appSchema", () => {
     expect(appPerformance.scenarios.length).toBeGreaterThanOrEqual(4);
   });
 
-  it("performance: zoom drag budget is declared for the image scene", () => {
+  it("performance: on-canvas image zoom stays responsive", () => {
     const scenario = appPerformance.scenarios.find(
-      (entry) => entry.id === "image-zoom-drag",
+      (entry) => entry.id === "scene-image-zoom-stability",
     );
 
     expect(scenario?.interaction).toBe("control-drag");
     expect(scenario?.target).toBe("scene.imageZoom");
     expect(scenario?.budget.maxFrameGapMs).toBeLessThanOrEqual(120);
-    expect(scenario?.budget.maxInteractionMs).toBeLessThanOrEqual(2000);
-    expect(scenario?.stressFixture?.value).toBe(2);
+  });
+
+  it("performance: on-canvas image crop stays responsive", () => {
+    const scenario = appPerformance.scenarios.find(
+      (entry) => entry.id === "scene-image-crop-stability",
+    );
+
+    expect(scenario?.interaction).toBe("viewport-stability");
+    expect(scenario?.target).toBe("scene.imagePosition");
+    expect(scenario?.budget.maxFrameGapMs).toBeLessThanOrEqual(120);
   });
 
   it("performance: viewport stability budget is declared for the slide canvas", () => {
@@ -234,14 +240,6 @@ describe("appSchema", () => {
 
     expect(scenario?.interaction).toBe("control-change");
     expect(scenario?.browserTestName).toBe("browser perf: appearance.background change stays within budget");
-    expect(Object.keys(scenario?.budget ?? {}).length).toBeGreaterThan(0);
-  });
-
-  it("performance: scene.imagePosition scenario is declared", () => {
-    const scenario = appPerformance.scenarios.find((entry) => entry.id === "focus-drag");
-
-    expect(scenario?.interaction).toBe("control-drag");
-    expect(scenario?.browserTestName).toBe("browser perf: scene.imagePosition change stays within budget");
     expect(Object.keys(scenario?.budget ?? {}).length).toBeGreaterThan(0);
   });
 

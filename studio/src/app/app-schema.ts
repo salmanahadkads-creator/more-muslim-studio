@@ -22,11 +22,6 @@ const colourwayItems = (Object.keys(COLOURWAYS) as ColourwayKey[]).map((key) => 
   value: key,
 }));
 
-const imageSceneCondition = {
-  oneOf: ["illustration", "upload"],
-  target: "scene.source",
-} as const;
-
 const whenTemplate = (template: string) =>
   ({ equals: template, target: "post.template" }) as const;
 
@@ -221,33 +216,6 @@ export const appSchema = defineToolcraft({
               target: "scene.upload",
               type: "fileDrop",
               visibleWhen: { equals: "upload", target: "scene.source" },
-            },
-            imagePosition: {
-              defaultValue: { x: 0, y: 0 },
-              label: "Focus",
-              orderRole: "spatial",
-              performanceReason:
-                "Focus drags update the cover-crop position of a decoded full-bleed image live.",
-              performanceRole: "responsiveness",
-              target: "scene.imagePosition",
-              type: "vector",
-              visibleWhen: imageSceneCondition,
-              xLabel: "X",
-              yLabel: "Y",
-            },
-            imageZoom: {
-              defaultValue: 1,
-              label: "Zoom",
-              max: 2,
-              min: 1,
-              orderRole: "spatial",
-              performanceReason:
-                "Zoom scales a decoded full-bleed image live while dragging.",
-              performanceRole: "responsiveness",
-              step: 0.01,
-              target: "scene.imageZoom",
-              type: "slider",
-              visibleWhen: imageSceneCondition,
             },
           },
           title: "Scene",
