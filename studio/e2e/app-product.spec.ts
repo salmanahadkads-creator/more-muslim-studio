@@ -516,6 +516,24 @@ test("runtime: filmstrip add button creates a slide", async ({ page }) => {
   await expect(filmstripSlides(page)).toHaveCount(2);
 });
 
+test("runtime: filmstrip delete removes a slide", async ({ page }) => {
+  await openStudio(page);
+  await buildEpisodeSet(page);
+  await expect(filmstripSlides(page)).toHaveCount(5);
+
+  await filmstripSlides(page).nth(1).getByRole("button", { name: /delete slide/i }).click();
+  await expect(filmstripSlides(page)).toHaveCount(4);
+});
+
+test("runtime: filmstrip duplicate adds a copy", async ({ page }) => {
+  await openStudio(page);
+  await buildEpisodeSet(page);
+  await expect(filmstripSlides(page)).toHaveCount(5);
+
+  await filmstripSlides(page).nth(0).getByRole("button", { name: /duplicate slide/i }).click();
+  await expect(filmstripSlides(page)).toHaveCount(6);
+});
+
 test("runtime: selecting a filmstrip slide swaps the slide values", async ({ page }) => {
   await openStudio(page);
   await buildEpisodeSet(page);

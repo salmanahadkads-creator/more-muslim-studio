@@ -74,6 +74,42 @@ Mode: product
 - Skipped checks: None.
 - Risks: Risk: first-run detection treats an untouched default studio as fresh, so reloading a never-edited studio returns to the wizard — matching the legacy entry behavior, but worth revisiting if users find it surprising.
 
+### Iteration 5 — Audiogram design-dynamics motion
+
+- Request: Make the Toolcraft audiogram have all the same functionalities as the design-dynamics audiogram player; the user pre-selected motions 1, 3, 4, 5, 7, 9, 10 from the earlier proposal.
+- Task type: Toolcraft product feature (custom renderer motion, shared preview/export math).
+- User-visible result: The audiogram animates as a choreographed conversation — the ground crossfades between the post (host) and a new Guest colourway as speakers alternate (1); the pattern tile breathes with a per-frame RMS envelope of the audio (3); a living grain tile drifts at 6Hz (4); caption words fade and rise in with the spoken word carrying the colourway accent then settling to ink (5); one auto-selected line renders as a large italic pull-quote with receding chrome (7); a branded now-streaming card fades in element by element over the final seconds (9); and the ground pushes in with a ±24px pan / illustration Ken Burns drift (10).
+- Source/reference checked: Legacy ui_kits/social/audiogram-player.html (groundState/wayFor crossfade, env RMS breathing, living grain frand offsets, per-word accent hexMix, highlightIndex scoring, staggered outro oFade, groundLayer motion) and the design-dynamics proposal the user selected from (session 1d5bf078).
+- Reference inputs: Legacy audiogram-player.html source; the user's explicit motion selection (1,3,4,5,7,9,10; highlight auto by default; outro fade-only, no rise).
+- Docs/contracts read: acceptance-testing.md (schema-control coverage, runtime rows), performance.md (procedural pixel-output classification), schema-reference.md (select controls, section inventory).
+- Contract rules applied: every visual is a time-deterministic pure function of timeline time so the DOM preview and the offline Canvas export read identical values; one new schema control (audiogram.guestColourway) with acceptance, section-inventory (Speaker Grounds), performance, unit, and Playwright coverage; the export grain tile is painted with fillRect cells (not ImageData, which would classify the renderer as procedural pixel-output, and not an SVG image, which taints the export canvas).
+- Decision: A shared pure-math module (audiogram-motion.ts) feeds both the DOM preview (templates.tsx AudiogramPost) and the Canvas export (export-audiogram.ts); motions are always-on and driven by existing inputs (audio, captions, colourway, timeline) plus a single Guest colourway control, so the only new schema surface is one select.
+- Alternatives rejected: per-motion toggles and a manual highlight index like the legacy (kept motions always-on with a single Guest colourway control to stay "similarly simple" and bound the schema-control test burden — the highlight is auto-selected, matching the user's "let claude autoselect" default); reseeding feTurbulence per frame for grain (regenerates noise every frame — used a drifting static noise tile instead); an SVG-foreignObject snapshot to share one renderer (taints the export canvas in current Chromium).
+- State/output mapping: audiogram-motion.ts holds the shared math (buildSpeechBlocks word timing, speakersOf host/guest, groundState crossfade, highlightIndex, groundMotion, livingGrainOffset, computeAudioEnvelope/envAt, breatheOpacity, wordVisual, outro helpers); templates.tsx AudiogramPost renders it in the DOM from state.timeline time + a decoded-audio envelope hook (useAudioEnvelope); export-audiogram.ts paints the matching Canvas frames at the 12fps posterized grid; post.colourway is the host ground and audiogram.guestColourway the guest ground.
+- Files changed: src/app/audiogram-motion.ts (new), src/app/brand.ts (per-colourway accent), src/app/templates.tsx (AudiogramPost motion renderer), src/app/post-renderer.tsx (motion props + useAudioEnvelope), src/app/export-audiogram.ts (motion painter), src/app/app-schema.ts (guestColourway + Speaker Grounds section), src/app/app-acceptance.ts, src/app/app-performance.ts, tests and e2e suites.
+- Verification: pnpm typecheck passed; pnpm test passed (281 unit tests); Playwright audiogram tests (guest colourway crossfade, timed captions word-by-word, timeline playback) passed against real chromium-headless-shell; the crossfade math was cross-checked with a throwaway unit probe (groundState → guest ground at k=1 during the guest block).
+- Skipped checks: None.
+- Risks: Risk: the DOM preview (CSS/SVG grain, real accent blending) and the Canvas export (fillRect grain) diverge slightly in grain texture; both read as film grain and every layout/timing value is shared, so the divergence is cosmetic.
+
+### Iteration 6 — Filmstrip slide management + parity audit
+
+- Request: General check that all functionalities from the original studio are available in the Toolcraft rebuild in a similarly simple manner.
+- Task type: Parity audit + one functional gap closed.
+- User-visible result: Each carousel filmstrip thumbnail now carries a duplicate (⧉) and delete (×) control (delete hidden on the last remaining slide), matching the legacy filmstrip; the audit's remaining differences are documented below as intentional simplifications.
+- Source/reference checked: Legacy ui_kits/social/index.html control surface (templates, colourway swatches + shuffle, format, scene pattern/solid/illustration/upload with crop/zoom/flip/rotate, per-template content incl. credit rows, carousel filmstrip add/duplicate/delete/reorder + New episode carousel, audiogram audio/captions/guestWay/solidBg/highlight/motion toggles/transport/export, export PNG/JPG/ZIP + resolutions, free "Drag elements", Save session, onboarding wizard).
+- Reference inputs: Legacy studio source (ui_kits/social/index.html, screens.jsx, onboarding.html, audiogram-player.html); the current Toolcraft app source.
+- Docs/contracts read: acceptance-testing.md (runtime acceptance rows), component-rules.md (runtime UI vs schema controls).
+- Contract rules applied: filmstrip actions use the runtime layers.delete/layers.add commands and clean the carousel.slides snapshot; two runtime acceptance rows (runtime.filmstrip.delete/duplicate) backed by unit + Playwright tests, consistent with the existing add/select/reorder rows.
+- Decision: Close the one functional gap (no way to remove or copy a carousel slide) by adding duplicate/delete controls to each filmstrip thumbnail; leave the remaining differences as intentional simplifications and document them here for the client to weigh.
+- Alternatives rejected: porting every legacy affordance (colourway shuffle, free element dragging, per-motion audiogram toggles, manual highlight index, standalone recording player) in this pass (out of scope for "similarly simple"; surfaced as findings for the client to prioritise); inserting the duplicate after the source slide (append + reorder is simpler and reorder already covers repositioning).
+- State/output mapping: filmstrip duplicate captures the tile's slide values into a new carousel.slides entry + layers.add + layers.select; filmstrip delete removes the carousel.slides entry + dispatches layers.delete (the reducer reselects a neighbour, and CarouselSlideSync applies its values).
+- Parity findings (present with parity): all six templates, colourway select, scene sources + crop/zoom/upload rotate-flip, per-template copy, carousel add/reorder/select/delete/duplicate + Build episode set, audiogram audio/captions + timeline transport + MP4/WebM export, PNG/JPG/ZIP export at all resolutions, onboarding wizard, and localStorage persistence (auto, no explicit Save button).
+- Parity findings (intentional simplifications, not yet ported): colourway Shuffle button; free "Drag elements" text repositioning; audiogram per-motion toggles and solidBg (motions are always-on, solid ground is reachable via the Scene = Solid source); audiogram manual highlight index and explicit Off (highlight is auto-selected); the legacy "Open player in a new tab for screen recording" (the Toolcraft app exports the MP4 directly).
+- Files changed: src/app/carousel-filmstrip.tsx (duplicate/delete), src/app/app-acceptance.ts, src/app/app-product.test.ts, e2e/app-product.spec.ts.
+- Verification: pnpm typecheck passed; pnpm test passed (283 unit tests); Playwright filmstrip add/delete/duplicate/reorder tests passed.
+- Skipped checks: None. (Two illustration-scene performance-budget Playwright tests fail on this machine because the disk is 100% full and render frames jank to ~275ms > 120ms budget; the same tests fail on the unmodified baseline, so this is environmental, not a regression.)
+- Risks: Risk: appending duplicates at the end of the strip rather than after the source slide differs from the legacy insert-after; reordering covers repositioning.
+
 ## Decisions
 
 ### Renderer
@@ -93,9 +129,9 @@ Render Pipeline Inventory: rendererPipeline declares two passes — "slide-dom" 
 - Evidence: src/app/app-schema.ts panels.timeline, appTransferMode.animationIntent timeline-playback with product-derived loopDuration, AudiogramAudioSync in src/app/post-renderer.tsx.
 
 ### Layers
-- Decision: No layers panel.
-- Reason: One slide output with schema-driven scene branches; no multi-object editing.
-- Evidence: src/app/app-schema.ts (panels.layers omitted).
+- Decision: No runtime layers panel; carousel slides are runtime layers presented through a bespoke filmstrip below the preview (add / select / drag-reorder / duplicate / delete).
+- Reason: A single post needs no multi-object editing, and for carousels the client asked for "a simple plus to add and drag to reorder" below the preview rather than a layers panel; the filmstrip renders scaled slide thumbnails so the navigator reads as slides, not abstract layers.
+- Evidence: src/app/app-schema.ts (panels.layers omitted), src/app/carousel-filmstrip.tsx, runtime.filmstrip.* acceptance rows in src/app/app-acceptance.ts.
 
 ### Controls
 - Decision: Schema-declared built-ins grouped by product entity: Post (template selector + dependency-grouped per-template copy via visibleWhen), Colourway, Scene (source select, imagePicker, fileDrop, vector focus, zoom slider), required Background row, Image Export inline pair, sticky Export footer.

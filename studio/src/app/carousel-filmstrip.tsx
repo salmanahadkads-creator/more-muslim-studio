@@ -22,6 +22,23 @@ import { PostSlide, slideViewFromValues } from "./post-renderer";
 
 const THUMB_H = 104;
 
+/* Per-slide hover actions (duplicate / delete) on each filmstrip tile. */
+const miniButtonStyle: React.CSSProperties = {
+  alignItems: "center",
+  background: "rgba(0,0,0,0.55)",
+  border: "none",
+  borderRadius: 3,
+  color: "#F6E1C6",
+  cursor: "pointer",
+  display: "flex",
+  fontSize: 11,
+  height: 16,
+  justifyContent: "center",
+  lineHeight: 1,
+  padding: 0,
+  width: 16,
+};
+
 /* Memoised so unselected slide thumbnails (whose snapshot object identity is
    stable across renders) do not re-render on every keystroke — only the
    selected slide, whose live snapshot is a fresh object each render, repaints. */
@@ -121,6 +138,41 @@ export function CarouselFilmstrip(): React.JSX.Element | null {
     }
   };
 
+  const duplicateSlide = (index: number) => {
+    const layer = layers[index];
+
+    if (!layer) {
+      return;
+    }
+
+    const next = readCarouselSlides(state);
+    const snapshot =
+      layer.id === state.selectedLayerId
+        ? captureSlideValues(state)
+        : (next[layer.id] ?? captureSlideValues(state));
+    const layerId = makeSlideLayerId();
+
+    next[layerId] = { ...snapshot };
+    writeCarouselSlides(dispatch, next);
+    dispatch({ layer: { id: layerId, name: `Slide ${layers.length + 1}` }, type: "layers.add" });
+    dispatch({ layerId, type: "layers.select" });
+  };
+
+  const deleteSlide = (index: number) => {
+    const layer = layers[index];
+
+    // Keep at least one slide — the last one is just the single post.
+    if (!layer || layers.length <= 1) {
+      return;
+    }
+
+    const next = readCarouselSlides(state);
+
+    delete next[layer.id];
+    writeCarouselSlides(dispatch, next);
+    dispatch({ layerId: layer.id, type: "layers.delete" });
+  };
+
   const commitReorder = (from: number, to: number) => {
     if (from === to) {
       return;
@@ -137,9 +189,9 @@ export function CarouselFilmstrip(): React.JSX.Element | null {
   // root-delegated onClick, so click handling is delegated with a native
   // listener on the container. Handlers are read from a ref so the listener
   // (attached once) always sees the latest closures.
-  const handlersRef = React.useRef({ addSlide, layers, selectSlide });
+  const handlersRef = React.useRef({ addSlide, deleteSlide, duplicateSlide, layers, selectSlide });
 
-  handlersRef.current = { addSlide, layers, selectSlide };
+  handlersRef.current = { addSlide, deleteSlide, duplicateSlide, layers, selectSlide };
 
   React.useEffect(() => {
     const container = containerRef.current;
@@ -165,13 +217,27 @@ export function CarouselFilmstrip(): React.JSX.Element | null {
 
       const slideEl = target?.closest<HTMLElement>("[data-slide-index]");
 
-      if (slideEl) {
-        const index = Number(slideEl.dataset.slideIndex);
-        const layer = handlersRef.current.layers[index];
+      if (!slideEl) {
+        return;
+      }
 
-        if (layer) {
-          handlersRef.current.selectSlide(layer);
-        }
+      const index = Number(slideEl.dataset.slideIndex);
+
+      // Per-slide actions take priority over selecting the tile.
+      if (target?.closest("[data-filmstrip-delete]")) {
+        handlersRef.current.deleteSlide(index);
+        return;
+      }
+
+      if (target?.closest("[data-filmstrip-duplicate]")) {
+        handlersRef.current.duplicateSlide(index);
+        return;
+      }
+
+      const layer = handlersRef.current.layers[index];
+
+      if (layer) {
+        handlersRef.current.selectSlide(layer);
       }
     };
 
@@ -262,6 +328,28 @@ export function CarouselFilmstrip(): React.JSX.Element | null {
           >
             {index + 1}
           </span>
+          <div style={{ display: "flex", gap: 2, position: "absolute", right: 2, top: 2 }}>
+            <button
+              aria-label={`Duplicate slide ${index + 1}`}
+              data-filmstrip-duplicate=""
+              style={miniButtonStyle}
+              title="Duplicate slide"
+              type="button"
+            >
+              ⧉
+            </button>
+            {layers.length > 1 ? (
+              <button
+                aria-label={`Delete slide ${index + 1}`}
+                data-filmstrip-delete=""
+                style={miniButtonStyle}
+                title="Delete slide"
+                type="button"
+              >
+                ×
+              </button>
+            ) : null}
+          </div>
         </div>
       ))}
       <button

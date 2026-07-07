@@ -365,4 +365,18 @@ describe("More Muslim Social Studio schema", () => {
     expect(row?.evidence).toBe("exported-bytes");
     expect(row?.expectedObservable).toMatch(/drag|reorder|position/i);
   });
+
+  it("filmstrip: delete removes a slide", () => {
+    const row = appAcceptance.find((entry) => entry.id === "runtime.filmstrip.delete");
+
+    expect(row?.kind).toBe("runtime");
+    expect(row?.expectedObservable).toMatch(/delete|remove/i);
+  });
+
+  it("filmstrip: duplicate copies a slide", () => {
+    const row = appAcceptance.find((entry) => entry.id === "runtime.filmstrip.duplicate");
+
+    expect(row?.kind).toBe("runtime");
+    expect(row?.expectedObservable).toMatch(/duplicate|copy/i);
+  });
 });
