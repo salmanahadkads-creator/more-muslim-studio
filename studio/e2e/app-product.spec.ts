@@ -119,7 +119,7 @@ test("app controls: colourway select restyles the slide ground and ink", async (
   ]) {
     await expectToolcraftProductObservableToChange(
       page,
-      async () => chooseSelectOption(page, "Colourway", colourway),
+      async () => page.getByRole("button", { name: colourway, exact: true }).click(),
       { selector: frameSelector },
     );
   }

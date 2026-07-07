@@ -7,6 +7,21 @@ const colourwayOptions = (Object.keys(COLOURWAYS) as ColourwayKey[]).map((key) =
   value: key,
 }));
 
+/* A small ground-colour swatch (4:5, matching the post shape) so the colourway
+   picker previews each ground the way the illustration picker previews art. */
+const colourwaySwatch = (bg: string): string =>
+  "data:image/svg+xml;charset=utf-8," +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="80"><rect width="64" height="80" rx="6" fill="${bg}"/></svg>`,
+  );
+
+const colourwayItems = (Object.keys(COLOURWAYS) as ColourwayKey[]).map((key) => ({
+  alt: COLOURWAYS[key].label,
+  label: COLOURWAYS[key].label,
+  src: colourwaySwatch(COLOURWAYS[key].bg),
+  value: key,
+}));
+
 const imageSceneCondition = {
   oneOf: ["illustration", "upload"],
   target: "scene.source",
@@ -145,14 +160,14 @@ export const appSchema = defineToolcraft({
               defaultValue: "night",
               description:
                 "Nine approved ground × ink pairings from the brand palette. Ink, pattern tile, and symbol follow the ground automatically.",
+              items: colourwayItems,
               label: "Colourway",
-              options: colourwayOptions,
-              orderRole: "color",
+              orderRole: "input",
               performanceReason:
                 "Colourway changes restyle the slide ground, ink, and pattern in one commit.",
               performanceRole: "responsiveness",
               target: "post.colourway",
-              type: "select",
+              type: "imagePicker",
             },
           },
           title: "Colourway",

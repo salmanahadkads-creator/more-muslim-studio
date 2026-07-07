@@ -53,9 +53,9 @@ describe("More Muslim Social Studio schema", () => {
   it("schema: post.colourway covers all nine approved pairings", () => {
     const control = findControl(appSchema, "post.colourway");
 
-    expect(control?.type).toBe("select");
+    expect(control?.type).toBe("imagePicker");
     expect(control?.defaultValue).toBe("night");
-    expect(optionValues(control)).toEqual([...COLOURWAY_KEYS]);
+    expect(control?.items?.map((item) => item.value)).toEqual([...COLOURWAY_KEYS]);
 
     for (const key of COLOURWAY_KEYS) {
       expect(COLOURWAYS[key].bg).toMatch(/^#[0-9A-Fa-f]{6}$/);

@@ -196,7 +196,7 @@ test("browser perf: post.colourway change stays within budget", async ({ page })
   await openStudio(page);
 
   const result = await measureToolcraftInteraction(page, async () => {
-    await chooseSelectOption(page, "Colourway", "Terracotta");
+    await page.getByRole("button", { name: "Terracotta", exact: true }).click();
   });
 
   expectToolcraftScenarioPerformanceBudget(result, appPerformance, "post-colourway-change");
