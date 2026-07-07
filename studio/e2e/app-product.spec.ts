@@ -861,7 +861,7 @@ test("onboarding: wizard choices prefill the studio", async ({ page }) => {
   await page.getByRole("button", { name: "Episode illustration" }).click();
   await page.getByRole("button", { name: "Terracotta", exact: true }).click();
   await page.getByRole("button", { name: "Continue →" }).click();
-  await expect(page.getByText("Ready.")).toBeVisible();
+  await expect(page.getByText("Ready", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Open Studio →" }).click();
 
   await expect(page.locator(slideSelector)).toBeVisible();

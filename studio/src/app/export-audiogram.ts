@@ -404,16 +404,27 @@ export async function exportAudiogramVideo(
     width,
   });
 
+  // Posterize time: the visual is painted at 12fps and each frame is held for
+  // two 24fps output frames (the "vox"/stop-motion look). This halves the
+  // per-frame paint work while keeping the 24fps container.
+  const POSTERIZE = 2;
+  let lastPaintedStep = -1;
+
   for (let frameIndex = 0; frameIndex < totalFrames; frameIndex += 1) {
-    paintAudiogramFrame(slideContext, {
-      assets,
-      captions,
-      durationSeconds,
-      episode,
-      timeSeconds: frameIndex / FPS,
-      way,
-    });
-    frameContext.drawImage(slideCanvas, 0, 0, width, height);
+    const posterStep = Math.floor(frameIndex / POSTERIZE);
+
+    if (posterStep !== lastPaintedStep) {
+      paintAudiogramFrame(slideContext, {
+        assets,
+        captions,
+        durationSeconds,
+        episode,
+        timeSeconds: (posterStep * POSTERIZE) / FPS,
+        way,
+      });
+      frameContext.drawImage(slideCanvas, 0, 0, width, height);
+      lastPaintedStep = posterStep;
+    }
 
     const frame = new VideoFrame(frameCanvas, {
       duration: Math.round(1e6 / FPS),

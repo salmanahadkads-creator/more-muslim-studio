@@ -1,8 +1,10 @@
 /* Guided onboarding for the studio — the Toolcraft port of the legacy
-   wizard (ui_kits/social/onboarding.html). Collects what the user is making,
-   the episode, and the scene, then opens the studio with prefill search
-   params that SetupPrefill applies to runtime state. App chrome only: no
-   runtime surfaces are recreated here. */
+   wizard (ui_kits/social/onboarding.html). Styled to match the minimal
+   Toolcraft chrome: dark surfaces, ABC Diatype, the runtime CSS variables so
+   it tracks the active theme. Collects what the user is making, the episode,
+   and the scene, then opens the studio with prefill search params that
+   SetupPrefill applies to runtime state. App chrome only — no runtime
+   surfaces are recreated here. */
 
 import * as React from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -15,17 +17,15 @@ import {
 } from "../app/brand";
 import "../app/brand.css";
 
-const OAK = "#511C14";
-const MARIST = '"ABC Marist", Georgia, serif';
-const DIATYPE = '"ABC Diatype", -apple-system, sans-serif';
-
 type WizardMode = "post" | "carousel" | "audiogram";
 type WizardScene = "pattern" | "solid" | "illustration";
 
-const capsLabel: React.CSSProperties = {
-  fontFamily: DIATYPE,
-  fontSize: 12,
-  letterSpacing: "0.165em",
+const surface = "color-mix(in oklab, var(--popover) 96%, transparent)";
+const subtleBorder = "color-mix(in oklab, var(--border) 60%, transparent)";
+
+const label: React.CSSProperties = {
+  fontSize: 11,
+  letterSpacing: "0.14em",
   textTransform: "uppercase",
 };
 
@@ -42,26 +42,31 @@ function OptionCard({
 }): React.JSX.Element {
   return (
     <button
+      aria-pressed={selected}
       onClick={onSelect}
       style={{
-        background: selected ? OAK : "rgba(246,225,198,0.5)",
-        border: "none",
-        color: selected ? "#F6E1C6" : OAK,
+        background: selected
+          ? "color-mix(in oklab, var(--foreground) 8%, var(--popover))"
+          : surface,
+        border: `1px solid ${selected ? "var(--foreground)" : subtleBorder}`,
+        borderRadius: "var(--radius)",
+        color: "var(--foreground)",
         cursor: "pointer",
-        fontFamily: MARIST,
-        padding: "32px 28px",
+        padding: "22px 20px",
         textAlign: "left",
+        transition: "border-color 0.12s, background 0.12s",
       }}
       type="button"
     >
-      <span style={{ display: "block", fontSize: 28, marginBottom: 10 }}>{title}</span>
+      <span style={{ display: "block", fontSize: 17, fontWeight: 500, marginBottom: 8 }}>
+        {title}
+      </span>
       <span
         style={{
+          color: "var(--muted-foreground)",
           display: "block",
-          fontFamily: DIATYPE,
-          fontSize: 14,
-          lineHeight: 1.6,
-          opacity: 0.75,
+          fontSize: 13,
+          lineHeight: 1.55,
         }}
       >
         {description}
@@ -78,25 +83,36 @@ export function SetupWizard(): React.JSX.Element {
   const [scene, setScene] = React.useState<WizardScene>("pattern");
   const [way, setWay] = React.useState<ColourwayKey>("night");
 
-  const openStudio = () => {
-    void navigate({
-      search: { episode, mode, scene, way } as never,
-      to: "/",
-    });
-  };
-
+  const openStudio = () =>
+    void navigate({ search: { episode, mode, scene, way } as never, to: "/" });
   const skip = () => void navigate({ search: { mode: "skip" } as never, to: "/" });
 
-  const questions = ["What are you making?", "Which episode?", "Set the scene.", "Ready."];
+  const questions = [
+    "What are you making?",
+    "Which episode?",
+    "Set the scene",
+    "Ready",
+  ];
+
+  const pill = (active: boolean): React.CSSProperties => ({
+    ...label,
+    background: active
+      ? "color-mix(in oklab, var(--foreground) 10%, var(--popover))"
+      : "transparent",
+    border: `1px solid ${active ? "var(--foreground)" : subtleBorder}`,
+    borderRadius: "var(--radius)",
+    color: "var(--foreground)",
+    cursor: "pointer",
+    padding: "9px 14px",
+  });
 
   return (
     <div
       style={{
-        background: "rgba(246,225,198,0.4)",
-        color: OAK,
+        background: "var(--background)",
+        color: "var(--foreground)",
         display: "flex",
         flexDirection: "column",
-        fontFamily: MARIST,
         height: "100dvh",
         overflowY: "auto",
       }}
@@ -104,41 +120,36 @@ export function SetupWizard(): React.JSX.Element {
       <header
         style={{
           alignItems: "center",
-          borderBottom: "1px solid rgba(81,28,20,0.1)",
+          borderBottom: `1px solid ${subtleBorder}`,
           display: "flex",
           justifyContent: "space-between",
-          padding: "24px 48px",
+          padding: "20px 40px",
         }}
       >
-        <span style={{ ...capsLabel, fontWeight: 500 }}>More Muslim — Studio Setup</span>
-        <button
-          onClick={skip}
-          style={{
-            ...capsLabel,
-            background: "transparent",
-            border: "1px solid rgba(81,28,20,0.18)",
-            color: "rgba(81,28,20,0.55)",
-            cursor: "pointer",
-            padding: "9px 16px",
-          }}
-          type="button"
-        >
+        <span style={{ ...label, fontWeight: 500 }}>More Muslim — Studio Setup</span>
+        <button onClick={skip} style={pill(false)} type="button">
           Skip setup →
         </button>
       </header>
 
-      <main style={{ margin: "0 auto", maxWidth: 860, padding: "56px 32px 80px", width: "100%" }}>
-        <h1 style={{ fontSize: 46, fontWeight: 400, lineHeight: 1.05, marginBottom: 40 }}>
+      <main
+        style={{ margin: "0 auto", maxWidth: 760, padding: "56px 32px 96px", width: "100%" }}
+      >
+        <div style={{ ...label, color: "var(--muted-foreground)", marginBottom: 14 }}>
+          Step {step + 1} of {questions.length}
+        </div>
+        <h1
+          style={{ fontSize: 30, fontWeight: 500, letterSpacing: "-0.01em", marginBottom: 36 }}
+        >
           {questions[step]}
         </h1>
 
         {step === 0 ? (
           <div
             style={{
-              background: "rgba(81,28,20,0.1)",
               display: "grid",
-              gap: 1,
-              gridTemplateColumns: "1fr 1fr 1fr",
+              gap: 10,
+              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
             }}
           >
             <OptionCard
@@ -163,66 +174,69 @@ export function SetupWizard(): React.JSX.Element {
         ) : null}
 
         {step === 1 ? (
-          <div style={{ borderTop: "1px solid rgba(81,28,20,0.1)" }}>
-            {[{ label: "General post (no specific episode)", value: "general" }].concat(
-              EPISODE_ILLUSTRATIONS.map((entry) => ({
-                label: entry.label,
-                value: entry.value,
-              })),
-            ).map((option) => (
-              <button
-                key={option.value}
-                onClick={() => setEpisode(option.value)}
-                style={{
-                  alignItems: "center",
-                  background: "transparent",
-                  border: "none",
-                  borderBottom: "1px solid rgba(81,28,20,0.1)",
-                  color: OAK,
-                  cursor: "pointer",
-                  display: "flex",
-                  fontFamily: MARIST,
-                  fontSize: 19,
-                  gap: 16,
-                  padding: "15px 4px",
-                  textAlign: "left",
-                  width: "100%",
-                }}
-                type="button"
-              >
-                <span
-                  aria-hidden="true"
-                  style={{
-                    background: episode === option.value ? OAK : "transparent",
-                    border: "1.5px solid rgba(81,28,20,0.35)",
-                    borderRadius: "50%",
-                    display: "inline-block",
-                    flex: "none",
-                    height: 16,
-                    width: 16,
-                  }}
-                />
-                {option.label}
-              </button>
-            ))}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {[{ label: "General post (no specific episode)", value: "general" }]
+              .concat(
+                EPISODE_ILLUSTRATIONS.map((entry) => ({
+                  label: entry.label,
+                  value: entry.value,
+                })),
+              )
+              .map((option) => {
+                const active = episode === option.value;
+
+                return (
+                  <button
+                    aria-pressed={active}
+                    key={option.value}
+                    onClick={() => setEpisode(option.value)}
+                    style={{
+                      alignItems: "center",
+                      background: active
+                        ? "color-mix(in oklab, var(--foreground) 8%, var(--popover))"
+                        : surface,
+                      border: `1px solid ${active ? "var(--foreground)" : subtleBorder}`,
+                      borderRadius: "var(--radius)",
+                      color: "var(--foreground)",
+                      cursor: "pointer",
+                      display: "flex",
+                      fontSize: 15,
+                      gap: 14,
+                      padding: "13px 16px",
+                      textAlign: "left",
+                      width: "100%",
+                    }}
+                    type="button"
+                  >
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        background: active ? "var(--foreground)" : "transparent",
+                        border: `1.5px solid ${
+                          active ? "var(--foreground)" : "var(--muted-foreground)"
+                        }`,
+                        borderRadius: "50%",
+                        flex: "none",
+                        height: 14,
+                        width: 14,
+                      }}
+                    />
+                    {option.label}
+                  </button>
+                );
+              })}
           </div>
         ) : null}
 
         {step === 2 ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
             <div style={{ display: "flex", gap: 8 }}>
               {(["pattern", "solid", "illustration"] as const).map((option) => (
                 <button
+                  aria-pressed={scene === option}
                   key={option}
                   onClick={() => setScene(option)}
-                  style={{
-                    ...capsLabel,
-                    background: scene === option ? OAK : "transparent",
-                    border: "1px solid rgba(81,28,20,0.2)",
-                    color: scene === option ? "#F6E1C6" : OAK,
-                    cursor: "pointer",
-                    padding: "10px 18px",
-                  }}
+                  style={pill(scene === option)}
                   type="button"
                 >
                   {option === "pattern"
@@ -237,15 +251,19 @@ export function SetupWizard(): React.JSX.Element {
               {COLOURWAY_KEYS.map((key) => (
                 <button
                   aria-label={COLOURWAYS[key].label}
+                  aria-pressed={way === key}
                   key={key}
                   onClick={() => setWay(key)}
                   style={{
                     background: COLOURWAYS[key].bg,
                     border:
-                      way === key ? `3px solid ${OAK}` : "1px solid rgba(81,28,20,0.2)",
+                      way === key
+                        ? "2px solid var(--foreground)"
+                        : `1px solid ${subtleBorder}`,
+                    borderRadius: "var(--radius)",
                     cursor: "pointer",
-                    height: 56,
-                    width: 56,
+                    height: 52,
+                    width: 52,
                   }}
                   title={COLOURWAYS[key].label}
                   type="button"
@@ -256,7 +274,14 @@ export function SetupWizard(): React.JSX.Element {
         ) : null}
 
         {step === 3 ? (
-          <dl style={{ borderTop: "1px solid rgba(81,28,20,0.1)", fontSize: 20, margin: 0 }}>
+          <dl
+            style={{
+              border: `1px solid ${subtleBorder}`,
+              borderRadius: "var(--radius)",
+              margin: 0,
+              overflow: "hidden",
+            }}
+          >
             {[
               [
                 "Format",
@@ -283,39 +308,41 @@ export function SetupWizard(): React.JSX.Element {
                       : "Episode illustration"
                 } · ${COLOURWAYS[way].label}`,
               ],
-            ].map(([key, value]) => (
+            ].map(([key, value], index) => (
               <div
                 key={key}
                 style={{
-                  borderBottom: "1px solid rgba(81,28,20,0.1)",
+                  background: surface,
+                  borderTop: index === 0 ? "none" : `1px solid ${subtleBorder}`,
                   display: "flex",
-                  gap: 24,
-                  padding: "18px 0",
+                  gap: 20,
+                  padding: "16px 18px",
                 }}
               >
-                <dt style={{ ...capsLabel, minWidth: 110, opacity: 0.55, paddingTop: 4 }}>
+                <dt
+                  style={{
+                    ...label,
+                    color: "var(--muted-foreground)",
+                    minWidth: 92,
+                    paddingTop: 2,
+                  }}
+                >
                   {key}
                 </dt>
-                <dd style={{ margin: 0 }}>{value}</dd>
+                <dd style={{ fontSize: 15, margin: 0 }}>{value}</dd>
               </div>
             ))}
           </dl>
         ) : null}
 
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            marginTop: 48,
-          }}
-        >
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 40 }}>
           <button
             onClick={() => setStep((current) => Math.max(0, current - 1))}
             style={{
-              ...capsLabel,
+              ...label,
               background: "transparent",
               border: "none",
-              color: OAK,
+              color: "var(--muted-foreground)",
               cursor: "pointer",
               opacity: step === 0 ? 0 : 1,
               padding: "12px 0",
@@ -325,37 +352,21 @@ export function SetupWizard(): React.JSX.Element {
           >
             ← Back
           </button>
-          {step < 3 ? (
-            <button
-              onClick={() => setStep((current) => current + 1)}
-              style={{
-                ...capsLabel,
-                background: OAK,
-                border: "none",
-                color: "#F6E1C6",
-                cursor: "pointer",
-                padding: "14px 28px",
-              }}
-              type="button"
-            >
-              Continue →
-            </button>
-          ) : (
-            <button
-              onClick={openStudio}
-              style={{
-                ...capsLabel,
-                background: OAK,
-                border: "none",
-                color: "#F6E1C6",
-                cursor: "pointer",
-                padding: "14px 28px",
-              }}
-              type="button"
-            >
-              Open Studio →
-            </button>
-          )}
+          <button
+            onClick={() => (step < 3 ? setStep((current) => current + 1) : openStudio())}
+            style={{
+              ...label,
+              background: "var(--foreground)",
+              border: "none",
+              borderRadius: "var(--radius)",
+              color: "var(--background)",
+              cursor: "pointer",
+              padding: "13px 26px",
+            }}
+            type="button"
+          >
+            {step < 3 ? "Continue →" : "Open Studio →"}
+          </button>
         </div>
       </main>
     </div>

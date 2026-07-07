@@ -4,9 +4,6 @@
 
 import { useNavigate } from "@tanstack/react-router";
 
-const OAK = "#511C14";
-const DIATYPE = '"ABC Diatype", -apple-system, sans-serif';
-
 export function StudioChrome(): React.JSX.Element {
   const navigate = useNavigate();
 
@@ -15,12 +12,11 @@ export function StudioChrome(): React.JSX.Element {
       onClick={() => void navigate({ to: "/setup" })}
       style={{
         backdropFilter: "blur(24px) saturate(1.5)",
-        background: "rgba(251,242,233,0.86)",
-        border: "1px solid rgba(81,28,20,0.16)",
-        borderRadius: 8,
-        color: OAK,
+        background: "color-mix(in oklab, var(--popover) 82%, transparent)",
+        border: "1px solid color-mix(in oklab, var(--border) 60%, transparent)",
+        borderRadius: "var(--radius)",
+        color: "var(--foreground)",
         cursor: "pointer",
-        fontFamily: DIATYPE,
         fontSize: 12,
         left: 14,
         letterSpacing: "0.14em",

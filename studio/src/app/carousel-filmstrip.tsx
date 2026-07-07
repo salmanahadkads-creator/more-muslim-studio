@@ -7,7 +7,7 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 
-import type { ToolcraftLayer } from "@/toolcraft/runtime";
+import type { ToolcraftLayer, ToolcraftState } from "@/toolcraft/runtime";
 import { useToolcraft } from "@/toolcraft/runtime/react";
 
 import { POST_SIZES } from "./brand";
@@ -20,19 +20,20 @@ import {
 } from "./carousel";
 import { PostSlide, slideViewFromValues } from "./post-renderer";
 
-const OAK = "#511C14";
 const THUMB_H = 104;
 
-function SlideThumb({
-  onClick,
+/* Memoised so unselected slide thumbnails (whose snapshot object identity is
+   stable across renders) do not re-render on every keystroke — only the
+   selected slide, whose live snapshot is a fresh object each render, repaints. */
+const SlideThumb = React.memo(function SlideThumb({
+  mediaAssets,
   selected,
   values,
 }: {
-  onClick: () => void;
+  mediaAssets: ToolcraftState["mediaAssets"];
   selected: boolean;
   values: SlideSnapshot;
 }): React.JSX.Element {
-  const { mediaAssets } = useToolcraft().state;
   const view = slideViewFromValues(values, mediaAssets, true);
   const native = POST_SIZES.portrait;
   const scale = THUMB_H / native.h;
@@ -40,7 +41,6 @@ function SlideThumb({
   return (
     <button
       aria-pressed={selected}
-      onClick={onClick}
       style={{
         background: "#fff",
         border: "none",
@@ -48,7 +48,7 @@ function SlideThumb({
         cursor: "pointer",
         flex: "none",
         height: THUMB_H,
-        outline: selected ? `2px solid ${OAK}` : "2px solid transparent",
+        outline: selected ? "2px solid var(--foreground)" : "2px solid transparent",
         outlineOffset: 1,
         overflow: "hidden",
         padding: 0,
@@ -76,7 +76,7 @@ function SlideThumb({
       </div>
     </button>
   );
-}
+});
 
 export function CarouselFilmstrip(): React.JSX.Element | null {
   const { dispatch, state } = useToolcraft();
@@ -84,6 +84,7 @@ export function CarouselFilmstrip(): React.JSX.Element | null {
   const slides = readCarouselSlides(state);
   const [dragIndex, setDragIndex] = React.useState<number | null>(null);
   const [overIndex, setOverIndex] = React.useState<number | null>(null);
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
 
   // The selected slide reflects live values; the rest use their snapshot.
   const valuesFor = (layer: ToolcraftLayer): SlideSnapshot =>
@@ -132,17 +133,69 @@ export function CarouselFilmstrip(): React.JSX.Element | null {
     dispatch({ layers: next, type: "layers.reorder" });
   };
 
+  // Real pointer clicks on a portaled subtree do not reliably reach React's
+  // root-delegated onClick, so click handling is delegated with a native
+  // listener on the container. Handlers are read from a ref so the listener
+  // (attached once) always sees the latest closures.
+  const handlersRef = React.useRef({ addSlide, layers, selectSlide });
+
+  handlersRef.current = { addSlide, layers, selectSlide };
+
+  React.useEffect(() => {
+    const container = containerRef.current;
+
+    if (!container) {
+      return;
+    }
+
+    // The runtime's global pointer handling (canvas pan / panel drag) calls
+    // preventDefault + setPointerCapture on pointerdown, which otherwise
+    // swallows clicks that land on this floating overlay. Stopping the
+    // pointerdown at the strip in the capture phase isolates the filmstrip so
+    // the full mouse/click sequence completes normally.
+    const stopPointer = (event: PointerEvent) => event.stopPropagation();
+
+    const onClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+
+      if (target?.closest("[data-filmstrip-add]")) {
+        handlersRef.current.addSlide();
+        return;
+      }
+
+      const slideEl = target?.closest<HTMLElement>("[data-slide-index]");
+
+      if (slideEl) {
+        const index = Number(slideEl.dataset.slideIndex);
+        const layer = handlersRef.current.layers[index];
+
+        if (layer) {
+          handlersRef.current.selectSlide(layer);
+        }
+      }
+    };
+
+    container.addEventListener("pointerdown", stopPointer, { capture: true });
+    container.addEventListener("click", onClick);
+
+    return () => {
+      container.removeEventListener("pointerdown", stopPointer, { capture: true });
+      container.removeEventListener("click", onClick);
+    };
+  }, []);
+
   const strip = (
     <div
       data-testid="carousel-filmstrip"
+      ref={containerRef}
       style={{
         alignItems: "flex-end",
         backdropFilter: "blur(24px) saturate(1.5)",
-        background: "rgba(251,242,233,0.86)",
-        border: "1px solid rgba(81,28,20,0.16)",
+        background: "color-mix(in oklab, var(--popover) 82%, transparent)",
+        border: "1px solid color-mix(in oklab, var(--border) 60%, transparent)",
         borderRadius: 10,
         bottom: 66,
-        boxShadow: "0 12px 32px rgba(81,28,20,0.16)",
+        boxShadow: "0 12px 32px rgba(0,0,0,0.4)",
         display: "flex",
         gap: 8,
         left: "50%",
@@ -183,14 +236,14 @@ export function CarouselFilmstrip(): React.JSX.Element | null {
             opacity: dragIndex === index ? 0.4 : 1,
             outline:
               overIndex === index && dragIndex !== null && dragIndex !== index
-                ? `2px dashed ${OAK}`
+                ? "2px dashed var(--foreground)"
                 : "none",
             outlineOffset: 2,
             position: "relative",
           }}
         >
           <SlideThumb
-            onClick={() => selectSlide(layer)}
+            mediaAssets={state.mediaAssets}
             selected={layer.id === state.selectedLayerId}
             values={valuesFor(layer)}
           />
@@ -213,13 +266,13 @@ export function CarouselFilmstrip(): React.JSX.Element | null {
       ))}
       <button
         aria-label="Add slide"
-        onClick={addSlide}
+        data-filmstrip-add=""
         style={{
           alignItems: "center",
-          background: "rgba(81,28,20,0.04)",
-          border: "1px dashed rgba(81,28,20,0.3)",
+          background: "color-mix(in oklab, var(--foreground) 4%, transparent)",
+          border: "1px dashed color-mix(in oklab, var(--foreground) 30%, transparent)",
           borderRadius: 4,
-          color: OAK,
+          color: "var(--foreground)",
           cursor: "pointer",
           display: "flex",
           flex: "none",
@@ -236,5 +289,7 @@ export function CarouselFilmstrip(): React.JSX.Element | null {
     </div>
   );
 
-  return createPortal(strip, document.body);
+  // Portal into the React root (not document.body) so real pointer clicks
+  // reach React's root-level event delegation; body-level portals miss it.
+  return createPortal(strip, document.getElementById("root") ?? document.body);
 }

@@ -3,9 +3,25 @@
 @source "./toolcraft/ui";
 @source "./toolcraft/runtime";
 @import "tw-animate-css";
-@import "@fontsource-variable/inter";
 @import "@/toolcraft/ui/styles.css";
 @import "@/toolcraft/runtime/styles.css";
+
+/* The whole studio UI (toolkit chrome included) uses ABC Diatype so the tool
+   and the brand share one typeface. Trial fonts licensed to More Muslim. */
+@font-face {
+  font-family: "ABC Diatype";
+  src: url("../../uploads/ABCDiatype-Regular-Trial.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "ABC Diatype";
+  src: url("../../uploads/ABCDiatype-Medium-Trial.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
 
 @theme {
   --spacing-field-control: 0.3125rem;
@@ -13,7 +29,7 @@
   --text-2xs--line-height: 0.875rem;
   --text-xs-plus: 0.8125rem;
   --text-xs-plus--line-height: 1.125rem;
-  --font-sans: "Inter Variable", sans-serif;
+  --font-sans: "ABC Diatype", -apple-system, sans-serif;
   --font-mono:
     ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
   --radius-xs: 0.125rem;
