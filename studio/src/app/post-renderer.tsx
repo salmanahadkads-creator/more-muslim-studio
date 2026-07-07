@@ -477,6 +477,10 @@ export function PostRenderer(): React.JSX.Element {
   const { scene, state, template, values, way } = usePostSlideValues();
   const canvasWidth = state.canvas.size.width;
   const canvasHeight = state.canvas.size.height;
+  // Read the timeline once (destructured, not dotted) — the audiogram frame is
+  // a pure function of this time; it never writes the duration back.
+  const { currentTimeSeconds: timelineTime, durationSeconds: timelineDuration } =
+    state.timeline;
   const isAudiogram = template === "audiogram";
   const format = isAudiogram ? "story" : getPostFormat(canvasWidth, canvasHeight);
   const native = POST_SIZES[format];
@@ -531,15 +535,12 @@ export function PostRenderer(): React.JSX.Element {
           <AudiogramPost
             scene={scene}
             values={{
-              caption: activeCaptionAt(captions, state.timeline.currentTimeSeconds),
+              caption: activeCaptionAt(captions, timelineTime),
               episode:
                 typeof values["content.episode"] === "string"
                   ? (values["content.episode"] as string)
                   : "",
-              progress:
-                state.timeline.durationSeconds > 0
-                  ? state.timeline.currentTimeSeconds / state.timeline.durationSeconds
-                  : 0,
+              progress: timelineDuration > 0 ? timelineTime / timelineDuration : 0,
             }}
             way={way}
           />
