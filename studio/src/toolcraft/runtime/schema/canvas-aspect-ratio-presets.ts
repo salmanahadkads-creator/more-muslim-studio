@@ -1,30 +1,21 @@
 import type { ToolcraftCanvasSize } from "./types";
 
-export type ToolcraftCanvasAspectRatioPresetValue =
-  | "1:1"
-  | "3:2"
-  | "16:9"
-  | "3:4"
-  | "9:16"
-  | "2:3"
-  | "4:3";
+export type ToolcraftCanvasAspectRatioPresetValue = "4:5" | "9:16";
 
 export type ToolcraftCanvasAspectRatioPreset = {
   height: number;
+  label: string;
   ratioHeight: number;
   ratioWidth: number;
   value: ToolcraftCanvasAspectRatioPresetValue;
   width: number;
 };
 
+/* More Muslim ships exactly two Instagram output formats: the 4:5 feed post and
+   the 9:16 story. */
 export const toolcraftCanvasAspectRatioPresets = [
-  { height: 1080, ratioHeight: 1, ratioWidth: 1, value: "1:1", width: 1080 },
-  { height: 1080, ratioHeight: 2, ratioWidth: 3, value: "3:2", width: 1620 },
-  { height: 1080, ratioHeight: 9, ratioWidth: 16, value: "16:9", width: 1920 },
-  { height: 1440, ratioHeight: 4, ratioWidth: 3, value: "3:4", width: 1080 },
-  { height: 1920, ratioHeight: 16, ratioWidth: 9, value: "9:16", width: 1080 },
-  { height: 1620, ratioHeight: 3, ratioWidth: 2, value: "2:3", width: 1080 },
-  { height: 1080, ratioHeight: 3, ratioWidth: 4, value: "4:3", width: 1440 },
+  { height: 1350, label: "Post (4:5)", ratioHeight: 5, ratioWidth: 4, value: "4:5", width: 1080 },
+  { height: 1920, label: "Story (9:16)", ratioHeight: 16, ratioWidth: 9, value: "9:16", width: 1080 },
 ] as const satisfies readonly ToolcraftCanvasAspectRatioPreset[];
 
 export const toolcraftCanvasAspectRatioPresetValues = new Set<string>(

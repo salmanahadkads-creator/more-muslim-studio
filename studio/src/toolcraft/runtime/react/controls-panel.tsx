@@ -137,13 +137,10 @@ type CanvasAspectRatioValue = {
 
 const hiddenDiscreteMarkerCount = 2;
 const controlsPanelSectionCollapseStorageVersion = 1;
-const canvasAspectRatioOptions = [
-  ...toolcraftCanvasAspectRatioPresets.map((preset) => ({
-    label: preset.value,
-    value: preset.value,
-  })),
-  { label: "Custom...", value: "custom" },
-] as const;
+const canvasAspectRatioOptions = toolcraftCanvasAspectRatioPresets.map((preset) => ({
+  label: preset.label,
+  value: preset.value,
+}));
 
 const sectionedCompoundControlTypes = new Set([
   "channelMixer",

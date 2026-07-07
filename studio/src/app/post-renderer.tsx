@@ -339,6 +339,25 @@ function AudiogramAudioSync(): null {
   return null;
 }
 
+/* Shows the runtime timeline (and its transport) only for the audiogram, which
+   is the one timeline-driven template; static post templates hide it. Renders
+   nothing — it only mirrors runtime panel state. */
+function TimelinePanelSync(): null {
+  const { dispatch, state } = useToolcraft();
+  const isAudiogram = state.values["post.template"] === "audiogram";
+  const hidden = state.panels.timeline.hidden === true;
+
+  React.useEffect(() => {
+    const shouldHide = !isAudiogram;
+
+    if (shouldHide !== hidden) {
+      dispatch({ hidden: shouldHide, panelId: "timeline", type: "panels.setHidden" });
+    }
+  }, [isAudiogram, hidden, dispatch]);
+
+  return null;
+}
+
 /* Applies the onboarding wizard's prefill search params once, then clears
    them from the URL. Renders nothing — app chrome stays out of the canvas. */
 function SetupPrefill(): null {
@@ -602,6 +621,7 @@ export function PostRenderer(): React.JSX.Element {
       <SetupPrefill />
       <CarouselSlideSync />
       <AudiogramAudioSync />
+      <TimelinePanelSync />
       <div
         style={{
           flex: "none",
