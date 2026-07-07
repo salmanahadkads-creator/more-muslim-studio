@@ -13,6 +13,7 @@ import {
   COLOURWAY_KEYS,
   COLOURWAYS,
   EPISODE_ILLUSTRATIONS,
+  getEpisodeIllustration,
   type ColourwayKey,
 } from "../app/brand";
 import "../app/brand.css";
@@ -72,6 +73,80 @@ function OptionCard({
         {description}
       </span>
     </button>
+  );
+}
+
+/* A 4:5 preview tile mirroring how the chosen scene renders on the selected
+   colourway: solid ground, star-lattice pattern over the ground, or the chosen
+   episode illustration with the studio's tint. */
+function ScenePreview({
+  episode,
+  scene,
+  subtleBorder,
+  way,
+}: {
+  episode: string;
+  scene: WizardScene;
+  subtleBorder: string;
+  way: ColourwayKey;
+}): React.JSX.Element {
+  const colour = COLOURWAYS[way];
+  const illustration = scene === "illustration" ? getEpisodeIllustration(episode) : null;
+
+  if (scene === "illustration" && !illustration) {
+    return (
+      <p style={{ color: "var(--muted-foreground)", fontSize: 13, margin: 0 }}>
+        Pick an episode in the previous step to place its illustration, or choose a colour
+        pattern or solid colour.
+      </p>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        aspectRatio: "1080 / 1350",
+        background: colour.bg,
+        border: `1px solid ${subtleBorder}`,
+        borderRadius: "var(--radius)",
+        maxWidth: 200,
+        overflow: "hidden",
+        position: "relative",
+        width: "100%",
+      }}
+    >
+      {illustration ? (
+        <>
+          <img
+            alt={illustration.label}
+            src={illustration.src}
+            style={{ display: "block", height: "100%", objectFit: "cover", width: "100%" }}
+          />
+          <div
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(8,10,18,0.42) 0%, rgba(8,10,18,0.30) 42%, rgba(8,10,18,0.66) 100%)",
+              inset: 0,
+              position: "absolute",
+            }}
+          />
+        </>
+      ) : scene === "pattern" && colour.tile ? (
+        <div
+          aria-hidden="true"
+          style={{
+            backgroundImage: `url("${colour.tile}")`,
+            backgroundPosition: "center",
+            backgroundSize: "cover",
+            // Boosted well above the real 10–15% so the lattice reads at this
+            // small size; the slide itself keeps the subtle brand opacity.
+            inset: 0,
+            opacity: Math.min(0.85, colour.tileOpacity * 5),
+            position: "absolute",
+          }}
+        />
+      ) : null}
+    </div>
   );
 }
 
@@ -247,6 +322,16 @@ export function SetupWizard(): React.JSX.Element {
                 </button>
               ))}
             </div>
+            {/* A live preview of the chosen scene on the selected colourway, so
+                the pattern texture and episode illustration actually read (they
+                are near-invisible at the real 10–15% tile opacity on a 52px
+                chip). */}
+            <ScenePreview
+              episode={episode}
+              scene={scene}
+              subtleBorder={subtleBorder}
+              way={way}
+            />
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
               {COLOURWAY_KEYS.map((key) => (
                 <button
