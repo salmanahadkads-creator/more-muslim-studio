@@ -23,6 +23,15 @@ const filmstripSlides = (page: Page) =>
   page.locator('[data-testid="carousel-filmstrip"] [data-slide-index]');
 
 async function openStudio(page: Page): Promise<void> {
+  // Keep control sections expanded in tests: pre-seed the first-open
+  // collapse marker so the studio does not auto-collapse them.
+  await page.addInitScript(() => {
+    try {
+      window.localStorage.setItem("toolcraft:ui:controls-panel-sections:seeded", "1");
+    } catch {
+      // ignore
+    }
+  });
   // Fresh contexts are redirected to the onboarding wizard; enter through it
   // deterministically and skip into the studio.
   await page.goto("/setup");

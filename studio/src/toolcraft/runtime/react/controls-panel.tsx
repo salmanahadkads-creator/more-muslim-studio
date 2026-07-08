@@ -137,6 +137,9 @@ type CanvasAspectRatioValue = {
 
 const hiddenDiscreteMarkerCount = 2;
 const controlsPanelSectionCollapseStorageVersion = 1;
+/* One-shot marker so app-authored sections collapse only on the first ever
+   studio open. Tests set this before load to keep sections expanded. */
+const controlsPanelSectionCollapseSeedKey = "toolcraft:ui:controls-panel-sections:seeded";
 const canvasAspectRatioOptions = toolcraftCanvasAspectRatioPresets.map((preset) => ({
   label: preset.label,
   value: preset.value,
@@ -1493,6 +1496,10 @@ export function ControlsPanel({
   const [collapsedSectionByKey, setCollapsedSectionByKey] = React.useState<
     Record<string, boolean>
   >(() => readControlsPanelCollapsedSections(sectionCollapseStorageKey));
+  // First-open default: app-authored sections start collapsed so the studio
+  // opens tidy. Guarded by a one-shot marker so it only happens on the very
+  // first visit; tests opt out by pre-seeding the marker.
+  const collapseSeededRef = React.useRef(false);
   const stickyFooterProgress = React.useMemo(() => {
     for (let index = footerActionProgressEntries.length - 1; index >= 0; index -= 1) {
       const progress = footerActionProgressEntries[index]?.progress;
@@ -2379,6 +2386,44 @@ export function ControlsPanel({
       section,
     }))
     .filter(({ entries, section }) => isSectionVisible(section) && entries.length > 0);
+
+  React.useEffect(() => {
+    if (collapseSeededRef.current || typeof window === "undefined") {
+      return;
+    }
+
+    collapseSeededRef.current = true;
+
+    try {
+      if (window.localStorage.getItem(controlsPanelSectionCollapseSeedKey)) {
+        return;
+      }
+
+      window.localStorage.setItem(controlsPanelSectionCollapseSeedKey, "1");
+    } catch {
+      return;
+    }
+
+    const seededKeys = visibleSections
+      .map(({ entries, section }, sectionIndex) => ({
+        collapsible:
+          !isRuntimeSetupSection({ entries, section }) &&
+          getRenderedControlsSectionTitle(section) !== undefined,
+        key: getControlsPanelSectionCollapseKey({ entries, section, sectionIndex }),
+      }))
+      .filter((entry) => entry.collapsible)
+      .map((entry) => entry.key);
+
+    if (seededKeys.length === 0) {
+      return;
+    }
+
+    const next = Object.fromEntries(seededKeys.map((key) => [key, true]));
+
+    setCollapsedSectionByKey((current) => ({ ...current, ...next }));
+    writeControlsPanelCollapsedSections(sectionCollapseStorageKey, next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const visibleControlsPanelSections = visibleSections.map(({ entries, section }) => ({
     ...section,
     controls: getControlsRecord(entries),

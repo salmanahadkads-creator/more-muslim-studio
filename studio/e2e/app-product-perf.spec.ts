@@ -21,6 +21,14 @@ function makeLargeTestImage(): Buffer {
 }
 
 async function openStudio(page: Page): Promise<void> {
+  // Keep control sections expanded in perf tests.
+  await page.addInitScript(() => {
+    try {
+      window.localStorage.setItem("toolcraft:ui:controls-panel-sections:seeded", "1");
+    } catch {
+      // ignore
+    }
+  });
   // Fresh contexts are redirected to the onboarding wizard; enter through it
   // deterministically and skip into the studio.
   await page.goto("/setup");
