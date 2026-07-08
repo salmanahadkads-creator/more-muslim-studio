@@ -191,7 +191,8 @@ export const appSchema = defineToolcraft({
               defaultValue: "ep1",
               items: EPISODE_ILLUSTRATIONS.map((entry) => ({
                 label: entry.label,
-                src: entry.src,
+                // Picker thumbnails use the lightweight preview copy.
+                src: entry.previewSrc,
                 value: entry.value,
               })),
               label: "Episode",

@@ -21,6 +21,19 @@ const illusEp7 = new URL("../../../assets/imagery/illus-ep7.jpg", import.meta.ur
 const illusEp8 = new URL("../../../assets/imagery/illus-ep8.jpg", import.meta.url).href;
 const illusEp9 = new URL("../../../assets/imagery/illus-ep9.jpg", import.meta.url).href;
 const illusEp10 = new URL("../../../assets/imagery/illus-ep10.jpg", import.meta.url).href;
+// ~1280px preview copies of each illustration: the preview renders at ~540px on
+// screen, so these ~150-500KB files load and decode fast, while the full-res
+// originals above stay reserved for export fidelity.
+const illusEp1Preview = new URL("../../../assets/imagery/illus-ep1-preview.jpg", import.meta.url).href;
+const illusEp2Preview = new URL("../../../assets/imagery/illus-ep2-preview.jpg", import.meta.url).href;
+const illusEp3Preview = new URL("../../../assets/imagery/illus-ep3-preview.jpg", import.meta.url).href;
+const illusEp4Preview = new URL("../../../assets/imagery/illus-ep4-preview.jpg", import.meta.url).href;
+const illusEp5Preview = new URL("../../../assets/imagery/illus-ep5-preview.jpg", import.meta.url).href;
+const illusEp6Preview = new URL("../../../assets/imagery/illus-ep6-preview.jpg", import.meta.url).href;
+const illusEp7Preview = new URL("../../../assets/imagery/illus-ep7-preview.jpg", import.meta.url).href;
+const illusEp8Preview = new URL("../../../assets/imagery/illus-ep8-preview.jpg", import.meta.url).href;
+const illusEp9Preview = new URL("../../../assets/imagery/illus-ep9-preview.jpg", import.meta.url).href;
+const illusEp10Preview = new URL("../../../assets/imagery/illus-ep10-preview.jpg", import.meta.url).href;
 const symbolBeige = new URL("../../../assets/logos/symbol-beige.svg", import.meta.url).href;
 const symbolBlack = new URL("../../../assets/logos/symbol-black.svg", import.meta.url).href;
 const symbolNight = new URL("../../../assets/logos/symbol-night.svg", import.meta.url).href;
@@ -93,21 +106,24 @@ export const TEXT_WIDTH: Record<PostFormat, number> = {
 
 export type EpisodeIllustration = {
   label: string;
+  /** Full-resolution source, used only for export. */
   src: string;
+  /** Lightweight ~1280px copy, used for the live preview and picker. */
+  previewSrc: string;
   value: string;
 };
 
 export const EPISODE_ILLUSTRATIONS: readonly EpisodeIllustration[] = [
-  { label: "E1 Side Entrances", src: illusEp1, value: "ep1" },
-  { label: "E2 Nikkah Loophole", src: illusEp2, value: "ep2" },
-  { label: "E3 Secret Translators", src: illusEp3, value: "ep3" },
-  { label: "E4 Recitation Revolution", src: illusEp4, value: "ep4" },
-  { label: "E5 Hanabneehu", src: illusEp5, value: "ep5" },
-  { label: "E6 Cape Malay", src: illusEp6, value: "ep6" },
-  { label: "E7 SheikhaGPT", src: illusEp7, value: "ep7" },
-  { label: "E8 Travelling Sisterhood", src: illusEp8, value: "ep8" },
-  { label: "E9 A More Muslim Japan", src: illusEp9, value: "ep9" },
-  { label: "E10 Washing the Dead", src: illusEp10, value: "ep10" },
+  { label: "E1 Side Entrances", previewSrc: illusEp1Preview, src: illusEp1, value: "ep1" },
+  { label: "E2 Nikkah Loophole", previewSrc: illusEp2Preview, src: illusEp2, value: "ep2" },
+  { label: "E3 Secret Translators", previewSrc: illusEp3Preview, src: illusEp3, value: "ep3" },
+  { label: "E4 Recitation Revolution", previewSrc: illusEp4Preview, src: illusEp4, value: "ep4" },
+  { label: "E5 Hanabneehu", previewSrc: illusEp5Preview, src: illusEp5, value: "ep5" },
+  { label: "E6 Cape Malay", previewSrc: illusEp6Preview, src: illusEp6, value: "ep6" },
+  { label: "E7 SheikhaGPT", previewSrc: illusEp7Preview, src: illusEp7, value: "ep7" },
+  { label: "E8 Travelling Sisterhood", previewSrc: illusEp8Preview, src: illusEp8, value: "ep8" },
+  { label: "E9 A More Muslim Japan", previewSrc: illusEp9Preview, src: illusEp9, value: "ep9" },
+  { label: "E10 Washing the Dead", previewSrc: illusEp10Preview, src: illusEp10, value: "ep10" },
 ];
 
 export function getEpisodeIllustration(value: unknown): EpisodeIllustration | null {

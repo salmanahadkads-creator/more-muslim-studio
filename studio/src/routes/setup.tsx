@@ -119,7 +119,7 @@ function ScenePreview({
         <>
           <img
             alt={illustration.label}
-            src={illustration.src}
+            src={illustration.previewSrc}
             style={{ display: "block", height: "100%", objectFit: "cover", width: "100%" }}
           />
           <div

@@ -144,7 +144,9 @@ export function slideViewFromValues(
   let imageFlipVertical = false;
 
   if (source === "illustration") {
-    image = getEpisodeIllustration(values["scene.illustration"])?.src ?? null;
+    // Preview uses the lightweight copy; the Canvas export loads the full-res
+    // source independently.
+    image = getEpisodeIllustration(values["scene.illustration"])?.previewSrc ?? null;
   } else if (source === "upload") {
     const uploaded = mediaAssets.find(
       (asset) => asset.sourceTarget === "scene.upload",
