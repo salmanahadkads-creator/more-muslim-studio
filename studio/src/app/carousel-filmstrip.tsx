@@ -20,7 +20,7 @@ import {
 } from "./carousel";
 import { PostSlide, slideViewFromValues } from "./post-renderer";
 
-const THUMB_H = 104;
+const THUMB_H = 130;
 
 /* Per-slide hover actions (duplicate / delete) on each filmstrip tile. */
 const miniButtonStyle: React.CSSProperties = {

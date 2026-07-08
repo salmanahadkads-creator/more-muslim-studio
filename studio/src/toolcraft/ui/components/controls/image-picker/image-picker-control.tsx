@@ -53,11 +53,10 @@ function getImagePickerColumns(itemCount: number): ImagePickerColumns {
     return 2;
   }
 
-  if (itemCount === 3 || itemCount === 6) {
-    return 3;
-  }
-
-  return 4;
+  // Three columns keeps the picker tiles comfortably large and tappable
+  // (colourway swatches and episode thumbnails) rather than shrinking to a
+  // dense four-up grid.
+  return 3;
 }
 
 export function ImagePickerControl({

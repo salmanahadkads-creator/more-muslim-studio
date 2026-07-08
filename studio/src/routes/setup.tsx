@@ -53,7 +53,7 @@ function OptionCard({
         borderRadius: "var(--radius)",
         color: "var(--foreground)",
         cursor: "pointer",
-        padding: "22px 20px",
+        padding: "28px 25px",
         textAlign: "left",
         transition: "border-color 0.12s, background 0.12s",
       }}
@@ -347,8 +347,8 @@ export function SetupWizard(): React.JSX.Element {
                         : `1px solid ${subtleBorder}`,
                     borderRadius: "var(--radius)",
                     cursor: "pointer",
-                    height: 52,
-                    width: 52,
+                    height: 64,
+                    width: 64,
                   }}
                   title={COLOURWAYS[key].label}
                   type="button"
