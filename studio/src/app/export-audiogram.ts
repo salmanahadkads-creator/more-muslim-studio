@@ -31,8 +31,10 @@ import {
   activeBlockIndex,
   breatheOpacity,
   buildSpeechBlocks,
+  captionZoom,
   computeAudioEnvelope,
   firstName,
+  gateWeave,
   GRAIN_TILE_SIZE,
   grainCompositing,
   groundMotion,
@@ -54,8 +56,6 @@ import { parseSrt } from "./srt";
 const FPS = 24;
 const MARIST = '"ABC Marist", Georgia, serif';
 const CAPS_TRACKING_EM = 0.165;
-const OUTRO_LINE_1 = "Listen to the full episode at moremuslim.org.";
-const OUTRO_LINE_2 = "Or search for “More Muslim” wherever you get your podcasts.";
 
 type PaintContext = CanvasRenderingContext2D & { letterSpacing?: string };
 
@@ -135,6 +135,8 @@ type AudiogramFrameParams = {
   assets: AudiogramFrameAssets;
   durationSeconds: number;
   episode: string;
+  eyebrow: string;
+  outroLines: readonly string[];
   timeSeconds: number;
 };
 
@@ -289,7 +291,7 @@ function layoutWords(
 }
 
 function paintAudiogramFrame(context: PaintContext, params: AudiogramFrameParams): void {
-  const { assets, durationSeconds, episode, timeSeconds } = params;
+  const { assets, durationSeconds, episode, eyebrow, outroLines, timeSeconds } = params;
   const { blocks, config, guest } = assets;
   const { h, w } = POST_SIZES.story;
   const centerX = w / 2;
@@ -318,7 +320,10 @@ function paintAudiogramFrame(context: PaintContext, params: AudiogramFrameParams
     }
 
     paintTexturedGround(context, ground.curWay, ground.k, params);
-    paintGrain(context, assets.grainTile, ground.curWay, timeSeconds);
+
+    if (config.filmTexture) {
+      paintGrain(context, assets.grainTile, ground.curWay, timeSeconds);
+    }
   }
 
   context.textBaseline = "alphabetic";
@@ -329,7 +334,7 @@ function paintAudiogramFrame(context: PaintContext, params: AudiogramFrameParams
   context.fillStyle = ink;
   context.textAlign = "center";
   setFont(context, 32, { tracked: true });
-  context.fillText(episode.toUpperCase(), centerX, CAPTION_BOX.top - 90 + 32);
+  context.fillText(eyebrow.toUpperCase(), centerX, CAPTION_BOX.top - 90 + 32);
   context.restore();
 
   // Active caption — per-word entrance + accent
@@ -368,6 +373,19 @@ function paintAudiogramFrame(context: PaintContext, params: AudiogramFrameParams
     context.textAlign = "left";
     context.textBaseline = "top";
 
+    // Film texture: gate-weave wander + text zoom around the caption's origin,
+    // matching the DOM caption transform.
+    const weave = gateWeave(config, timeSeconds);
+    const zoom = captionZoom(active, isHighlight, config, timeSeconds);
+    const originX = isHighlight ? centerX : CAPTION_BOX.left;
+    const originY = startY;
+
+    context.save();
+    context.translate(originX + weave.wx, originY + weave.wy);
+    context.rotate((weave.wr * Math.PI) / 180);
+    context.scale(zoom, zoom);
+    context.translate(-originX, -originY);
+
     layout.lines.forEach((line, lineIndex) => {
       const lineY = startY + lineIndex * lineHeight;
       const lineStartX = isHighlight ? centerX - line.width / 2 : CAPTION_BOX.left;
@@ -392,6 +410,7 @@ function paintAudiogramFrame(context: PaintContext, params: AudiogramFrameParams
       }
     });
 
+    context.restore();
     context.textBaseline = "alphabetic";
   }
 
@@ -417,7 +436,10 @@ function paintAudiogramFrame(context: PaintContext, params: AudiogramFrameParams
         ...params,
         assets: { ...assets, config: { ...config, hasImage: false } },
       });
-      paintGrain(context, assets.grainTile, outroWay, timeSeconds);
+
+      if (config.filmTexture) {
+        paintGrain(context, assets.grainTile, outroWay, timeSeconds);
+      }
     }
 
     context.textAlign = "center";
@@ -425,9 +447,6 @@ function paintAudiogramFrame(context: PaintContext, params: AudiogramFrameParams
     context.textBaseline = "alphabetic";
 
     const titleFade = outroFadeAt(timeSeconds, outroStart, OUTRO_FADE_DELAYS.title);
-    const line1Fade = outroFadeAt(timeSeconds, outroStart, OUTRO_FADE_DELAYS.line1);
-    const line2Fade = outroFadeAt(timeSeconds, outroStart, OUTRO_FADE_DELAYS.line2);
-    const symbolFade = outroFadeAt(timeSeconds, outroStart, OUTRO_FADE_DELAYS.symbol);
     let y = h / 2 - 240;
 
     setFont(context, 56, { tracked: true });
@@ -438,17 +457,22 @@ function paintAudiogramFrame(context: PaintContext, params: AudiogramFrameParams
     y += 200;
 
     setFont(context, 48);
-    context.globalAlpha = outroProg * line1Fade;
-    context.fillText(OUTRO_LINE_1, centerX, y);
-    y += 130;
-    context.globalAlpha = outroProg * line2Fade;
-    context.fillText(OUTRO_LINE_2, centerX, y);
-    y += 150;
+
+    outroLines.forEach((line, index) => {
+      context.globalAlpha =
+        outroProg * outroFadeAt(timeSeconds, outroStart, OUTRO_FADE_DELAYS.line1 + index * 0.4);
+      context.fillText(line, centerX, y);
+      y += index === 0 ? 130 : 90;
+    });
+
+    y += 60;
 
     const symbol = assets.symbols[outroColour.logo];
 
     if (symbol) {
-      context.globalAlpha = outroProg * symbolFade;
+      context.globalAlpha =
+        outroProg *
+        outroFadeAt(timeSeconds, outroStart, OUTRO_FADE_DELAYS.line1 + outroLines.length * 0.4);
       context.drawImage(symbol, centerX - 95, y, 190, 190);
     }
 
@@ -557,17 +581,43 @@ export async function exportAudiogramVideo(
   const guestWay = (typeof state.values["audiogram.guestColourway"] === "string"
     ? state.values["audiogram.guestColourway"]
     : way) as ColourwayKey;
+  const highlightMode =
+    typeof state.values["audiogram.highlight"] === "string"
+      ? (state.values["audiogram.highlight"] as string)
+      : "auto";
+  const highlightLine =
+    typeof state.values["audiogram.highlightLine"] === "number"
+      ? (state.values["audiogram.highlightLine"] as number)
+      : 1;
   const config: AudiogramMotionConfig = {
-    bgDrift: true,
-    breathe: true,
+    bgDrift: state.values["audiogram.breathing"] !== false,
+    breathe: state.values["audiogram.breathing"] !== false,
+    filmTexture: state.values["audiogram.filmTexture"] !== false,
     guestWay: COLOURWAYS[guestWay] ? guestWay : way,
     hasImage: !!sceneImageSrc,
-    highlight: "auto",
+    highlight:
+      highlightMode === "off"
+        ? "off"
+        : highlightMode === "choose"
+          ? Math.max(0, Math.round(highlightLine) - 1)
+          : "auto",
     hostWay: way,
     solid: sceneSource === "solid",
-    speakerSwap: true,
-    wordAccent: true,
+    speakerSwap: state.values["audiogram.crossfade"] !== false,
+    wordAccent: state.values["audiogram.wordAccent"] !== false,
   };
+  const eyebrow =
+    (typeof state.values["audiogram.eyebrow"] === "string"
+      ? (state.values["audiogram.eyebrow"] as string)
+      : ""
+    ).trim() || episode;
+  const outroLines = (typeof state.values["audiogram.outro"] === "string"
+    ? (state.values["audiogram.outro"] as string)
+    : "Listen to the full episode at moremuslim.org.\nOr search for “More Muslim” wherever you get your podcasts."
+  )
+    .split(/\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
   const blocks = buildSpeechBlocks(captions);
   const guest = speakersOf(blocks).guest;
 
@@ -708,6 +758,8 @@ export async function exportAudiogramVideo(
         assets,
         durationSeconds,
         episode,
+        eyebrow,
+        outroLines,
         timeSeconds: (posterStep * POSTERIZE) / FPS,
       });
       frameContext.drawImage(slideCanvas, 0, 0, width, height);

@@ -145,9 +145,12 @@ export function firstName(speaker: string): string {
 export type AudiogramMotionConfig = {
   bgDrift: boolean;
   breathe: boolean;
+  filmTexture: boolean;
   guestWay: ColourwayKey;
   hasImage: boolean;
-  highlight: "auto" | "off";
+  /** "auto" scores the strongest line, "off" disables, a number forces that
+   *  0-based caption block as the highlight. */
+  highlight: "auto" | "off" | number;
   hostWay: ColourwayKey;
   solid: boolean;
   speakerSwap: boolean;
@@ -255,6 +258,12 @@ export function highlightIndex(
     return -1;
   }
 
+  if (typeof config.highlight === "number") {
+    return config.highlight >= 0 && config.highlight < blocks.length
+      ? config.highlight
+      : -1;
+  }
+
   const contentEnd = blocks[blocks.length - 1]?.end ?? 0;
   let best = -1;
   let bestScore = -Infinity;
@@ -336,6 +345,43 @@ export function groundMotion(
   const ty = image && motion ? -10 * p : 0;
 
   return { scale, tx, ty };
+}
+
+/* Gate weave (film-texture): a slow filmic wander of the whole frame plus a
+   whisper of rotation, re-seeded at 6Hz so it drifts rather than trembles. */
+export function gateWeave(
+  config: AudiogramMotionConfig,
+  timeSeconds: number,
+): { wr: number; wx: number; wy: number } {
+  if (!config.filmTexture) {
+    return { wr: 0, wx: 0, wy: 0 };
+  }
+
+  const boil = Math.floor(Math.floor(timeSeconds * AUDIOGRAM_FPS) / 2);
+
+  return {
+    wr: Math.sin(timeSeconds * 0.3 + 2.6) * 0.028,
+    wx: Math.sin(timeSeconds * 0.45 + 1.7) * 1.2 + (frand(boil * 3 + 11) * 2 - 1) * 0.3,
+    wy: Math.cos(timeSeconds * 0.35 + 0.4) * 1.2 + (frand(boil * 3 + 77) * 2 - 1) * 0.3,
+  };
+}
+
+/* Text zoom (film-texture): a slow push on the live caption; a stronger arc on
+   the highlight set piece. Returns the caption block's scale for this frame. */
+export function captionZoom(
+  block: AudiogramSpeechBlock | null,
+  isHighlight: boolean,
+  config: AudiogramMotionConfig,
+  timeSeconds: number,
+): number {
+  if (!config.filmTexture || !block) {
+    return 1;
+  }
+
+  const span = Math.max(1.2, block.end - block.start || 1.2);
+  const progress = clamp01((timeSeconds + SYNC_LEAD - block.start) / span);
+
+  return isHighlight ? 0.98 + 0.1 * progress : 1 + 0.035 * progress;
 }
 
 /* Living grain (feature 4): the noise tile jumps to a fresh deterministic

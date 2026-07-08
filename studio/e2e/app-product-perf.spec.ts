@@ -219,6 +219,110 @@ test("browser perf: audiogram.guestColourway change stays within budget", async 
   );
 });
 
+function audiogramSwitch(page: Page, label: string) {
+  return page
+    .getByRole("group")
+    .filter({ has: page.getByText(label, { exact: true }) })
+    .last()
+    .getByRole("switch");
+}
+
+async function openAudiogram(page: Page): Promise<void> {
+  await openStudio(page);
+  await chooseSelectOption(page, "Template", "Audiogram");
+}
+
+async function measureAudiogramSwitch(page: Page, label: string, scenarioId: string) {
+  await openAudiogram(page);
+
+  const result = await measureToolcraftInteraction(page, async () => {
+    await audiogramSwitch(page, label).click();
+  });
+
+  expectToolcraftScenarioPerformanceBudget(result, appPerformance, scenarioId);
+}
+
+test("browser perf: audiogram.crossfade change stays within budget", async ({ page }) => {
+  await measureAudiogramSwitch(page, "Speaker crossfade", "audiogram-crossfade-change");
+});
+
+test("browser perf: audiogram.breathing change stays within budget", async ({ page }) => {
+  await measureAudiogramSwitch(page, "Breathing & drift", "audiogram-breathing-change");
+});
+
+test("browser perf: audiogram.wordAccent change stays within budget", async ({ page }) => {
+  await measureAudiogramSwitch(page, "Word accent", "audiogram-wordAccent-change");
+});
+
+test("browser perf: audiogram.filmTexture change stays within budget", async ({ page }) => {
+  await measureAudiogramSwitch(page, "Film texture", "audiogram-filmTexture-change");
+});
+
+test("browser perf: audiogram.highlight change stays within budget", async ({ page }) => {
+  await openAudiogram(page);
+
+  const result = await measureToolcraftInteraction(page, async () => {
+    await chooseSelectOption(page, "Highlight", "Off");
+  });
+
+  expectToolcraftScenarioPerformanceBudget(result, appPerformance, "audiogram-highlight-change");
+});
+
+test("browser perf: audiogram.highlightLine change stays within budget", async ({ page }) => {
+  await openAudiogram(page);
+  await chooseSelectOption(page, "Highlight", "Choose line");
+
+  const slider = page
+    .getByRole("group")
+    .filter({ has: page.getByText("Highlight line", { exact: true }) })
+    .last()
+    .getByRole("slider");
+
+  await slider.focus();
+
+  const result = await measureToolcraftInteraction(page, async () => {
+    await slider.press("ArrowRight");
+  });
+
+  expectToolcraftScenarioPerformanceBudget(
+    result,
+    appPerformance,
+    "audiogram-highlightLine-change",
+  );
+});
+
+test("browser perf: audiogram.eyebrow change stays within budget", async ({ page }) => {
+  await openAudiogram(page);
+
+  const eyebrow = page
+    .getByRole("group")
+    .filter({ has: page.getByText("Eyebrow", { exact: true }) })
+    .last()
+    .getByRole("textbox");
+
+  const result = await measureToolcraftInteraction(page, async () => {
+    await eyebrow.fill("Eyebrow perf");
+  });
+
+  expectToolcraftScenarioPerformanceBudget(result, appPerformance, "audiogram-eyebrow-change");
+});
+
+test("browser perf: audiogram.outro change stays within budget", async ({ page }) => {
+  await openAudiogram(page);
+
+  const outro = page
+    .getByRole("group")
+    .filter({ has: page.getByText("Outro lines", { exact: true }) })
+    .last()
+    .getByRole("textbox");
+
+  const result = await measureToolcraftInteraction(page, async () => {
+    await outro.fill("One outro line");
+  });
+
+  expectToolcraftScenarioPerformanceBudget(result, appPerformance, "audiogram-outro-change");
+});
+
 test("browser perf: scene.source change stays within budget", async ({ page }) => {
   await openStudio(page);
 

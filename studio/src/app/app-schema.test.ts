@@ -63,6 +63,14 @@ describe("appSchema", () => {
       "audiogram.audio",
       "audiogram.captions",
       "audiogram.guestColourway",
+      "audiogram.crossfade",
+      "audiogram.breathing",
+      "audiogram.wordAccent",
+      "audiogram.filmTexture",
+      "audiogram.highlight",
+      "audiogram.highlightLine",
+      "audiogram.eyebrow",
+      "audiogram.outro",
       "carousel.episode",
       "carousel.slides",
       "export.includeBackground",
@@ -217,6 +225,50 @@ describe("appSchema", () => {
       "browser perf: audiogram.guestColourway change stays within budget",
     );
     expect(Object.keys(scenario?.budget ?? {}).length).toBeGreaterThan(0);
+  });
+
+  const expectMotionScenario = (id: string) => {
+    const scenario = appPerformance.scenarios.find((entry) => entry.id === id);
+
+    expect(scenario?.interaction).toBe("control-change");
+    expect(Object.keys(scenario?.budget ?? {}).length).toBeGreaterThan(0);
+  };
+
+  it("performance: audiogram.crossfade scenario is declared", () => {
+    expectMotionScenario("audiogram-crossfade-change");
+  });
+
+  it("performance: audiogram.breathing scenario is declared", () => {
+    expectMotionScenario("audiogram-breathing-change");
+  });
+
+  it("performance: audiogram.wordAccent scenario is declared", () => {
+    expectMotionScenario("audiogram-wordAccent-change");
+  });
+
+  it("performance: audiogram.filmTexture scenario is declared", () => {
+    expectMotionScenario("audiogram-filmTexture-change");
+  });
+
+  it("performance: audiogram.highlight scenario is declared", () => {
+    expectMotionScenario("audiogram-highlight-change");
+  });
+
+  it("performance: audiogram.highlightLine scenario is declared", () => {
+    const scenario = appPerformance.scenarios.find(
+      (entry) => entry.id === "audiogram-highlightLine-change",
+    );
+
+    expect(scenario?.interaction).toBe("control-drag");
+    expect(Object.keys(scenario?.budget ?? {}).length).toBeGreaterThan(0);
+  });
+
+  it("performance: audiogram.eyebrow scenario is declared", () => {
+    expectMotionScenario("audiogram-eyebrow-change");
+  });
+
+  it("performance: audiogram.outro scenario is declared", () => {
+    expectMotionScenario("audiogram-outro-change");
   });
 
   it("performance: scene.source scenario is declared", () => {

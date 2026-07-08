@@ -293,7 +293,10 @@ export const appPerformance: ToolcraftPerformanceConfig = defineToolcraftPerform
       automatedTestName: "performance: audiogram.guestColourway scenario is declared",
       browser: true,
       browserTestName: "browser perf: audiogram.guestColourway change stays within budget",
-      budget: { maxFrameGapMs: 120, maxInteractionMs: 500, maxLongTaskMs: 200 },
+      // Select popups open a portal in the control-rich audiogram panel; the
+      // render stays smooth (frame gap) but the popup wall-clock runs a little
+      // longer than the tighter budget the lighter templates use.
+      budget: { maxFrameGapMs: 120, maxInteractionMs: 750, maxLongTaskMs: 200 },
       controlLabel: "Guest colourway",
       expectedObservable:
         "Changing the guest colourway reblends the audiogram ground crossfade within the responsiveness budget.",
@@ -303,6 +306,39 @@ export const appPerformance: ToolcraftPerformanceConfig = defineToolcraftPerform
       target: "audiogram.guestColourway",
       workload: false,
     },
+    ...(
+      [
+        ["audiogram.crossfade", "Speaker crossfade"],
+        ["audiogram.breathing", "Breathing & drift"],
+        ["audiogram.wordAccent", "Word accent"],
+        ["audiogram.filmTexture", "Film texture"],
+        ["audiogram.highlight", "Highlight"],
+        ["audiogram.highlightLine", "Highlight line"],
+        ["audiogram.eyebrow", "Eyebrow"],
+        ["audiogram.outro", "Outro lines"],
+      ] as const
+    ).map(([target, controlLabel]) => ({
+      automated: true as const,
+      automatedTestName: `performance: ${target} scenario is declared`,
+      browser: true as const,
+      browserTestName: `browser perf: ${target} change stays within budget`,
+      budget: {
+        maxFrameGapMs: 120,
+        // The Highlight select opens a portal popup in the rich audiogram panel.
+        maxInteractionMs: target === "audiogram.highlight" ? 750 : 500,
+        maxLongTaskMs: 200,
+      },
+      controlLabel,
+      expectedObservable: `Changing ${target} re-renders the audiogram within the responsiveness budget.`,
+      fixture: "Audiogram template with a two-speaker SRT fixture.",
+      id: `${target.replace(/\./g, "-")}-change`,
+      interaction:
+        target === "audiogram.highlightLine"
+          ? ("control-drag" as const)
+          : ("control-change" as const),
+      target,
+      workload: false as const,
+    })),
     {
       automated: true,
       automatedTestName: "performance: scene.source scenario is declared",

@@ -17,7 +17,9 @@ import {
 import {
   activeBlockIndex,
   breatheOpacity,
+  captionZoom,
   firstName,
+  gateWeave,
   GRAIN_DATA_URI,
   GRAIN_TILE_SIZE,
   grainCompositing,
@@ -535,12 +537,9 @@ export type AudiogramMotionProps = {
   envelope: Float32Array | null;
   episode: string;
   guest: string;
+  outroLines: readonly string[];
   timeSeconds: number;
 };
-
-const OUTRO_LINE_1 = "Listen to the full episode at moremuslim.org.";
-const OUTRO_LINE_2 =
-  "Or search for “More Muslim” wherever you get your podcasts.";
 
 /* One textured (pattern/solid) ground layer with the slow push-in + pan
    (feature 10), the audio-envelope breathing tile (feature 3), and the living
@@ -592,19 +591,21 @@ function AudiogramGround({
           />
         ) : null}
       </div>
-      <div
-        aria-hidden="true"
-        style={{
-          backgroundImage: `url("${GRAIN_DATA_URI}")`,
-          backgroundPosition: `${grainOffset.gx}px ${grainOffset.gy}px`,
-          backgroundSize: `${GRAIN_TILE_SIZE}px ${GRAIN_TILE_SIZE}px`,
-          inset: 0,
-          mixBlendMode: grain.blend as React.CSSProperties["mixBlendMode"],
-          opacity: grain.opacity,
-          pointerEvents: "none",
-          position: "absolute",
-        }}
-      />
+      {config.filmTexture ? (
+        <div
+          aria-hidden="true"
+          style={{
+            backgroundImage: `url("${GRAIN_DATA_URI}")`,
+            backgroundPosition: `${grainOffset.gx}px ${grainOffset.gy}px`,
+            backgroundSize: `${GRAIN_TILE_SIZE}px ${GRAIN_TILE_SIZE}px`,
+            inset: 0,
+            mixBlendMode: grain.blend as React.CSSProperties["mixBlendMode"],
+            opacity: grain.opacity,
+            pointerEvents: "none",
+            position: "absolute",
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -644,6 +645,12 @@ export function AudiogramPost({
 
   const words = active?.words ?? [];
   const speakerLabel = active ? firstName(active.speaker) : "";
+  // Film texture: a slow gate-weave wander + text zoom, applied to the caption
+  // only so the eyebrow and footer stay perfectly still.
+  const weave = gateWeave(config, timeSeconds);
+  const zoom = captionZoom(active, isHighlight, config, timeSeconds);
+  const captionTransform = `scale(${zoom.toFixed(4)}) translate(${weave.wx.toFixed(2)}px, ${weave.wy.toFixed(2)}px) rotate(${weave.wr.toFixed(3)}deg)`;
+  const outroLines = motion.outroLines;
 
   return (
     <div
@@ -756,6 +763,8 @@ export function AudiogramPost({
                 lineHeight: 1.06,
                 margin: isHighlight ? "0 auto" : 0,
                 maxWidth: isHighlight ? 880 : TEXT_WIDTH.story,
+                transform: captionTransform,
+                transformOrigin: isHighlight ? "center" : "0% 22%",
               }}
             >
               {words.map((word, index) => {
@@ -841,22 +850,38 @@ export function AudiogramPost({
               <br />
               Now Streaming
             </div>
-            <div
-              data-toolcraft-product-text=""
-              style={{ fontSize: 48, lineHeight: 1.18, marginTop: 140, maxWidth: 860, opacity: outroFadeAt(timeSeconds, outroStart, OUTRO_FADE_DELAYS.line1) }}
-            >
-              {OUTRO_LINE_1}
-            </div>
-            <div
-              data-toolcraft-product-text=""
-              style={{ fontSize: 48, lineHeight: 1.24, marginTop: 90, maxWidth: 860, opacity: outroFadeAt(timeSeconds, outroStart, OUTRO_FADE_DELAYS.line2) }}
-            >
-              {OUTRO_LINE_2}
-            </div>
+            {outroLines.map((line, index) => (
+              <div
+                data-toolcraft-product-text=""
+                key={index}
+                style={{
+                  fontSize: 48,
+                  lineHeight: 1.2,
+                  marginTop: index === 0 ? 140 : 90,
+                  maxWidth: 860,
+                  opacity: outroFadeAt(
+                    timeSeconds,
+                    outroStart,
+                    OUTRO_FADE_DELAYS.line1 + index * 0.4,
+                  ),
+                }}
+              >
+                {line}
+              </div>
+            ))}
             <img
               alt=""
               src={SYMBOLS[outroColour.logo]}
-              style={{ height: 190, marginTop: 150, opacity: outroFadeAt(timeSeconds, outroStart, OUTRO_FADE_DELAYS.symbol), width: 190 }}
+              style={{
+                height: 190,
+                marginTop: 150,
+                opacity: outroFadeAt(
+                  timeSeconds,
+                  outroStart,
+                  OUTRO_FADE_DELAYS.line1 + outroLines.length * 0.4,
+                ),
+                width: 190,
+              }}
             />
           </div>
         </div>

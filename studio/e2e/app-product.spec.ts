@@ -683,6 +683,48 @@ async function setupAudiogram(page: Page): Promise<void> {
   });
 }
 
+test("runtime: audiogram motion controls change the frame", async ({ page }) => {
+  test.setTimeout(60_000);
+  await setupAudiogram(page);
+
+  // The Highlight select accepts each mode without error.
+  await chooseSelectOption(page, "Highlight", "Off");
+  await chooseSelectOption(page, "Highlight", "Auto");
+
+  // Film texture toggles the living grain overlay on the preview.
+  const grainCount = () =>
+    page.evaluate(
+      () =>
+        document.querySelectorAll(
+          '#mm-post-slide [style*="mix-blend-mode: overlay"], #mm-post-slide [style*="mix-blend-mode: screen"]',
+        ).length,
+    );
+
+  await expect.poll(grainCount).toBeGreaterThan(0);
+
+  await page
+    .getByRole("group")
+    .filter({ has: page.getByText("Film texture", { exact: true }) })
+    .last()
+    .getByRole("switch")
+    .click();
+
+  await expect.poll(grainCount).toBe(0);
+});
+
+test("runtime: audiogram eyebrow and outro text render", async ({ page }) => {
+  await setupAudiogram(page);
+
+  const eyebrow = page
+    .getByRole("group")
+    .filter({ has: page.getByText("Eyebrow", { exact: true }) })
+    .last()
+    .getByRole("textbox");
+
+  await eyebrow.fill("Custom Eyebrow Label");
+  await expect(page.locator(slideSelector)).toContainText("Custom Eyebrow Label");
+});
+
 test("app controls: uploading audio sets the timeline duration", async ({ page }) => {
   await setupAudiogram(page);
 

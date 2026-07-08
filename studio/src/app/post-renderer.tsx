@@ -594,17 +594,37 @@ export function PostRenderer(): React.JSX.Element {
       null)
     : null;
   const envelope = useAudioEnvelope(audioUrl);
+  const highlightMode = readString(values["audiogram.highlight"], "auto");
+  const highlightLine =
+    typeof values["audiogram.highlightLine"] === "number"
+      ? (values["audiogram.highlightLine"] as number)
+      : 1;
   const audiogramConfig: AudiogramMotionConfig = {
-    bgDrift: true,
-    breathe: true,
+    bgDrift: values["audiogram.breathing"] !== false,
+    breathe: values["audiogram.breathing"] !== false,
+    filmTexture: values["audiogram.filmTexture"] !== false,
     guestWay: (readString(values["audiogram.guestColourway"], way) || way) as ColourwayKey,
     hasImage: !!scene.image,
-    highlight: "auto",
+    highlight:
+      highlightMode === "off"
+        ? "off"
+        : highlightMode === "choose"
+          ? Math.max(0, Math.round(highlightLine) - 1)
+          : "auto",
     hostWay: way,
     solid: !scene.image && scene.pattern === false,
-    speakerSwap: true,
-    wordAccent: true,
+    speakerSwap: values["audiogram.crossfade"] !== false,
+    wordAccent: values["audiogram.wordAccent"] !== false,
   };
+  const audiogramEyebrow =
+    readString(values["audiogram.eyebrow"]).trim() || readString(values["content.episode"]);
+  const audiogramOutro = readString(
+    values["audiogram.outro"],
+    "Listen to the full episode at moremuslim.org.\nOr search for “More Muslim” wherever you get your podcasts.",
+  )
+    .split(/\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
 
   return (
     <div
@@ -640,8 +660,9 @@ export function PostRenderer(): React.JSX.Element {
               config: audiogramConfig,
               durationSeconds: timelineDuration,
               envelope,
-              episode: readString(values["content.episode"]),
+              episode: audiogramEyebrow,
               guest,
+              outroLines: audiogramOutro,
               timeSeconds: timelineTime,
             }}
             scene={scene}

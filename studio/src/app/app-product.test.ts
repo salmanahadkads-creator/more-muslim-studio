@@ -317,6 +317,44 @@ describe("More Muslim Social Studio schema", () => {
     });
   });
 
+  it("schema: audiogram.crossfade toggles the speaker crossfade", () => {
+    expect(findControl(appSchema, "audiogram.crossfade")?.type).toBe("switch");
+  });
+
+  it("schema: audiogram.breathing toggles envelope breathing and drift", () => {
+    expect(findControl(appSchema, "audiogram.breathing")?.type).toBe("switch");
+  });
+
+  it("schema: audiogram.wordAccent toggles the spoken-word accent", () => {
+    expect(findControl(appSchema, "audiogram.wordAccent")?.type).toBe("switch");
+  });
+
+  it("schema: audiogram.filmTexture toggles grain, gate weave, and text zoom", () => {
+    expect(findControl(appSchema, "audiogram.filmTexture")?.type).toBe("switch");
+  });
+
+  it("schema: audiogram.highlight offers auto, off, and choose", () => {
+    const control = findControl(appSchema, "audiogram.highlight");
+
+    expect(control?.type).toBe("select");
+    expect(optionValues(control)).toEqual(["auto", "off", "choose"]);
+  });
+
+  it("schema: audiogram.highlightLine picks the highlighted caption block", () => {
+    const control = findControl(appSchema, "audiogram.highlightLine");
+
+    expect(control?.type).toBe("slider");
+    expect(control?.visibleWhen).toEqual({ equals: "choose", target: "audiogram.highlight" });
+  });
+
+  it("schema: audiogram.eyebrow overrides the frame eyebrow", () => {
+    expect(findControl(appSchema, "audiogram.eyebrow")?.type).toBe("text");
+  });
+
+  it("schema: audiogram.outro sets the closing-card lines", () => {
+    expect(findControl(appSchema, "audiogram.outro")?.type).toBe("code");
+  });
+
   it("schema: export.video.format offers mp4 and webm containers", () => {
     const control = findControl(appSchema, "export.video.format");
 
