@@ -483,7 +483,7 @@ export async function exportAudiogramVideo(
     (asset) => asset.sourceTarget === "audiogram.audio",
   );
 
-  // Decode audio for the AAC track; its duration drives the video duration.
+  // Decode audio for the AAC/Opus track; its duration drives the video duration.
   let audioBuffer: AudioBuffer | null = null;
 
   if (audioAsset) {
@@ -492,6 +492,24 @@ export async function exportAudiogramVideo(
 
     audioBuffer = await audioContext.decodeAudioData(bytes);
     await audioContext.close();
+
+    // WebCodecs audio encoders only accept 44.1kHz or 48kHz; resample anything
+    // else (e.g. an 8kHz voice memo) up to 48kHz through an OfflineAudioContext
+    // so the export never rejects an odd input rate.
+    if (audioBuffer.sampleRate !== 44_100 && audioBuffer.sampleRate !== 48_000) {
+      const targetRate = 48_000;
+      const offline = new OfflineAudioContext(
+        audioBuffer.numberOfChannels,
+        Math.max(1, Math.ceil(audioBuffer.duration * targetRate)),
+        targetRate,
+      );
+      const source = offline.createBufferSource();
+
+      source.buffer = audioBuffer;
+      source.connect(offline.destination);
+      source.start();
+      audioBuffer = await offline.startRendering();
+    }
   }
 
   const durationSeconds = Math.max(

@@ -1730,6 +1730,15 @@ export function ControlsPanel({
   }
 
   function isControlVisible(control: ToolcraftControlSchema): boolean {
+    // The runtime Setup "Timeline" toggle only makes sense while the timeline
+    // panel itself is shown; hide it wherever the panel is hidden.
+    if (
+      isToolcraftTimelinePanelExtendedTarget(control.target) &&
+      state.panels.timeline.hidden === true
+    ) {
+      return false;
+    }
+
     return control.visibleWhen ? conditionMatches(control.visibleWhen) : true;
   }
 
