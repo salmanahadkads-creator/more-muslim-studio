@@ -100,6 +100,13 @@ describe("More Muslim Social Studio schema", () => {
     expect(row?.expectedObservable).toMatch(/zoom|scale/i);
   });
 
+  it("runtime: double-click edits preview text", () => {
+    const row = appAcceptance.find((entry) => entry.id === "runtime.inlineText.edit");
+
+    expect(row?.kind).toBe("runtime");
+    expect(row?.expectedObservable).toMatch(/double-click|edit/i);
+  });
+
   it("schema: scene.illustration lists all ten episode artworks", () => {
     const control = findControl(appSchema, "scene.illustration");
     const items = (control?.items ?? []).map((item) => item.value);

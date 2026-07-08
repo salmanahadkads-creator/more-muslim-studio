@@ -740,6 +740,20 @@ export const appAcceptance: readonly ToolcraftComponentAcceptance[] = [
   },
   {
     automated: true,
+    automatedTestName: "runtime: double-click edits preview text",
+    browser: true,
+    browserTestName: "runtime: double-clicking preview text edits it inline",
+    componentType: "runtime",
+    evidence: "product-output",
+    expectedObservable:
+      "Double-clicking an editable product text element on the preview makes it editable in place; committing writes the new text back to its content.* runtime value, so the panel field and the slide both update.",
+    fixture: "Default cover post.",
+    id: "runtime.inlineText.edit",
+    kind: "runtime",
+    userAction: "Double-click the cover title on the preview and type a new title.",
+  },
+  {
+    automated: true,
     automatedTestName: "schema: audiogram.audio is a single audio fileDrop",
     browser: true,
     browserTestName: "app controls: uploading audio sets the timeline duration",

@@ -510,6 +510,39 @@ test("runtime: filmstrip duplicate adds a copy", async ({ page }) => {
   await expect(filmstripSlides(page)).toHaveCount(6);
 });
 
+test("runtime: double-clicking preview text edits it inline", async ({ page }) => {
+  await openStudio(page);
+
+  const title = page.locator('[data-edit-target="content.cover.title"]');
+
+  await expect(title).toBeVisible();
+
+  // The tall 4:5 frame overflows the short test viewport; zoom the canvas out
+  // until the title sits fully inside the viewport so it is double-clickable.
+  const zoomOut = page.getByRole("button", { name: "Zoom out" });
+
+  await expect
+    .poll(async () => {
+      const box = await title.boundingBox();
+
+      if (box && box.y > 8 && box.y + box.height < 712) {
+        return true;
+      }
+
+      await zoomOut.click();
+      return false;
+    }, { timeout: 15_000 })
+    .toBe(true);
+
+  await title.dblclick();
+  await page.keyboard.press("ControlOrMeta+a");
+  await page.keyboard.type("Inline Edited Title");
+  await page.keyboard.press("Enter");
+
+  // The edit committed to the runtime value, so the slide re-renders with it.
+  await expect(title).toHaveText("Inline Edited Title");
+});
+
 test("runtime: selecting a filmstrip slide swaps the slide values", async ({ page }) => {
   await openStudio(page);
   await buildEpisodeSet(page);

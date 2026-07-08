@@ -166,9 +166,18 @@ export function PostFrame({
   );
 }
 
-function Eyebrow({ ink, text }: { ink: string; text: string }): React.JSX.Element {
+function Eyebrow({
+  editTarget,
+  ink,
+  text,
+}: {
+  editTarget?: string;
+  ink: string;
+  text: string;
+}): React.JSX.Element {
   return (
     <div
+      data-edit-target={editTarget}
       data-toolcraft-product-text=""
       style={{
         color: ink,
@@ -231,8 +240,9 @@ export function CoverPost({
 
   return (
     <PostFrame format={format} padBottom={isStory ? 370 : 85} padTop={isStory ? 370 : 85} way={way} {...scene}>
-      <Eyebrow ink={c.ink} text={values.presents} />
+      <Eyebrow editTarget="content.cover.presents" ink={c.ink} text={values.presents} />
       <h1
+        data-edit-target="content.cover.title"
         data-toolcraft-product-text=""
         style={{
           fontSize: 77,
@@ -253,6 +263,7 @@ export function CoverPost({
           style={{ flex: "none", height: 216, transform: "translate(-37px, 36px)", width: 216 }}
         />
         <div
+          data-edit-target="content.episode"
           data-toolcraft-product-text=""
           style={{
             color: c.ink,
@@ -295,7 +306,7 @@ export function QuotePost({
   return (
     <PostFrame format={format} padBottom={isStory ? 370 : 85} padTop={isStory ? 370 : 85} way={way} {...scene}>
       <div style={{ marginBottom: isStory ? 80 : 56 }}>
-        <Eyebrow ink={c.ink} text={values.episode} />
+        <Eyebrow editTarget="content.episode" ink={c.ink} text={values.episode} />
       </div>
       <div
         style={{
@@ -360,11 +371,14 @@ export function SynopsisPost({
   return (
     <PostFrame format={format} padBottom={isStory ? 370 : 85} padTop={isStory ? 370 : 85} way={way} {...scene}>
       <div style={{ marginBottom: 64, textAlign: "center" }}>
-        <Eyebrow ink={c.ink} text={values.episode} />
+        <Eyebrow editTarget="content.episode" ink={c.ink} text={values.episode} />
       </div>
       <div style={{ display: "flex", flex: 1, flexDirection: "column", gap: 40, justifyContent: "center" }}>
         {paragraphs.map((paragraph, index) => (
           <p
+            data-edit-index={index}
+            data-edit-separator="\n\n"
+            data-edit-target="content.synopsis.body"
             data-toolcraft-product-text=""
             key={index}
             style={{ fontSize: bodySize, margin: 0, maxWidth: TEXT_WIDTH[format], textWrap: "pretty" }}
@@ -439,6 +453,9 @@ export function NowStreamingPost({
         </h2>
         {lines.map((line, index) => (
           <p
+            data-edit-index={index}
+            data-edit-separator="\n"
+            data-edit-target="content.streaming.lines"
             data-toolcraft-product-text=""
             key={index}
             style={{ fontSize: 56, margin: "0 auto", maxWidth: TEXT_WIDTH[format], textAlign: "center" }}

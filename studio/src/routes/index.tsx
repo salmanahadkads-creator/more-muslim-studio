@@ -11,6 +11,7 @@ import {
 import { exportAudiogramVideo } from "../app/export-audiogram";
 import { exportCarouselZip, exportPostImage } from "../app/export-post";
 import { CarouselFilmstrip } from "../app/carousel-filmstrip";
+import { InlineTextEditor } from "../app/inline-text-editor";
 import { PostRenderer } from "../app/post-renderer";
 import { SceneImageControls } from "../app/scene-image-controls";
 import { StudioChrome } from "../app/studio-chrome";
@@ -26,6 +27,7 @@ export function AppHome(): React.JSX.Element {
             <PostRenderer />
             <CarouselFilmstrip />
             <SceneImageControls />
+            <InlineTextEditor />
           </>
         }
       className="h-dvh min-h-dvh"
