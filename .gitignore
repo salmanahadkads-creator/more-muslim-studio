@@ -1,3 +1,5 @@
 .vercel
 .DS_Store
 **/.DS_Store
+# AE / motion reference material — never shipped (also in .vercelignore). Kept on disk, out of git.
+assorted/
