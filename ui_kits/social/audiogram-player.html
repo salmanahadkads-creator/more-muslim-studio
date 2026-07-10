@@ -57,14 +57,18 @@ const DEFAULT_CFG = {
   hostWay:'beige', guestWay:'oak',
   episodeEyebrow:'IN THERAPY, WITH SHEIKHAGPT',
   outroWay:'night', outroDuration:5,
+  finalCard:true, finalCardDuration:2.5, // trailing beat after the outro: just the logo lockup
   outroEpisode:'EPISODE 7',
   outroLine1:'Listen to the full episode at moremuslim.org.',
   outroLine2:'Or search for \u201CMore Muslim\u201D on Apple Podcasts, Spotify, or wherever you listen to podcasts.',
   wordMotion:'fade', captionSize:'L',
   showSpeakerLabel:true, bgDrift:true, illusTint:true, solidBg:false,
   highlight:'auto', // 'auto' | 'off' | block index \u2014 one sentence rendered as a large italic set piece
+  blockRoles:{},    // per-sentence scene role: block index \u2192 'setpiece' | 'title' (absent = caption)
+  titleText:'In Therapy, with SheikhaGPT', // big serif line on the title-card scene
   speakerSwap:true, breathe:true, wordAccent:true,
   gateWeave:true, textZoom:true, paperTexture:true, printJitter:true,
+  posterize:true, // 12fps stop-motion feel; off = smooth continuous motion
   imgZoom:1, imgCropX:50, imgCropY:50,
   srt:DEFAULT_SRT, audioSrc:null,
 };
@@ -361,15 +365,28 @@ class AudiogramPlayer extends React.Component {
     return best;
   }
 
+  // Scene role for a block: explicit assignment wins; otherwise one auto set piece
+  // (suppressed as soon as any set piece has been chosen by hand).
+  roleFor(i) {
+    const c=this.state.cfg, roles=c.blockRoles||{};
+    if (roles[i]==='title' || roles[i]==='setpiece') return roles[i];
+    if (typeof c.highlight==='number') return i===c.highlight ? 'setpiece' : 'caption';
+    const manual=Object.values(roles).includes('setpiece');
+    if (c.highlight!=='off' && !manual && i===this.highlightIndex()) return 'setpiece';
+    return 'caption';
+  }
+
   tick = () => {
     const a=this.audio;
     if (a && !a.paused) {
       const dur=isFinite(a.duration)?a.duration:0;
       if (!this.state.duration&&dur) this.setState({duration:dur});
       if (dur) { const ct=a.currentTime; a.volume=clamp01(ct/AUDIO_FADE_IN)*(1-clamp01((ct-(dur-AUDIO_FADE_OUT))/AUDIO_FADE_OUT)); } // fade in + out every frame
-      // Throttle React re-render + postMessage to ~FPS (drift/caption fades stay smooth)
+      // Throttle React re-render + postMessage to ~FPS for the 12fps stop-motion feel.
+      // With posterize off, update on every rAF tick instead — smooth continuous motion.
+      const posterize = this.state.cfg.posterize!==false;
       const now = performance.now();
-      if (!this._lastTick || now - this._lastTick >= 1000/FPS) {
+      if (!posterize || !this._lastTick || now - this._lastTick >= 1000/FPS) {
         this._lastTick = now;
         this.setState({t:a.currentTime});
         if (IS_IFRAME) window.parent.postMessage({type:'audiogram-time',t:a.currentTime,duration:dur,playing:true},'*');
@@ -412,7 +429,7 @@ class AudiogramPlayer extends React.Component {
   groundLayer(way, opacity, key) {
     const w=this.ways[way]||this.ways.beige, t=this.state.t, cfg=this.state.cfg;
     // Slow push-in scaled to the clip's actual length — perceptible but calm.
-    const total=Math.max(1, this.state.duration || ((this.contentEnd||0)+(cfg.outroDuration||5)));
+    const total=Math.max(1, this.state.duration || ((this.contentEnd||0)+this.tailDuration()));
     const p=clamp01(t/total), motion=cfg.bgDrift!==false;
     // Slow left-right pan on anything with texture. Illustrations are zoomed a little extra
     // (1.09 → ~49px overhang each side) so the ±24px sweep never bares an edge; pattern tiles
@@ -445,9 +462,32 @@ class AudiogramPlayer extends React.Component {
     );
   }
 
-  buildCaption(ink, accent, isHi) {
+  buildCaption(ink, accent, role) {
     const active=this.activeBlock(); if (!active) return null;
     const {cfg}=this.state, motion=cfg.wordMotion, t=this.state.t+SYNC_LEAD;
+    const isHi = role==='setpiece';
+
+    // Title-card scene: the block's time carries the episode title instead of its caption —
+    // one static line + the symbol, fading in like a set piece (no per-word motion). The
+    // symbol itself gets its own reveal: it settles from a slight counter-rotation and
+    // smaller scale into true rest — a deliberate intro beat, not ambient chrome motion.
+    if (role==='title') {
+      const fade=clamp01((t-active.start)/0.4);
+      const w=this.ways[this.groundState().cur]||this.ways.beige;
+      const title=cfg.titleText||'';
+      const p=t-active.start;
+      const reveal=clamp01(p/0.7);
+      const ease=1-Math.pow(1-reveal,3); // easeOutCubic — a settle, not a linear pop
+      const symScale=0.55+0.45*ease;
+      const symRotate=(1-ease)*-28;
+      return (
+        <div style={{color:ink,width:'100%',textAlign:'center',opacity:fade}}>
+          <div style={{fontSize:cfg.captionSize==='M'?84:96,lineHeight:1.06,maxWidth:880,margin:'0 auto'}}>{title}</div>
+          <img src={`../../assets/logos/symbol-${w.logo}.svg`} alt="" style={{width:150,height:150,marginTop:84,transform:`scale(${symScale.toFixed(3)}) rotate(${symRotate.toFixed(2)}deg)`,transformOrigin:'50% 50%'}} />
+        </div>
+      );
+    }
+
     const size = isHi ? (cfg.captionSize==='M'?62:82) : (cfg.captionSize==='M'?48:69);
     const spans=[];
     const words=active.words;
@@ -460,6 +500,7 @@ class AudiogramPlayer extends React.Component {
       const color = cfg.wordAccent===false ? ink : hexMix(accent, ink, clamp01((t-nxt)/0.3));
       spans.push(<span key={i} style={{display:'inline-block',opacity:op,transform:`translateY(${(1-op)*10}px)`,marginRight:'0.28em',color}}>{w.text}</span>);
     });
+
     return (
       <div style={{color:ink, width:isHi?'100%':'auto', textAlign:isHi?'center':'left'}}>
         {cfg.showSpeakerLabel && !isHi && <div style={{fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',marginBottom:28,color:accent}}>{this.firstName(active.speaker)}</div>}
@@ -468,9 +509,19 @@ class AudiogramPlayer extends React.Component {
     );
   }
 
+  // Outro + final logo card, chained: outroDuration seconds of the episode outro,
+  // then finalCardDuration seconds of the plain logo card (unless finalCard is off).
+  tailDuration() {
+    const c=this.state.cfg;
+    return (c.outroDuration||5) + (c.finalCard===false ? 0 : (c.finalCardDuration||2.5));
+  }
   outroStart() {
     const dur=this.state.duration||0; if (!dur) return Infinity;
-    return Math.max((this.contentEnd||0)+0.3, dur-(this.state.cfg.outroDuration||5));
+    return Math.max((this.contentEnd||0)+0.3, dur-this.tailDuration());
+  }
+  finalCardStart() {
+    const os=this.outroStart(); if (!isFinite(os) || this.state.cfg.finalCard===false) return Infinity;
+    return os + (this.state.cfg.outroDuration||5);
   }
   fmt(s) { s=Math.max(0,Math.floor(s||0)); return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; }
   togglePlay=()=>{ const a=this.audio; if(!a) return; if(a.paused) a.play(); else a.pause(); };
@@ -511,9 +562,12 @@ class AudiogramPlayer extends React.Component {
     return canvas;
   };
 
-  // Offline 1080p (1080×1920) H.264 export — 24fps container, visuals posterized to 12fps
-  // (each animation frame is held for two output frames, the After Effects "posterize time"
-  // look). Each visual state is rendered deterministically from state.t and snapshotted once.
+  // Offline 1080p (1080×1920) H.264 export — 24fps container. With posterize on, visuals
+  // are posterized to 12fps (each animation frame held for two output frames, the After
+  // Effects "posterize time" look); with posterize off, every output frame gets its own
+  // snapshot for smooth continuous motion (roughly double the render time — grain/gate-weave
+  // reseed cadence is unaffected either way, it's tied to FPS not the render rate).
+  // Each visual state is rendered deterministically from state.t and snapshotted once.
   exportVideo = async () => {
     if (this.state.exporting) return;
     if (typeof VideoEncoder === 'undefined' || !window.Mp4Muxer) {
@@ -522,10 +576,11 @@ class AudiogramPlayer extends React.Component {
       return;
     }
     this._inlineCache = {}; // re-inline assets fresh for this export
-    const animFps = FPS, outFps = FPS * 2, W = 1080, H = 1920;
+    const outFps = FPS * 2, W = 1080, H = 1920;
+    const animFps = this.state.cfg.posterize!==false ? FPS : outFps;
     const a = this.audio;
     const audioDur = a && isFinite(a.duration) && a.duration ? a.duration : 0;
-    const total = Math.max((this.contentEnd || 0) + (this.state.cfg.outroDuration || 5), audioDur);
+    const total = Math.max((this.contentEnd || 0) + this.tailDuration(), audioDur);
     const totalFrames = Math.max(1, Math.ceil(total * outFps));
     const wasStarted = this.state.started;
     if (a && !a.paused) a.pause();
@@ -619,8 +674,9 @@ class AudiogramPlayer extends React.Component {
     const {cfg,t,scale,playing,exporting,exportPct}=this.state;
     const active=this.activeBlock();
     const gs=this.groundState();
-    const hi=this.highlightIndex();
-    const isHi = hi>=0 && active && (this.blocks||[]).indexOf(active)===hi;
+    const ai = active ? (this.blocks||[]).indexOf(active) : -1;
+    const role = ai>=0 ? this.roleFor(ai) : 'caption';
+    const isSet = role==='setpiece' || role==='title'; // full-frame scenes: chrome recedes, text centres
 
     const os=this.outroStart();
     const oProg=isFinite(os)?clamp01((t-os)/0.6):0;
@@ -630,27 +686,87 @@ class AudiogramPlayer extends React.Component {
     if (outroWay==='carry') { const lb=this.blocks&&this.blocks[this.blocks.length-1]; outroWay=(lb&&this.guest&&lb.speaker===this.guest)?cfg.guestWay:cfg.hostWay; }
     const ow=this.ways[outroWay]||this.ways.night;
     const symSrc=`../../assets/logos/symbol-${ow.logo}.svg`;
-    const dur=this.state.duration||((this.contentEnd||0)+cfg.outroDuration)||1;
+    // ── Final card: the logo reveal ─────────────────────────────────────────────
+    // Motion-design rule #1 here: NEVER crossfade two copies of the same mark. The old
+    // version dissolved a standalone symbol out while the lockup's embedded symbol faded
+    // in at the same spot — two near-identical shapes blending (one still rotating) reads
+    // as ghosting/shimmer, i.e. "not smooth". Instead we compose the lockup from ADJACENT,
+    // non-overlapping regions so only ONE symbol ever exists:
+    //   • the standalone symbol owns the mark's zone (lockup-local x 81→196px @ 756 wide)
+    //   • the wordmark is the lockup image, shown through an overflow-hidden window that
+    //     starts at the symbol's right edge (local x196) and grows rightward — a clean
+    //     wipe, not a dissolve. overflow:hidden rasterises reliably in the export snapshot
+    //     (clip-path through the foreignObject path is not guaranteed to).
+    // Geometry from the SVGs themselves: logo-horizontal viewBox 2400×890.266; its drawn
+    // symbol is a 364.02² box centred at (440.37,445.13). At 70% card width (756px) that
+    // puts the symbol centre at screen (300.72, 960) and its right edge at lockup-local 196.
+    const fs=this.finalCardStart();
+    // Quick cut to opaque (not the 0.6s dissolve the other outro card uses) so the reveal
+    // plays on a clean ground, not the previous card ghosting through.
+    const fProg=isFinite(fs)?clamp01((t-fs)/0.15):0;
+    const fp=t-fs; // time since the final card started
+    const easeInOut=(x)=> x<0.5 ? 4*x*x*x : 1-Math.pow(-2*x+2,3)/2; // easeInOutCubic — no front-loaded jump
+    const STANDALONE_FILL=0.65;
+    // Per-variant lockup geometry MEASURED from each SVG at a 756px render (by canvas
+    // alpha-scan). Besides the mark (symCx/symW/symRight) we record the drawn CONTENT extent
+    // cL..cR (symbol-left edge → wordmark-right edge), because the colour variants are cropped
+    // differently — beige is full-bleed (content 0..755), oak/night are inset (content 82..673).
+    // We NORMALISE each variant so its visible content spans TARGET_W (70% of frame), centred,
+    // so the lockup is the same visual size on every ground. All positions below are in the
+    // final FRAME space via fx(); the wordmark is the real lockup image shown from the mark's
+    // right edge onward, so the symbol→wordmark gap is always the SVG's own gap, to the pixel.
+    const LOCK_GEO={
+      beige:{cL:0, cR:755, symCx:72.5,  symW:145, symRight:145},
+      oak:  {cL:82,cR:673, symCx:138.5, symW:113, symRight:195},
+      night:{cL:82,cR:673, symCx:138.5, symW:113, symRight:195},
+    };
+    const geo=LOCK_GEO[ow.logo]||LOCK_GEO.beige;
+    const TARGET_W=756, CONTENT_LEFT=(1080-TARGET_W)/2;   // visible lockup = 70%, centred
+    const nScale=TARGET_W/(geo.cR-geo.cL);                // 756-render px → frame px
+    const fx=(x)=>CONTENT_LEFT+(x-geo.cL)*nScale;
+    const imgW=756*nScale, imgH=imgW*890.266/2400, imgTop=960-imgH/2; // lockup <img> box
+    const seamFrame=fx(geo.symRight);                     // wordmark window seam
+    const winMaxW=fx(geo.cR)-seamFrame;                   // fully-revealed wordmark width
+    const imgLeftInWin=-geo.symRight*nScale;              // img offset inside the window
+    const SYM_CX=fx(geo.symCx), SYM_CY=960;               // flying-mark centre
+    const SYM_W=(geo.symW*nScale)/STANDALONE_FILL;        // standalone <img> width → drawn mark == lockup mark
+    // Symbol: a single opaque element gliding from card-centre to its lockup seat while
+    // unwinding a left (counter-clockwise) rotation. It never fades out — there is nothing
+    // to hand off to, so nothing to ghost against.
+    const MOVE_DUR=0.9, mE=easeInOut(clamp01(fp/MOVE_DUR));
+    const symTx=(540-SYM_CX)*(1-mE);     // frame-centre → seated
+    const symScale=1.22-0.22*mE;         // gentle settle, small enough to posterise cleanly at 12fps
+    const symRotate=34*(1-mE);           // 34° → 0, decreasing = counter-clockwise = "rotates left"
+    const symOp=clamp01(fp/0.12);        // fade in once, then hold
+    // Wordmark: revealed by growing an overflow-hidden window rightward from the symbol seam.
+    const WIPE_START=0.72, WIPE_DUR=0.55, wE=easeInOut(clamp01((fp-WIPE_START)/WIPE_DUR));
+    const revealW=winMaxW*wE;
+    const dur=this.state.duration||((this.contentEnd||0)+this.tailDuration())||1;
 
     // All colours/opacities are inline (not CSS variables) so the export snapshot —
     // which clones only the frame — renders identically to the live preview.
-    const chromeOp=(1-oProg)*(isHi?0.35:1); // eyebrow/footer recede during the highlight set piece
+    const chromeOp=(1-oProg)*(isSet?0.35:1); // eyebrow/footer recede during set-piece and title scenes
+    // The cover/title scene shows the episode number instead of the persistent show eyebrow,
+    // and at full strength — it's the content here, not ambient chrome, so it doesn't recede.
+    const eyebrowText = role==='title' ? (cfg.outroEpisode||cfg.episodeEyebrow) : cfg.episodeEyebrow;
+    const eyebrowOp = role==='title' ? (1-oProg) : chromeOp;
     // Gate weave: slow filmic wander of the whole frame + a whisper of exposure flicker.
     // Random components re-seed at 6Hz (not per frame) so it drifts rather than trembles.
     const fIdx=Math.floor(t*FPS), boil=Math.floor(fIdx/2), weave=cfg.gateWeave!==false;
-    const wx=weave?Math.sin(t*0.45+1.7)*1.2+(frand(boil*3+11)*2-1)*0.3:0;
-    const wy=weave?Math.cos(t*0.35+0.4)*1.2+(frand(boil*3+77)*2-1)*0.3:0;
-    const wr=weave?Math.sin(t*0.3+2.6)*0.028:0;
+    const wx=weave?Math.sin(t*0.45+1.7)*0.6+(frand(boil*3+11)*2-1)*0.15:0;
+    const wy=weave?Math.cos(t*0.35+0.4)*0.6+(frand(boil*3+77)*2-1)*0.15:0;
+    const wr=weave?Math.sin(t*0.3+2.6)*0.014:0;
     const flick=weave?frand(boil+301)*0.011:0;
     // Print jitter: each text element drifts off-register by a hair, independently —
     // the ink never sits perfectly still on the page.
     const pj=cfg.printJitter!==false;
     const jit=(s,amp)=>pj?`translate(${((frand(s+boil*7)*2-1)*amp).toFixed(2)}px,${((frand(s+53+boil*7)*2-1)*amp).toFixed(2)}px) `:'';
-    // Text zoom: a slow push on the live sentence; stronger arc on the highlight.
+    // Text zoom: a slow push — applied ONLY to the highlight set piece / title scene.
+    // Normal captions hold still (no push) so the zoom stays a deliberate accent.
     let zScale=1;
-    if (cfg.textZoom!==false && active) {
+    if (cfg.textZoom!==false && active && isSet) {
       const bp=clamp01((t+SYNC_LEAD-active.start)/Math.max(1.2,(active.end-active.start)||1.2));
-      zScale=isHi?0.98+0.10*bp:1+0.035*bp;
+      zScale=0.98+0.10*bp;
     }
 
     const btn={background:'#232d45',color:'#e9edf5',border:'1px solid #2e3a55',borderRadius:6,padding:'7px 12px',cursor:'pointer',font:'13px -apple-system,sans-serif'};
@@ -671,9 +787,9 @@ class AudiogramPlayer extends React.Component {
                 {gs.k<1 && this.groundLayer(gs.prev,1,'g-prev')}
                 {this.groundLayer(gs.cur,gs.k,'g-cur')}
               </div>
-              <div style={{position:'absolute',top:370,left:0,right:0,textAlign:'center',fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',whiteSpace:'nowrap',padding:'0 60px',color:gs.ink,opacity:chromeOp,filter:pj?'url(#inkDisp)':'none'}}>{cfg.episodeEyebrow}</div>
-              <div style={{position:'absolute',left:86,right:86,top:460,bottom:460,display:'flex',flexDirection:'column',justifyContent:isHi?'center':'flex-start',alignItems:isHi?'center':'flex-start',pointerEvents:'none',transform:`${jit(2,0.6)}scale(${zScale.toFixed(4)})`,transformOrigin:isHi?'50% 50%':'0% 22%',filter:pj?'url(#inkDisp)':'none'}}>
-                {this.buildCaption(gs.ink,gs.accent,isHi)}
+              <div style={{position:'absolute',top:370,left:0,right:0,textAlign:'center',fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',whiteSpace:'nowrap',padding:'0 60px',color:gs.ink,opacity:eyebrowOp,filter:pj?'url(#inkDisp)':'none'}}>{eyebrowText}</div>
+              <div style={{position:'absolute',left:86,right:86,top:460,bottom:460,display:'flex',flexDirection:'column',justifyContent:isSet?'center':'flex-start',alignItems:isSet?'center':'flex-start',pointerEvents:'none',transform:`${jit(2,0.6)}scale(${zScale.toFixed(4)})`,transformOrigin:isSet?'50% 50%':'0% 22%',filter:pj?'url(#inkDisp)':'none'}}>
+                {this.buildCaption(gs.ink,gs.accent,role)}
               </div>
               <div style={{position:'absolute',bottom:370,left:0,right:0,textAlign:'center',fontSize:32,textTransform:'uppercase',letterSpacing:'0.165em',whiteSpace:'nowrap',color:gs.ink,opacity:chromeOp,filter:pj?'url(#inkDisp)':'none'}}>MOREMUSLIM.ORG</div>
               {oProg>0 && (
@@ -685,6 +801,18 @@ class AudiogramPlayer extends React.Component {
                     <div style={{marginTop:90,fontSize:48,maxWidth:860,lineHeight:1.24,opacity:oFade(0.95)}}>{cfg.outroLine2}</div>
                     <img src={symSrc} alt="" style={{width:190,height:190,marginTop:150,opacity:oFade(1.35)}} />
                   </div>
+                </div>
+              )}
+              {fProg>0 && (
+                <div style={{position:'absolute',inset:0,opacity:fProg,pointerEvents:fProg>0.5?'auto':'none'}}>
+                  <div style={{position:'absolute',inset:0}}>{this.groundLayer(outroWay,1,'finalG')}</div>
+                  {/* Wordmark: the lockup image seen through a window that opens rightward from
+                      the symbol seam (overflow:hidden width wipe — survives the export snapshot). */}
+                  <div style={{position:'absolute',left:seamFrame,top:imgTop,width:revealW,height:imgH,overflow:'hidden'}}>
+                    <img src={`../../assets/logos/logo-horizontal-${ow.logo}.svg`} alt="" style={{position:'absolute',left:imgLeftInWin,top:0,width:imgW,height:imgH,maxWidth:'none'}} />
+                  </div>
+                  {/* Symbol: one opaque element, glides from centre to its lockup seat, unwinding a left turn. */}
+                  <img src={`../../assets/logos/symbol-${ow.logo}.svg`} alt="" style={{position:'absolute',left:SYM_CX,top:SYM_CY,width:SYM_W,height:SYM_W,opacity:symOp,transform:`translate(-50%,-50%) translateX(${symTx.toFixed(2)}px) rotate(${symRotate.toFixed(2)}deg) scale(${symScale.toFixed(3)})`,transformOrigin:'50% 50%'}} />
                 </div>
               )}
             </div>

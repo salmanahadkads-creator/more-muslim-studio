@@ -288,7 +288,13 @@ const DEFAULTS = {
   audiogram: {
     guestWay:       "oak",
     episodeEyebrow: "IN THERAPY, WITH SHEIKHAGPT",
+    titleText:      "In Therapy, with SheikhaGPT",
     highlight:      "auto",
+    blockRoles:     {},
+    outroWay:       "night",
+    outroDuration:  5,
+    finalCard:      true,
+    finalCardDuration: 2.5,
     speakerSwap:    true,
     breathe:        true,
     wordAccent:     true,
@@ -297,6 +303,7 @@ const DEFAULTS = {
     textZoom:       true,
     paperTexture:   true,
     printJitter:    true,
+    posterize:      true,
     outroEpisode:   "EPISODE 7",
     outroLine1:     "Listen to the full episode at moremuslim.org.",
     outroLine2:     "Or search for \u201CMore Muslim\u201D on Apple Podcasts, Spotify, or wherever you listen to podcasts.",
@@ -324,7 +331,8 @@ const FIELDS = {
   credits:   [{id:'episode',label:'Episode',type:'input'},{id:'credits',label:'Credits',type:'credits'}],
   audiogram: [
     {id:'episodeEyebrow', label:'Episode Eyebrow',  type:'input'},
-    {id:'outroEpisode',   label:'Outro Episode',     type:'input'},
+    {id:'titleText',      label:'Title card text',   type:'input'},
+    {id:'outroEpisode',   label:'Episode number (cover + outro)', type:'input'},
     {id:'outroLine1',     label:'Outro Line 1',      type:'textarea', rows:2},
     {id:'outroLine2',     label:'Outro Line 2',      type:'textarea', rows:2},
     {id:'srt',            label:'Captions (SRT)',    type:'textarea', rows:10},
@@ -580,6 +588,27 @@ function App() {
     iframeRef.current?.contentWindow?.postMessage({type,...extra},'*');
   }, []);
 
+  // One source of truth for the player config — the sync effect, the iframe onLoad
+  // and the full-screen handoff all send exactly this shape (audio handled per-site).
+  const buildAgCfg = () => {
+    const ac = content.audiogram || {};
+    return {
+      hostWay: way, guestWay: ac.guestWay||'oak',
+      episodeEyebrow: ac.episodeEyebrow, titleText: ac.titleText||'',
+      outroEpisode: ac.outroEpisode, outroLine1: ac.outroLine1, outroLine2: ac.outroLine2,
+      outroWay: ac.outroWay||'night', outroDuration: ac.outroDuration||5,
+      finalCard: ac.finalCard!==false, finalCardDuration: ac.finalCardDuration||2.5,
+      highlight: ac.highlight===undefined ? 'auto' : ac.highlight,
+      blockRoles: ac.blockRoles||{},
+      speakerSwap: ac.speakerSwap!==false, breathe: ac.breathe!==false,
+      wordAccent: ac.wordAccent!==false, bgDrift: ac.bgDrift!==false,
+      gateWeave: ac.gateWeave!==false, textZoom: ac.textZoom!==false,
+      paperTexture: ac.paperTexture!==false, printJitter: ac.printJitter!==false,
+      posterize: ac.posterize!==false,
+      srt: ac.srt, solidBg: !!ac.solidBg,
+    };
+  };
+
   // Pick up audio file passed from onboarding via IndexedDB
   React.useEffect(() => {
     try {
@@ -604,18 +633,7 @@ function App() {
   // Keep iframe in sync with config
   React.useEffect(() => {
     if (tpl !== 'audiogram') return;
-    const ac = content.audiogram || {};
-    const msg = {
-      type:'audiogram-config', hostWay:way, guestWay:ac.guestWay||'oak',
-      episodeEyebrow:ac.episodeEyebrow, outroEpisode:ac.outroEpisode,
-      outroLine1:ac.outroLine1, outroLine2:ac.outroLine2,
-      highlight: ac.highlight===undefined ? 'auto' : ac.highlight,
-      speakerSwap: ac.speakerSwap!==false, breathe: ac.breathe!==false,
-      wordAccent: ac.wordAccent!==false, bgDrift: ac.bgDrift!==false,
-      gateWeave: ac.gateWeave!==false, textZoom: ac.textZoom!==false, paperTexture: ac.paperTexture!==false,
-      printJitter: ac.printJitter!==false,
-      srt:ac.srt, audioSrc, imgOpacity, solidBg:!!ac.solidBg,
-    };
+    const msg = { type:'audiogram-config', ...buildAgCfg(), audioSrc, imgOpacity };
     // Never persist blob: URLs — they are dead outside this document. The iframe gets the
     // actual Blob (structured clone) and mints its own URL.
     try { const st={...msg}; if (st.audioSrc && st.audioSrc.startsWith('blob:')) st.audioSrc=null; localStorage.setItem('mm-audiogram-cfg', JSON.stringify(st)); } catch {}
@@ -712,10 +730,9 @@ function App() {
   );
 
   const openForRecording = () => {
-    const ac=content.audiogram||{};
     const hasAudio = !!audioSrc;
     // Flag 'pending' so the new tab knows to pull the audio from IndexedDB (blob: URLs don't cross tabs).
-    try { localStorage.setItem('mm-audiogram-cfg', JSON.stringify({ hostWay:way, guestWay:ac.guestWay||'oak', episodeEyebrow:ac.episodeEyebrow, outroEpisode:ac.outroEpisode, outroLine1:ac.outroLine1, outroLine2:ac.outroLine2, highlight: ac.highlight===undefined?'auto':ac.highlight, speakerSwap: ac.speakerSwap!==false, breathe: ac.breathe!==false, wordAccent: ac.wordAccent!==false, bgDrift: ac.bgDrift!==false, gateWeave: ac.gateWeave!==false, textZoom: ac.textZoom!==false, paperTexture: ac.paperTexture!==false, printJitter: ac.printJitter!==false, srt:ac.srt, audioSrc: hasAudio ? 'pending' : null, solidBg:!!ac.solidBg })); } catch {}
+    try { localStorage.setItem('mm-audiogram-cfg', JSON.stringify({ ...buildAgCfg(), audioSrc: hasAudio ? 'pending' : null })); } catch {}
     // The player tab is opened by the <a target="_blank"> button (popup-blocker safe); here we only stage config + audio.
     if (hasAudio) {
       fetch(audioSrc).then(r=>r.blob()).then(blob=>{
@@ -865,33 +882,81 @@ function App() {
         {tpl==='audiogram' && (() => {
           const blocks = parseSrtBlocks(c.srt||'');
           const hv = c.highlight===undefined ? 'auto' : c.highlight;
+          const roles = c.blockRoles||{};
+          // Legacy saved configs stored a picked sentence as highlight:<number> — show it as a set piece chip.
+          const roleAt = (i) => roles[i] || (typeof hv==='number' && hv===i ? 'setpiece' : null);
+          const cycle = (i) => {
+            const cur = roleAt(i);
+            const next = cur===null ? 'setpiece' : cur==='setpiece' ? 'title' : null;
+            const nr = {...roles};
+            if (next) nr[i]=next; else delete nr[i];
+            upd('blockRoles', nr);
+            if (typeof hv==='number') upd('highlight','auto'); // migrate the legacy pick
+          };
+          const roleMark = { setpiece:'❝ ', title:'Title · ' };
+          const titleStyle = { background:'#E2B16D', color:'#511C14', borderColor:'#E2B16D' };
           return (
             <React.Fragment>
-              <span className="txlabel" style={{marginTop:12}}>Highlight moment</span>
+              <span className="txlabel" style={{marginTop:12}}>Scenes</span>
               <p className="hint" style={{fontSize:11,opacity:0.6,margin:'0 0 6px',fontFamily:"'ABCDiatype',sans-serif"}}>
-                One sentence plays as a large italic set piece. Auto lets the player choose; tap a sentence to pick it yourself.
+                Every sentence is a scene. Tap one to cycle its role: caption, set piece (large italic), title card (episode title + symbol). Auto picks one set piece for you until you choose your own.
               </p>
               <div className="hlchips">
-                <button className={'hlchip'+(hv==='auto'?' on':'')} onClick={()=>upd('highlight','auto')}>Auto</button>
+                <button className={'hlchip'+(hv==='auto'?' on':'')} onClick={()=>upd('highlight','auto')}>Auto set piece</button>
                 <button className={'hlchip'+(hv==='off'?' on':'')} onClick={()=>upd('highlight','off')}>Off</button>
-                {blocks.map((b,i)=>(
-                  <button key={i} className={'hlchip'+(hv===i?' on':'')} title={(b.speaker?b.speaker+': ':'')+b.text}
-                    onClick={()=>upd('highlight', hv===i?'auto':i)}>
-                    {b.text.length>52 ? b.text.slice(0,52)+'…' : b.text}
-                  </button>
-                ))}
+                {blocks.map((b,i)=>{
+                  const r = roleAt(i);
+                  return (
+                    <button key={i} className={'hlchip'+(r==='setpiece'?' on':'')} style={r==='title'?titleStyle:undefined}
+                      title={(b.speaker?b.speaker+': ':'')+b.text}
+                      onClick={()=>cycle(i)}>
+                      {(r?roleMark[r]:'')}{b.text.length>52 ? b.text.slice(0,52)+'…' : b.text}
+                    </button>
+                  );
+                })}
               </div>
               <span className="txlabel" style={{marginTop:12}}>Motion</span>
               <p className="hint" style={{fontSize:11,opacity:0.6,margin:'0 0 6px',fontFamily:"'ABCDiatype',sans-serif"}}>
                 Everything is on by default; switch off anything a clip does not need.
               </p>
               <div className="hlchips">
-                {[['speakerSwap','Speaker ground swap'],['breathe','Breathing pattern'],['wordAccent','Word accent'],['bgDrift','Background drift'],['gateWeave','Gate weave'],['textZoom','Text zoom'],['paperTexture','Paper texture'],['printJitter','Print jitter']].map(([k,label])=>(
+                {[['speakerSwap','Speaker ground swap'],['breathe','Breathing pattern'],['wordAccent','Word accent'],['bgDrift','Background drift'],['gateWeave','Gate weave'],['textZoom','Text zoom'],['paperTexture','Paper texture'],['printJitter','Print jitter'],['posterize','Posterize motion (12fps)']].map(([k,label])=>(
                   <button key={k} className={'hlchip'+(c[k]!==false?' on':'')} onClick={()=>upd(k, c[k]===false)}>
                     {label}
                   </button>
                 ))}
               </div>
+              <span className="txlabel" style={{marginTop:12}}>Outro</span>
+              <p className="hint" style={{fontSize:11,opacity:0.6,margin:'0 0 6px',fontFamily:"'ABCDiatype',sans-serif"}}>
+                End-card ground colour and length. Carry keeps whichever speaker colour the clip ends on.
+              </p>
+              <div className="swatches">
+                {Object.keys(S.WAYS).map(w => (
+                  <button key={'ow-'+w} className={'sw'+((c.outroWay||'night')===w?' on':'')} title={w}
+                    style={{background:S.WAYS[w].bg}} onClick={()=>upd('outroWay',w)} />
+                ))}
+              </div>
+              <button className={'nonebtn'+(c.outroWay==='carry'?' on':'')} style={{width:'100%',marginTop:8}}
+                onClick={()=>upd('outroWay', c.outroWay==='carry'?'night':'carry')}>
+                {c.outroWay==='carry' ? '✓ Carry last speaker colour' : 'Carry last speaker colour'}
+              </button>
+              <span className="croplabel">Outro duration — {c.outroDuration||5}s</span>
+              <input type="range" className="cropslider" min="3" max="10" step="1" value={c.outroDuration||5}
+                onChange={e=>upd('outroDuration',Number(e.target.value))} />
+              <button className={'nonebtn'+(c.finalCard!==false?' on':'')} style={{width:'100%',marginTop:10}}
+                onClick={()=>upd('finalCard', c.finalCard===false)}>
+                {c.finalCard!==false ? '✓ Final logo card' : 'Final logo card'}
+              </button>
+              <p className="hint" style={{fontSize:11,opacity:0.6,margin:'4px 0 0',fontFamily:"'ABCDiatype',sans-serif"}}>
+                One last beat after the outro: just the logo, centred, on the same ground.
+              </p>
+              {c.finalCard!==false && (
+                <React.Fragment>
+                  <span className="croplabel">Final card duration — {c.finalCardDuration||2.5}s</span>
+                  <input type="range" className="cropslider" min="1.5" max="5" step="0.5" value={c.finalCardDuration||2.5}
+                    onChange={e=>upd('finalCardDuration',Number(e.target.value))} />
+                </React.Fragment>
+              )}
             </React.Fragment>
           );
         })()}
@@ -901,8 +966,7 @@ function App() {
           <iframe ref={iframeRef} src="audiogram-player.html"
             style={{width:displayW, height:displayH, border:'none', display:'block'}}
             onLoad={() => {
-              const ac=content.audiogram||{};
-              setTimeout(()=>{ iframeRef.current?.contentWindow?.postMessage({ type:'audiogram-config', hostWay:way, guestWay:ac.guestWay||'oak', episodeEyebrow:ac.episodeEyebrow, outroEpisode:ac.outroEpisode, outroLine1:ac.outroLine1, outroLine2:ac.outroLine2, highlight: ac.highlight===undefined?'auto':ac.highlight, speakerSwap: ac.speakerSwap!==false, breathe: ac.breathe!==false, wordAccent: ac.wordAccent!==false, bgDrift: ac.bgDrift!==false, gateWeave: ac.gateWeave!==false, textZoom: ac.textZoom!==false, paperTexture: ac.paperTexture!==false, printJitter: ac.printJitter!==false, srt:ac.srt, ...(audioBlob?{audioBlob}:{audioSrc}), solidBg:!!ac.solidBg }, '*'); }, 300);
+              setTimeout(()=>{ iframeRef.current?.contentWindow?.postMessage({ type:'audiogram-config', ...buildAgCfg(), imgOpacity, ...(audioBlob?{audioBlob}:{audioSrc}) }, '*'); }, 300);
             }}
           />
         ) : (
