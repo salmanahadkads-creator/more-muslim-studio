@@ -84,8 +84,12 @@ export const AudiogramHighlightPicker: ToolcraftCustomControlRenderer = ({
             >
               <TextInput
                 name={block.speaker || `Line ${lineNumber}`}
-                onValueChange={(nextText) => {
+                // Forward TextInput's live-typing history meta so one typing
+                // burst merges into one undo entry instead of one per keystroke.
+                onValueChange={(nextText, meta) => {
                   dispatch({
+                    history: meta?.history,
+                    historyGroup: meta?.historyGroup,
                     target: "audiogram.blockOverrides",
                     type: "controls.setValue",
                     value: { ...overrides, [index]: nextText },
