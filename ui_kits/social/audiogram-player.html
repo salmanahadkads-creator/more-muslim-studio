@@ -64,8 +64,7 @@ const DEFAULT_CFG = {
   wordMotion:'fade', captionSize:'L',
   showSpeakerLabel:true, bgDrift:true, illusTint:true, solidBg:false,
   highlight:'auto', // 'auto' | 'off' | block index \u2014 one sentence rendered as a large italic set piece
-  blockRoles:{},    // per-sentence scene role: block index \u2192 'setpiece' | 'title' (absent = caption)
-  titleText:'In Therapy, with SheikhaGPT', // big serif line on the title-card scene
+  blockRoles:{},    // per-sentence scene role: block index \u2192 'setpiece' (absent = caption)
   speakerSwap:true, breathe:true, wordAccent:true,
   gateWeave:true, textZoom:true, paperTexture:true, printJitter:true,
   posterize:true, // 12fps stop-motion feel; off = smooth continuous motion
@@ -369,7 +368,7 @@ class AudiogramPlayer extends React.Component {
   // (suppressed as soon as any set piece has been chosen by hand).
   roleFor(i) {
     const c=this.state.cfg, roles=c.blockRoles||{};
-    if (roles[i]==='title' || roles[i]==='setpiece') return roles[i];
+    if (roles[i]==='setpiece') return roles[i];
     if (typeof c.highlight==='number') return i===c.highlight ? 'setpiece' : 'caption';
     const manual=Object.values(roles).includes('setpiece');
     if (c.highlight!=='off' && !manual && i===this.highlightIndex()) return 'setpiece';
@@ -466,27 +465,6 @@ class AudiogramPlayer extends React.Component {
     const active=this.activeBlock(); if (!active) return null;
     const {cfg}=this.state, motion=cfg.wordMotion, t=this.state.t+SYNC_LEAD;
     const isHi = role==='setpiece';
-
-    // Title-card scene: the block's time carries the episode title instead of its caption —
-    // one static line + the symbol, fading in like a set piece (no per-word motion). The
-    // symbol itself gets its own reveal: it settles from a slight counter-rotation and
-    // smaller scale into true rest — a deliberate intro beat, not ambient chrome motion.
-    if (role==='title') {
-      const fade=clamp01((t-active.start)/0.4);
-      const w=this.ways[this.groundState().cur]||this.ways.beige;
-      const title=cfg.titleText||'';
-      const p=t-active.start;
-      const reveal=clamp01(p/0.7);
-      const ease=1-Math.pow(1-reveal,3); // easeOutCubic — a settle, not a linear pop
-      const symScale=0.55+0.45*ease;
-      const symRotate=(1-ease)*-28;
-      return (
-        <div style={{color:ink,width:'100%',textAlign:'center',opacity:fade}}>
-          <div style={{fontSize:cfg.captionSize==='M'?84:96,lineHeight:1.06,maxWidth:880,margin:'0 auto'}}>{title}</div>
-          <img src={`../../assets/logos/symbol-${w.logo}.svg`} alt="" style={{width:150,height:150,marginTop:84,transform:`scale(${symScale.toFixed(3)}) rotate(${symRotate.toFixed(2)}deg)`,transformOrigin:'50% 50%'}} />
-        </div>
-      );
-    }
 
     const size = isHi ? (cfg.captionSize==='M'?62:82) : (cfg.captionSize==='M'?48:69);
     const spans=[];
@@ -676,7 +654,7 @@ class AudiogramPlayer extends React.Component {
     const gs=this.groundState();
     const ai = active ? (this.blocks||[]).indexOf(active) : -1;
     const role = ai>=0 ? this.roleFor(ai) : 'caption';
-    const isSet = role==='setpiece' || role==='title'; // full-frame scenes: chrome recedes, text centres
+    const isSet = role==='setpiece'; // full-frame scene: chrome recedes, text centres
 
     const os=this.outroStart();
     const oProg=isFinite(os)?clamp01((t-os)/0.6):0;
@@ -745,11 +723,9 @@ class AudiogramPlayer extends React.Component {
 
     // All colours/opacities are inline (not CSS variables) so the export snapshot —
     // which clones only the frame — renders identically to the live preview.
-    const chromeOp=(1-oProg)*(isSet?0.35:1); // eyebrow/footer recede during set-piece and title scenes
-    // The cover/title scene shows the episode number instead of the persistent show eyebrow,
-    // and at full strength — it's the content here, not ambient chrome, so it doesn't recede.
-    const eyebrowText = role==='title' ? (cfg.outroEpisode||cfg.episodeEyebrow) : cfg.episodeEyebrow;
-    const eyebrowOp = role==='title' ? (1-oProg) : chromeOp;
+    const chromeOp=(1-oProg)*(isSet?0.35:1); // eyebrow/footer recede during the set-piece scene
+    const eyebrowText = cfg.episodeEyebrow;
+    const eyebrowOp = chromeOp;
     // Gate weave: slow filmic wander of the whole frame + a whisper of exposure flicker.
     // Random components re-seed at 6Hz (not per frame) so it drifts rather than trembles.
     const fIdx=Math.floor(t*FPS), boil=Math.floor(fIdx/2), weave=cfg.gateWeave!==false;

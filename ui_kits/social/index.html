@@ -288,7 +288,6 @@ const DEFAULTS = {
   audiogram: {
     guestWay:       "oak",
     episodeEyebrow: "IN THERAPY, WITH SHEIKHAGPT",
-    titleText:      "In Therapy, with SheikhaGPT",
     highlight:      "auto",
     blockRoles:     {},
     outroWay:       "night",
@@ -331,7 +330,6 @@ const FIELDS = {
   credits:   [{id:'episode',label:'Episode',type:'input'},{id:'credits',label:'Credits',type:'credits'}],
   audiogram: [
     {id:'episodeEyebrow', label:'Episode Eyebrow',  type:'input'},
-    {id:'titleText',      label:'Title card text',   type:'input'},
     {id:'outroEpisode',   label:'Episode number (cover + outro)', type:'input'},
     {id:'outroLine1',     label:'Outro Line 1',      type:'textarea', rows:2},
     {id:'outroLine2',     label:'Outro Line 2',      type:'textarea', rows:2},
@@ -594,7 +592,7 @@ function App() {
     const ac = content.audiogram || {};
     return {
       hostWay: way, guestWay: ac.guestWay||'oak',
-      episodeEyebrow: ac.episodeEyebrow, titleText: ac.titleText||'',
+      episodeEyebrow: ac.episodeEyebrow,
       outroEpisode: ac.outroEpisode, outroLine1: ac.outroLine1, outroLine2: ac.outroLine2,
       outroWay: ac.outroWay||'night', outroDuration: ac.outroDuration||5,
       finalCard: ac.finalCard!==false, finalCardDuration: ac.finalCardDuration||2.5,
@@ -887,19 +885,18 @@ function App() {
           const roleAt = (i) => roles[i] || (typeof hv==='number' && hv===i ? 'setpiece' : null);
           const cycle = (i) => {
             const cur = roleAt(i);
-            const next = cur===null ? 'setpiece' : cur==='setpiece' ? 'title' : null;
+            const next = cur===null ? 'setpiece' : null;
             const nr = {...roles};
             if (next) nr[i]=next; else delete nr[i];
             upd('blockRoles', nr);
             if (typeof hv==='number') upd('highlight','auto'); // migrate the legacy pick
           };
-          const roleMark = { setpiece:'❝ ', title:'Title · ' };
-          const titleStyle = { background:'#E2B16D', color:'#511C14', borderColor:'#E2B16D' };
+          const roleMark = { setpiece:'❝ ' };
           return (
             <React.Fragment>
               <span className="txlabel" style={{marginTop:12}}>Scenes</span>
               <p className="hint" style={{fontSize:11,opacity:0.6,margin:'0 0 6px',fontFamily:"'ABCDiatype',sans-serif"}}>
-                Every sentence is a scene. Tap one to cycle its role: caption, set piece (large italic), title card (episode title + symbol). Auto picks one set piece for you until you choose your own.
+                Every sentence is a scene. Tap one to cycle its role: caption, set piece (large italic). Auto picks one set piece for you until you choose your own.
               </p>
               <div className="hlchips">
                 <button className={'hlchip'+(hv==='auto'?' on':'')} onClick={()=>upd('highlight','auto')}>Auto set piece</button>
@@ -907,7 +904,7 @@ function App() {
                 {blocks.map((b,i)=>{
                   const r = roleAt(i);
                   return (
-                    <button key={i} className={'hlchip'+(r==='setpiece'?' on':'')} style={r==='title'?titleStyle:undefined}
+                    <button key={i} className={'hlchip'+(r==='setpiece'?' on':'')}
                       title={(b.speaker?b.speaker+': ':'')+b.text}
                       onClick={()=>cycle(i)}>
                       {(r?roleMark[r]:'')}{b.text.length>52 ? b.text.slice(0,52)+'…' : b.text}
