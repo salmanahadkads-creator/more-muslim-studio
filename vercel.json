@@ -1,6 +1,8 @@
 {
-  "redirects": [
-    { "source": "/", "destination": "/ui_kits/social/onboarding.html", "permanent": false },
-    { "source": "/social-studio.html", "destination": "/ui_kits/social/onboarding.html", "permanent": false }
+  "installCommand": "cd studio && corepack pnpm install",
+  "buildCommand": "cd studio && corepack pnpm run build",
+  "outputDirectory": "studio/dist",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
