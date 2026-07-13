@@ -17,16 +17,10 @@ import {
 import {
   activeBlockIndex,
   breatheOpacity,
-  captionZoom,
   firstName,
-  gateWeave,
-  GRAIN_DATA_URI,
-  GRAIN_TILE_SIZE,
-  grainCompositing,
   groundMotion,
   groundState,
   highlightIndex,
-  livingGrainOffset,
   outroFadeAt,
   OUTRO_FADE_DELAYS,
   outroProgress,
@@ -561,8 +555,6 @@ function AudiogramGround({
 }): React.JSX.Element {
   const c = COLOURWAYS[way];
   const move = groundMotion(config, timeSeconds, durationSeconds);
-  const grainOffset = livingGrainOffset(timeSeconds);
-  const grain = grainCompositing(c.bg);
   const patternOpacity = breatheOpacity(config, envelope, timeSeconds);
   const showTile = !config.solid && !!c.tile;
 
@@ -591,30 +583,15 @@ function AudiogramGround({
           />
         ) : null}
       </div>
-      {config.filmTexture ? (
-        <div
-          aria-hidden="true"
-          style={{
-            backgroundImage: `url("${GRAIN_DATA_URI}")`,
-            backgroundPosition: `${grainOffset.gx}px ${grainOffset.gy}px`,
-            backgroundSize: `${GRAIN_TILE_SIZE}px ${GRAIN_TILE_SIZE}px`,
-            inset: 0,
-            mixBlendMode: grain.blend as React.CSSProperties["mixBlendMode"],
-            opacity: grain.opacity,
-            pointerEvents: "none",
-            position: "absolute",
-          }}
-        />
-      ) : null}
     </div>
   );
 }
 
 /* Timeline-synced audiogram slide (story format) with the full design-dynamics
-   motion system: speaker ground crossfade, breathing pattern, living grain,
-   active-word accent, pull-quote highlight, ground pan / Ken Burns, and the
-   staggered fade outro. Every value is a pure function of timeSeconds so the
-   live preview and the offline export stay frame-identical. */
+   motion system: speaker ground crossfade, breathing pattern, active-word
+   accent, pull-quote highlight, ground pan / Ken Burns, and the staggered fade
+   outro. Every value is a pure function of timeSeconds so the live preview and
+   the offline export stay frame-identical. */
 export function AudiogramPost({
   motion,
   scene,
@@ -645,11 +622,6 @@ export function AudiogramPost({
 
   const words = active?.words ?? [];
   const speakerLabel = active ? firstName(active.speaker) : "";
-  // Film texture: a slow gate-weave wander + text zoom, applied to the caption
-  // only so the eyebrow and footer stay perfectly still.
-  const weave = gateWeave(config, timeSeconds);
-  const zoom = captionZoom(active, isHighlight, config, timeSeconds);
-  const captionTransform = `scale(${zoom.toFixed(4)}) translate(${weave.wx.toFixed(2)}px, ${weave.wy.toFixed(2)}px) rotate(${weave.wr.toFixed(3)}deg)`;
   const outroLines = motion.outroLines;
 
   return (
@@ -709,27 +681,6 @@ export function AudiogramPost({
         )
       ) : null}
 
-      {/* Eyebrow */}
-      <div
-        data-toolcraft-product-text=""
-        style={{
-          color: ink,
-          fontSize: 32,
-          left: 0,
-          letterSpacing: CAPS_TRACKING,
-          opacity: chromeOp,
-          padding: "0 60px",
-          position: "absolute",
-          right: 0,
-          textAlign: "center",
-          textTransform: "uppercase",
-          top: 370,
-          whiteSpace: "nowrap",
-        }}
-      >
-        {episode}
-      </div>
-
       {/* Active caption */}
       <div
         style={{
@@ -763,8 +714,6 @@ export function AudiogramPost({
                 lineHeight: 1.06,
                 margin: isHighlight ? "0 auto" : 0,
                 maxWidth: isHighlight ? 880 : TEXT_WIDTH.story,
-                transform: captionTransform,
-                transformOrigin: isHighlight ? "center" : "0% 22%",
               }}
             >
               {words.map((word, index) => {
@@ -783,7 +732,6 @@ export function AudiogramPost({
                         color: visual.color,
                         display: "inline-block",
                         opacity: visual.opacity,
-                        transform: `translateY(${visual.rise.toFixed(2)}px)`,
                       }}
                     >
                       {word.text}

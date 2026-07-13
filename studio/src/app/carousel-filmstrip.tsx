@@ -95,7 +95,23 @@ const SlideThumb = React.memo(function SlideThumb({
   );
 });
 
+/* The audiogram is a single timeline-driven video, not a slide deck — the
+   filmstrip (and especially its empty add-slide tile floating over the canvas)
+   has no meaning there. Gated in this thin wrapper so the strip component
+   below keeps a stable hook order: unmounting it entirely is safe, an early
+   return between its hooks is not. Slide layers persist untouched and the
+   strip reappears when a static template is selected again. */
 export function CarouselFilmstrip(): React.JSX.Element | null {
+  const { state } = useToolcraft();
+
+  if (state.values["post.template"] === "audiogram") {
+    return null;
+  }
+
+  return <CarouselFilmstripOverlay />;
+}
+
+function CarouselFilmstripOverlay(): React.JSX.Element | null {
   const { dispatch, state } = useToolcraft();
   const layers = state.layers;
   const slides = readCarouselSlides(state);

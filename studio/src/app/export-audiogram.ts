@@ -29,18 +29,14 @@ import {
 } from "./brand";
 import {
   activeBlockIndex,
+  applyBlockTextOverrides,
   breatheOpacity,
   buildSpeechBlocks,
-  captionZoom,
   computeAudioEnvelope,
   firstName,
-  gateWeave,
-  GRAIN_TILE_SIZE,
-  grainCompositing,
   groundMotion,
   groundState,
   highlightIndex,
-  livingGrainOffset,
   outroFadeAt,
   OUTRO_FADE_DELAYS,
   outroProgress,
@@ -50,7 +46,7 @@ import {
   type AudiogramMotionConfig,
   type AudiogramSpeechBlock,
 } from "./audiogram-motion";
-import { readFocusPercent } from "./post-renderer";
+import { readBlockOverrides, readFocusPercent } from "./post-renderer";
 import { parseSrt } from "./srt";
 
 const FPS = 24;
@@ -119,7 +115,6 @@ type AudiogramFrameAssets = {
   blocks: readonly AudiogramSpeechBlock[];
   config: AudiogramMotionConfig;
   envelope: Float32Array | null;
-  grainTile: HTMLCanvasElement;
   guest: string;
   scene: {
     focusX: number;
@@ -135,43 +130,11 @@ type AudiogramFrameParams = {
   assets: AudiogramFrameAssets;
   durationSeconds: number;
   episode: string;
-  eyebrow: string;
   outroLines: readonly string[];
   timeSeconds: number;
 };
 
 const CAPTION_BOX = { bottom: 460, left: 86, top: 460 } as const;
-
-const GRAIN_CELL = 2;
-
-/* A grey-noise grain tile, painted once as small fillRect cells (not ImageData
-   pixels, which would classify this as a heavy procedural pixel renderer, and
-   not an SVG image, which can taint the export canvas). Mid-grey around
-   0.36..0.64 so overlay compositing keeps the ground colour true and only adds
-   tooth — the filmic counterpart of the DOM preview's GRAIN_DATA_URI. */
-function buildGrainTile(): HTMLCanvasElement {
-  const canvas = document.createElement("canvas");
-
-  canvas.width = GRAIN_TILE_SIZE;
-  canvas.height = GRAIN_TILE_SIZE;
-
-  const context = canvas.getContext("2d");
-
-  if (!context) {
-    return canvas;
-  }
-
-  for (let y = 0; y < GRAIN_TILE_SIZE; y += GRAIN_CELL) {
-    for (let x = 0; x < GRAIN_TILE_SIZE; x += GRAIN_CELL) {
-      const value = Math.round((0.28 * Math.random() + 0.36) * 255);
-
-      context.fillStyle = `rgb(${value},${value},${value})`;
-      context.fillRect(x, y, GRAIN_CELL, GRAIN_CELL);
-    }
-  }
-
-  return canvas;
-}
 
 function paintTexturedGround(
   context: PaintContext,
@@ -232,32 +195,6 @@ function paintImageGround(context: PaintContext, params: AudiogramFrameParams): 
   );
 }
 
-function paintGrain(
-  context: PaintContext,
-  grainTile: HTMLCanvasElement,
-  way: ColourwayKey,
-  timeSeconds: number,
-): void {
-  const grain = grainCompositing(COLOURWAYS[way].bg);
-  const offset = livingGrainOffset(timeSeconds);
-  const { h, w } = POST_SIZES.story;
-
-  context.save();
-  context.globalCompositeOperation = grain.blend === "screen" ? "screen" : "overlay";
-  context.globalAlpha = grain.opacity;
-
-  const startX = (offset.gx % GRAIN_TILE_SIZE) - GRAIN_TILE_SIZE;
-  const startY = (offset.gy % GRAIN_TILE_SIZE) - GRAIN_TILE_SIZE;
-
-  for (let x = startX; x < w; x += GRAIN_TILE_SIZE) {
-    for (let y = startY; y < h; y += GRAIN_TILE_SIZE) {
-      context.drawImage(grainTile, x, y);
-    }
-  }
-
-  context.restore();
-}
-
 /* Lay out a block's words within maxWidth (word advance = measured width +
    0.28em gap, matching the DOM inline-block spacing), returning lines of words
    with x offsets for per-word painting. */
@@ -291,7 +228,7 @@ function layoutWords(
 }
 
 function paintAudiogramFrame(context: PaintContext, params: AudiogramFrameParams): void {
-  const { assets, durationSeconds, episode, eyebrow, outroLines, timeSeconds } = params;
+  const { assets, durationSeconds, episode, outroLines, timeSeconds } = params;
   const { blocks, config, guest } = assets;
   const { h, w } = POST_SIZES.story;
   const centerX = w / 2;
@@ -320,22 +257,9 @@ function paintAudiogramFrame(context: PaintContext, params: AudiogramFrameParams
     }
 
     paintTexturedGround(context, ground.curWay, ground.k, params);
-
-    if (config.filmTexture) {
-      paintGrain(context, assets.grainTile, ground.curWay, timeSeconds);
-    }
   }
 
   context.textBaseline = "alphabetic";
-
-  // Eyebrow
-  context.save();
-  context.globalAlpha = chromeOp;
-  context.fillStyle = ink;
-  context.textAlign = "center";
-  setFont(context, 32, { tracked: true });
-  context.fillText(eyebrow.toUpperCase(), centerX, CAPTION_BOX.top - 90 + 32);
-  context.restore();
 
   // Active caption — per-word entrance + accent
   if (active) {
@@ -373,19 +297,6 @@ function paintAudiogramFrame(context: PaintContext, params: AudiogramFrameParams
     context.textAlign = "left";
     context.textBaseline = "top";
 
-    // Film texture: gate-weave wander + text zoom around the caption's origin,
-    // matching the DOM caption transform.
-    const weave = gateWeave(config, timeSeconds);
-    const zoom = captionZoom(active, isHighlight, config, timeSeconds);
-    const originX = isHighlight ? centerX : CAPTION_BOX.left;
-    const originY = startY;
-
-    context.save();
-    context.translate(originX + weave.wx, originY + weave.wy);
-    context.rotate((weave.wr * Math.PI) / 180);
-    context.scale(zoom, zoom);
-    context.translate(-originX, -originY);
-
     layout.lines.forEach((line, lineIndex) => {
       const lineY = startY + lineIndex * lineHeight;
       const lineStartX = isHighlight ? centerX - line.width / 2 : CAPTION_BOX.left;
@@ -405,12 +316,11 @@ function paintAudiogramFrame(context: PaintContext, params: AudiogramFrameParams
         context.save();
         context.globalAlpha = visual.opacity;
         context.fillStyle = visual.color;
-        context.fillText(word.text, lineStartX + entry.x, lineY + visual.rise);
+        context.fillText(word.text, lineStartX + entry.x, lineY);
         context.restore();
       }
     });
 
-    context.restore();
     context.textBaseline = "alphabetic";
   }
 
@@ -436,10 +346,6 @@ function paintAudiogramFrame(context: PaintContext, params: AudiogramFrameParams
         ...params,
         assets: { ...assets, config: { ...config, hasImage: false } },
       });
-
-      if (config.filmTexture) {
-        paintGrain(context, assets.grainTile, outroWay, timeSeconds);
-      }
     }
 
     context.textAlign = "center";
@@ -592,7 +498,6 @@ export async function exportAudiogramVideo(
   const config: AudiogramMotionConfig = {
     bgDrift: state.values["audiogram.breathing"] !== false,
     breathe: state.values["audiogram.breathing"] !== false,
-    filmTexture: state.values["audiogram.filmTexture"] !== false,
     guestWay: COLOURWAYS[guestWay] ? guestWay : way,
     hasImage: !!sceneImageSrc,
     highlight:
@@ -606,11 +511,6 @@ export async function exportAudiogramVideo(
     speakerSwap: state.values["audiogram.crossfade"] !== false,
     wordAccent: state.values["audiogram.wordAccent"] !== false,
   };
-  const eyebrow =
-    (typeof state.values["audiogram.eyebrow"] === "string"
-      ? (state.values["audiogram.eyebrow"] as string)
-      : ""
-    ).trim() || episode;
   const outroLines = (typeof state.values["audiogram.outro"] === "string"
     ? (state.values["audiogram.outro"] as string)
     : "Listen to the full episode at moremuslim.org.\nOr search for “More Muslim” wherever you get your podcasts."
@@ -618,7 +518,10 @@ export async function exportAudiogramVideo(
     .split(/\n/)
     .map((line) => line.trim())
     .filter(Boolean);
-  const blocks = buildSpeechBlocks(captions);
+  const blocks = applyBlockTextOverrides(
+    buildSpeechBlocks(captions),
+    readBlockOverrides(state.values["audiogram.blockOverrides"]),
+  );
   const guest = speakersOf(blocks).guest;
 
   // Load the star-lattice tile for both the host and guest colourways so the
@@ -644,7 +547,6 @@ export async function exportAudiogramVideo(
     blocks,
     config,
     envelope: audioBuffer ? computeAudioEnvelope(audioBuffer) : null,
-    grainTile: buildGrainTile(),
     guest,
     scene: sceneImageSrc
       ? {
@@ -758,7 +660,6 @@ export async function exportAudiogramVideo(
         assets,
         durationSeconds,
         episode,
-        eyebrow,
         outroLines,
         timeSeconds: (posterStep * POSTERIZE) / FPS,
       });

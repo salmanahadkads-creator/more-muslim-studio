@@ -7,6 +7,7 @@ import * as React from "react";
 
 import {
   shouldIncludeToolcraftPreviewBackground,
+  toolcraftTimelinePanelExtendedTarget,
   type ToolcraftState,
 } from "@/toolcraft/runtime";
 import { useToolcraft } from "@/toolcraft/runtime/react";
@@ -26,6 +27,7 @@ import {
   writeCarouselSlides,
 } from "./carousel";
 import {
+  applyBlockTextOverrides,
   buildSpeechBlocks,
   computeAudioEnvelope,
   speakersOf,
@@ -47,8 +49,29 @@ function readString(value: unknown, fallback = ""): string {
   return typeof value === "string" ? value : fallback;
 }
 
+/* Highlight-picker typo-fix overrides: a plain object keyed by 0-based block
+   index, written by the custom control (see audiogram-highlight-picker.tsx).
+   Read defensively — an empty/missing value means no corrections yet. */
+export function readBlockOverrides(value: unknown): Record<number, string> {
+  if (typeof value !== "object" || value === null) {
+    return {};
+  }
+
+  const out: Record<number, string> = {};
+
+  for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+    const index = Number(key);
+
+    if (Number.isInteger(index) && typeof entry === "string") {
+      out[index] = entry;
+    }
+  }
+
+  return out;
+}
+
 /* fileDrop stores files as data URLs; captions need the decoded text. */
-function decodeCaptionAsset(dataUrl: string): string {
+export function decodeCaptionAsset(dataUrl: string): string {
   const commaIndex = dataUrl.indexOf(",");
 
   if (commaIndex === -1) {
@@ -342,12 +365,20 @@ function AudiogramAudioSync(): null {
 }
 
 /* Shows the runtime timeline (and its transport) only for the audiogram, which
-   is the one timeline-driven template; static post templates hide it. Renders
-   nothing — it only mirrors runtime panel state. */
+   is the one timeline-driven template; static post templates hide it. Entering
+   audiogram mode also opens the extended transport (play, scrubber, duration,
+   loop) so the timeline is immediately usable — the compact play-only default
+   plus the buried Setup switch made it too easy to miss. The extended flag is
+   only synced on the template TRANSITION, so a user who collapses the strip
+   while staying in audiogram mode is not fought. Renders nothing — it only
+   mirrors runtime panel state. */
 function TimelinePanelSync(): null {
   const { dispatch, state } = useToolcraft();
   const isAudiogram = state.values["post.template"] === "audiogram";
   const hidden = state.panels.timeline.hidden === true;
+  // Starts false (not the current template) so a session that mounts directly
+  // into audiogram mode still gets the one-shot extend.
+  const wasAudiogramRef = React.useRef(false);
 
   React.useEffect(() => {
     const shouldHide = !isAudiogram;
@@ -356,6 +387,20 @@ function TimelinePanelSync(): null {
       dispatch({ hidden: shouldHide, panelId: "timeline", type: "panels.setHidden" });
     }
   }, [isAudiogram, hidden, dispatch]);
+
+  React.useEffect(() => {
+    if (wasAudiogramRef.current === isAudiogram) {
+      return;
+    }
+
+    wasAudiogramRef.current = isAudiogram;
+    dispatch({
+      historyGroup: "timeline-panel-sync",
+      target: toolcraftTimelinePanelExtendedTarget,
+      type: "controls.setValue",
+      value: isAudiogram,
+    });
+  }, [isAudiogram, dispatch]);
 
   return null;
 }
@@ -587,7 +632,11 @@ export function PostRenderer(): React.JSX.Element {
         : [],
     [isAudiogram, state.mediaAssets],
   );
-  const speechBlocks = React.useMemo(() => buildSpeechBlocks(captions), [captions]);
+  const blockOverridesValue = values["audiogram.blockOverrides"];
+  const speechBlocks = React.useMemo(
+    () => applyBlockTextOverrides(buildSpeechBlocks(captions), readBlockOverrides(blockOverridesValue)),
+    [captions, blockOverridesValue],
+  );
   const guest = React.useMemo(() => speakersOf(speechBlocks).guest, [speechBlocks]);
   const audioUrl = isAudiogram
     ? (state.mediaAssets.find((asset) => asset.sourceTarget === "audiogram.audio")?.dataUrl ??
@@ -602,7 +651,6 @@ export function PostRenderer(): React.JSX.Element {
   const audiogramConfig: AudiogramMotionConfig = {
     bgDrift: values["audiogram.breathing"] !== false,
     breathe: values["audiogram.breathing"] !== false,
-    filmTexture: values["audiogram.filmTexture"] !== false,
     guestWay: (readString(values["audiogram.guestColourway"], way) || way) as ColourwayKey,
     hasImage: !!scene.image,
     highlight:
@@ -616,8 +664,6 @@ export function PostRenderer(): React.JSX.Element {
     speakerSwap: values["audiogram.crossfade"] !== false,
     wordAccent: values["audiogram.wordAccent"] !== false,
   };
-  const audiogramEyebrow =
-    readString(values["audiogram.eyebrow"]).trim() || readString(values["content.episode"]);
   const audiogramOutro = readString(
     values["audiogram.outro"],
     "Listen to the full episode at moremuslim.org.\nOr search for “More Muslim” wherever you get your podcasts.",
@@ -660,7 +706,7 @@ export function PostRenderer(): React.JSX.Element {
               config: audiogramConfig,
               durationSeconds: timelineDuration,
               envelope,
-              episode: audiogramEyebrow,
+              episode: readString(values["content.episode"]),
               guest,
               outroLines: audiogramOutro,
               timeSeconds: timelineTime,

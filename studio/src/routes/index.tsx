@@ -1,6 +1,7 @@
 import { ToolcraftApp } from "@/toolcraft/runtime/react";
 
 import { appSchema } from "../app/app-schema";
+import { AudiogramHighlightPicker } from "../app/audiogram-highlight-picker";
 import {
   buildEpisodeSetSnapshots,
   captureSlideValues,
@@ -29,6 +30,7 @@ export function AppHome(): React.JSX.Element {
           </>
         }
       className="h-dvh min-h-dvh"
+      controlRenderers={{ audiogramHighlightPicker: AudiogramHighlightPicker }}
       onPanelAction={({ action, dispatch, reportProgress, state }) => {
         // Export pipelines are lazy-loaded so the heavy WebCodecs muxers and
         // Canvas painters stay out of the initial bundle until an export runs.

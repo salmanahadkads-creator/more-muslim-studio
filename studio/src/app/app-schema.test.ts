@@ -66,10 +66,8 @@ describe("appSchema", () => {
       "audiogram.crossfade",
       "audiogram.breathing",
       "audiogram.wordAccent",
-      "audiogram.filmTexture",
       "audiogram.highlight",
       "audiogram.highlightLine",
-      "audiogram.eyebrow",
       "audiogram.outro",
       "carousel.episode",
       "carousel.slides",
@@ -246,10 +244,6 @@ describe("appSchema", () => {
     expectMotionScenario("audiogram-wordAccent-change");
   });
 
-  it("performance: audiogram.filmTexture scenario is declared", () => {
-    expectMotionScenario("audiogram-filmTexture-change");
-  });
-
   it("performance: audiogram.highlight scenario is declared", () => {
     expectMotionScenario("audiogram-highlight-change");
   });
@@ -259,12 +253,8 @@ describe("appSchema", () => {
       (entry) => entry.id === "audiogram-highlightLine-change",
     );
 
-    expect(scenario?.interaction).toBe("control-drag");
+    expect(scenario?.interaction).toBe("control-change");
     expect(Object.keys(scenario?.budget ?? {}).length).toBeGreaterThan(0);
-  });
-
-  it("performance: audiogram.eyebrow scenario is declared", () => {
-    expectMotionScenario("audiogram-eyebrow-change");
   });
 
   it("performance: audiogram.outro scenario is declared", () => {

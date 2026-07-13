@@ -311,10 +311,8 @@ export const appPerformance: ToolcraftPerformanceConfig = defineToolcraftPerform
         ["audiogram.crossfade", "Speaker crossfade"],
         ["audiogram.breathing", "Breathing & drift"],
         ["audiogram.wordAccent", "Word accent"],
-        ["audiogram.filmTexture", "Film texture"],
         ["audiogram.highlight", "Highlight"],
         ["audiogram.highlightLine", "Highlight line"],
-        ["audiogram.eyebrow", "Eyebrow"],
         ["audiogram.outro", "Outro lines"],
       ] as const
     ).map(([target, controlLabel]) => ({
@@ -332,10 +330,7 @@ export const appPerformance: ToolcraftPerformanceConfig = defineToolcraftPerform
       expectedObservable: `Changing ${target} re-renders the audiogram within the responsiveness budget.`,
       fixture: "Audiogram template with a two-speaker SRT fixture.",
       id: `${target.replace(/\./g, "-")}-change`,
-      interaction:
-        target === "audiogram.highlightLine"
-          ? ("control-drag" as const)
-          : ("control-change" as const),
+      interaction: "control-change" as const,
       target,
       workload: false as const,
     })),

@@ -329,10 +329,6 @@ describe("More Muslim Social Studio schema", () => {
     expect(findControl(appSchema, "audiogram.wordAccent")?.type).toBe("switch");
   });
 
-  it("schema: audiogram.filmTexture toggles grain, gate weave, and text zoom", () => {
-    expect(findControl(appSchema, "audiogram.filmTexture")?.type).toBe("switch");
-  });
-
   it("schema: audiogram.highlight offers auto, off, and choose", () => {
     const control = findControl(appSchema, "audiogram.highlight");
 
@@ -343,12 +339,8 @@ describe("More Muslim Social Studio schema", () => {
   it("schema: audiogram.highlightLine picks the highlighted caption block", () => {
     const control = findControl(appSchema, "audiogram.highlightLine");
 
-    expect(control?.type).toBe("slider");
+    expect(control?.type).toBe("audiogramHighlightPicker");
     expect(control?.visibleWhen).toEqual({ equals: "choose", target: "audiogram.highlight" });
-  });
-
-  it("schema: audiogram.eyebrow overrides the frame eyebrow", () => {
-    expect(findControl(appSchema, "audiogram.eyebrow")?.type).toBe("text");
   });
 
   it("schema: audiogram.outro sets the closing-card lines", () => {
@@ -385,6 +377,26 @@ describe("More Muslim Social Studio schema", () => {
 
     expect(row?.kind).toBe("runtime");
     expect(row?.expectedObservable).toMatch(/\+ tile|append|add/i);
+  });
+
+  it("filmstrip: hidden while the audiogram template is selected", () => {
+    const row = appAcceptance.find(
+      (entry) => entry.id === "runtime.filmstrip.audiogram-hidden",
+    );
+
+    expect(row?.kind).toBe("runtime");
+    expect(row?.expectedObservable).toMatch(/removes the filmstrip|hidden/i);
+    expect(row?.expectedObservable).toMatch(/add-slide tile/i);
+  });
+
+  it("timeline: selecting the audiogram opens the extended transport", () => {
+    const row = appAcceptance.find(
+      (entry) => entry.id === "runtime.timeline.audiogram-extended",
+    );
+
+    expect(row?.kind).toBe("runtime");
+    expect(row?.expectedObservable).toMatch(/extended/i);
+    expect(row?.expectedObservable).toMatch(/scrubber/i);
   });
 
   it("filmstrip: selecting a thumbnail swaps the slide", () => {

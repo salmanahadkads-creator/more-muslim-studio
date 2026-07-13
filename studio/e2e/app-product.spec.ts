@@ -674,14 +674,14 @@ const srtFixture = [
   "",
 ].join("\n");
 
-async function setupAudiogram(page: Page): Promise<void> {
+async function setupAudiogram(page: Page, toneDurationSeconds = 2): Promise<void> {
   await openStudio(page);
   await chooseSelectOption(page, "Template", "Audiogram");
 
   const inputs = page.locator('input[type="file"]');
 
   await inputs.first().setInputFiles({
-    buffer: makeTestWavBuffer(2),
+    buffer: makeTestWavBuffer(toneDurationSeconds),
     mimeType: "audio/wav",
     name: "tone.wav",
   });
@@ -699,56 +699,103 @@ test("runtime: audiogram motion controls change the frame", async ({ page }) => 
   // The Highlight select accepts each mode without error.
   await chooseSelectOption(page, "Highlight", "Off");
   await chooseSelectOption(page, "Highlight", "Auto");
-
-  // Film texture toggles the living grain overlay on the preview.
-  const grainCount = () =>
-    page.evaluate(
-      () =>
-        document.querySelectorAll(
-          '#mm-post-slide [style*="mix-blend-mode: overlay"], #mm-post-slide [style*="mix-blend-mode: screen"]',
-        ).length,
-    );
-
-  await expect.poll(grainCount).toBeGreaterThan(0);
-
-  await page
-    .getByRole("group")
-    .filter({ has: page.getByText("Film texture", { exact: true }) })
-    .last()
-    .getByRole("switch")
-    .click();
-
-  await expect.poll(grainCount).toBe(0);
 });
 
-test("runtime: audiogram eyebrow and outro text render", async ({ page }) => {
+test("runtime: audiogram highlight picker selects and edits a line", async ({ page }) => {
   await setupAudiogram(page);
+  await chooseSelectOption(page, "Highlight", "Choose line");
 
-  const eyebrow = page
+  const highlightGroup = page
     .getByRole("group")
-    .filter({ has: page.getByText("Eyebrow", { exact: true }) })
+    .filter({ has: page.getByText("Highlight line", { exact: true }) })
+    .last();
+  const lines = highlightGroup.getByRole("textbox");
+
+  // The picker shows the ACTUAL parsed caption text, not a bare block number.
+  await expect(lines).toHaveCount(2);
+  await expect(lines.first()).toHaveValue("The first line.");
+  await expect(lines.nth(1)).toHaveValue("The second line.");
+
+  // Clicking a line selects it — the row picks up the selected styling.
+  await lines.nth(1).click();
+  await expect(
+    highlightGroup.locator('[data-selected="true"]').getByRole("textbox"),
+  ).toHaveValue("The second line.");
+
+  // Editing a line's text is a typo fix: it changes the rendered caption
+  // words for that block's original time span, without touching the
+  // uploaded SRT file. Block 0 is active from t=0, so the edit shows up
+  // as soon as the (autoplaying, looping) timeline reaches the start.
+  await lines.first().fill("The corrected first line.");
+  await expect(page.locator(slideSelector)).toContainText("The corrected first line.", {
+    timeout: 8000,
+  });
+});
+
+test("runtime: audiogram outro text renders", async ({ page }) => {
+  // A tone barely longer than the captions (2s) reaches the outro window
+  // (contentEnd + 0.3 = 2.3s) within a couple of real seconds of autoplay —
+  // no manual scrubbing needed.
+  await setupAudiogram(page, 4);
+
+  const outro = page
+    .getByRole("group")
+    .filter({ has: page.getByText("Outro lines", { exact: true }) })
     .last()
     .getByRole("textbox");
 
-  await eyebrow.fill("Custom Eyebrow Label");
-  await expect(page.locator(slideSelector)).toContainText("Custom Eyebrow Label");
+  await outro.fill("Custom outro line for the closing card.");
+  await expect(page.locator(slideSelector)).toContainText(
+    "Custom outro line for the closing card.",
+    { timeout: 8000 },
+  );
 });
 
 test("app controls: uploading audio sets the timeline duration", async ({ page }) => {
   await setupAudiogram(page);
 
-  // Show the extended timeline, then the 2s tone appears as the timeline
-  // duration (default was 60s).
-  await page
-    .getByRole("group")
-    .filter({ has: page.getByText("Timeline", { exact: true }) })
-    .last()
-    .getByRole("switch")
-    .click();
+  // The extended timeline opens automatically in audiogram mode; the 2s tone
+  // appears as the timeline duration (default was 60s).
   await expect(page.getByRole("button", { name: "Edit timeline duration" })).toHaveText(
     "2s",
     { timeout: 8000 },
   );
+});
+
+test("runtime: selecting the audiogram reveals the extended timeline", async ({ page }) => {
+  await openStudio(page);
+
+  // Static templates show no timeline transport at all.
+  await expect(page.getByRole("slider", { name: "Playback position" })).toHaveCount(0);
+
+  // Switching to the audiogram opens the extended transport — scrubber and
+  // duration editor included — without touching the Setup Timeline switch.
+  await chooseSelectOption(page, "Template", "Audiogram");
+  await expect(page.getByRole("slider", { name: "Playback position" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Edit timeline duration" }),
+  ).toBeVisible();
+
+  // Leaving the audiogram hides the transport again.
+  await chooseSelectOption(page, "Template", "Cover");
+  await expect(page.getByRole("slider", { name: "Playback position" })).toHaveCount(0);
+});
+
+test("runtime: audiogram mode hides the carousel filmstrip", async ({ page }) => {
+  await openStudio(page);
+
+  // The filmstrip (with its add-slide tile) floats over the canvas for the
+  // static templates…
+  await expect(filmstrip(page)).toBeVisible();
+
+  // …but the audiogram is one timeline-driven video, not a slide deck, so the
+  // strip (and its empty card) leaves the canvas entirely.
+  await chooseSelectOption(page, "Template", "Audiogram");
+  await expect(filmstrip(page)).toHaveCount(0);
+
+  // Returning to a static template brings the filmstrip back.
+  await chooseSelectOption(page, "Template", "Cover");
+  await expect(filmstrip(page)).toBeVisible();
 });
 
 test("app controls: uploading captions renders timed caption text", async ({ page }) => {

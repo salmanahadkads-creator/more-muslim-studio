@@ -262,10 +262,6 @@ test("browser perf: audiogram.wordAccent change stays within budget", async ({ p
   await measureAudiogramSwitch(page, "Word accent", "audiogram-wordAccent-change");
 });
 
-test("browser perf: audiogram.filmTexture change stays within budget", async ({ page }) => {
-  await measureAudiogramSwitch(page, "Film texture", "audiogram-filmTexture-change");
-});
-
 test("browser perf: audiogram.highlight change stays within budget", async ({ page }) => {
   await openAudiogram(page);
 
@@ -278,18 +274,33 @@ test("browser perf: audiogram.highlight change stays within budget", async ({ pa
 
 test("browser perf: audiogram.highlightLine change stays within budget", async ({ page }) => {
   await openAudiogram(page);
+
+  const srtFixture = [
+    "1",
+    "00:00:00,000 --> 00:00:01,000",
+    "Yassmin: The first line.",
+    "",
+    "2",
+    "00:00:01,200 --> 00:00:02,000",
+    "Dr. Rania: The second line.",
+    "",
+  ].join("\n");
+
+  await page.locator('input[type="file"]').nth(1).setInputFiles({
+    buffer: Buffer.from(srtFixture),
+    mimeType: "text/plain",
+    name: "perf-captions.srt",
+  });
   await chooseSelectOption(page, "Highlight", "Choose line");
 
-  const slider = page
+  const lines = page
     .getByRole("group")
     .filter({ has: page.getByText("Highlight line", { exact: true }) })
     .last()
-    .getByRole("slider");
-
-  await slider.focus();
+    .getByRole("textbox");
 
   const result = await measureToolcraftInteraction(page, async () => {
-    await slider.press("ArrowRight");
+    await lines.nth(1).click();
   });
 
   expectToolcraftScenarioPerformanceBudget(
@@ -299,21 +310,6 @@ test("browser perf: audiogram.highlightLine change stays within budget", async (
   );
 });
 
-test("browser perf: audiogram.eyebrow change stays within budget", async ({ page }) => {
-  await openAudiogram(page);
-
-  const eyebrow = page
-    .getByRole("group")
-    .filter({ has: page.getByText("Eyebrow", { exact: true }) })
-    .last()
-    .getByRole("textbox");
-
-  const result = await measureToolcraftInteraction(page, async () => {
-    await eyebrow.fill("Eyebrow perf");
-  });
-
-  expectToolcraftScenarioPerformanceBudget(result, appPerformance, "audiogram-eyebrow-change");
-});
 
 test("browser perf: audiogram.outro change stays within budget", async ({ page }) => {
   await openAudiogram(page);

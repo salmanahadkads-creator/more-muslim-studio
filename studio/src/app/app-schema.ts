@@ -309,16 +309,6 @@ export const appSchema = defineToolcraft({
               type: "switch",
               visibleWhen: { equals: "audiogram", target: "post.template" },
             },
-            filmTexture: {
-              defaultValue: true,
-              label: "Film texture",
-              orderRole: "mode",
-              performanceReason: "Toggles living grain, gate weave, and text zoom per frame.",
-              performanceRole: "responsiveness",
-              target: "audiogram.filmTexture",
-              type: "switch",
-              visibleWhen: { equals: "audiogram", target: "post.template" },
-            },
             highlight: {
               defaultValue: "auto",
               description:
@@ -338,35 +328,18 @@ export const appSchema = defineToolcraft({
             },
             highlightLine: {
               defaultValue: 1,
+              description:
+                "Shows every parsed caption line so you can see the exact wording before choosing the highlight, and fix typos inline.",
               label: "Highlight line",
-              max: 12,
-              min: 1,
               orderRole: "mode",
               performanceReason: "Chooses which caption block is the highlight per frame.",
               performanceRole: "responsiveness",
-              step: 1,
               target: "audiogram.highlightLine",
-              type: "slider",
+              type: "audiogramHighlightPicker",
               visibleWhen: { equals: "choose", target: "audiogram.highlight" },
             },
           },
           title: "Motion",
-        },
-        {
-          controls: {
-            eyebrow: {
-              defaultValue: "",
-              description: "Top label on the audiogram. Leave blank to use the episode marker.",
-              label: "Eyebrow",
-              orderRole: "input",
-              performanceReason: "Eyebrow text re-renders one line on the frame.",
-              performanceRole: "responsiveness",
-              target: "audiogram.eyebrow",
-              type: "text",
-              visibleWhen: { equals: "audiogram", target: "post.template" },
-            },
-          },
-          title: "Eyebrow",
         },
         {
           controls: {

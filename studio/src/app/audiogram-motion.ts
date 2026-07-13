@@ -18,9 +18,7 @@ export const SYNC_LEAD = 0.12;
 export const GROUND_CROSSFADE = 0.5;
 /* Default trailing outro length (branded "now streaming" card). */
 export const OUTRO_DURATION = 5;
-/* Word entrance + active-word accent settle timings. */
-const WORD_FADE = 0.18;
-const WORD_RISE_PX = 10;
+/* Active-word accent settle timing. */
 const ACCENT_SETTLE = 0.3;
 
 export const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
@@ -43,14 +41,6 @@ export function hexMix(a: string, b: string, k: number): string {
 
   return `#${((1 << 24) | (r << 16) | (g << 8) | bl).toString(16).slice(1)}`;
 }
-
-/* Deterministic pseudo-random in [0,1) from an integer — keeps grain motion
-   reproducible for a given frame index. */
-export const frand = (n: number): number => {
-  const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
-
-  return x - Math.floor(x);
-};
 
 export type AudiogramWord = { end: number; start: number; text: string };
 export type AudiogramSpeechBlock = {
@@ -111,6 +101,55 @@ export function buildSpeechBlocks(
   return blocks;
 }
 
+/* The block's words joined back into one line — what the highlight picker
+   shows the user so they can recognise the line by its actual wording. */
+export function blockText(block: AudiogramSpeechBlock): string {
+  return block.words.map((word) => word.text).join(" ");
+}
+
+/* Typo-fix overrides keyed by 0-based block index, applied on top of the
+   parsed captions (feature: highlight picker text editing). Re-tokenises the
+   corrected line and redistributes word timing proportionally across the
+   block's ORIGINAL [start,end) span — the same weighting buildSpeechBlocks
+   uses — so a corrected word still lands at roughly the moment it's spoken
+   without needing to re-time the whole transcript. The uploaded SRT file
+   itself is never rewritten; this is a render-time correction layer. */
+export function applyBlockTextOverrides(
+  blocks: readonly AudiogramSpeechBlock[],
+  overrides: Readonly<Record<number, string>>,
+): AudiogramSpeechBlock[] {
+  return blocks.map((block, blockIndex) => {
+    const overrideText = overrides[blockIndex];
+
+    if (overrideText === undefined || overrideText === blockText(block)) {
+      return block;
+    }
+
+    const tokens = overrideText.split(/\s+/).filter(Boolean);
+
+    if (tokens.length === 0) {
+      return block;
+    }
+
+    const weights = tokens.map((token) => token.length + 1);
+    const total = weights.reduce((sum, weight) => sum + weight, 0) || 1;
+    const words: AudiogramWord[] = [];
+    let accumulated = 0;
+
+    for (let index = 0; index < tokens.length; index += 1) {
+      const start = block.start + (accumulated / total) * (block.end - block.start);
+
+      accumulated += weights[index];
+
+      const end = block.start + (accumulated / total) * (block.end - block.start);
+
+      words.push({ end, start, text: tokens[index] });
+    }
+
+    return { ...block, end: words[words.length - 1].end, words };
+  });
+}
+
 /* The first two distinct speakers become host and guest. */
 export function speakersOf(blocks: readonly AudiogramSpeechBlock[]): {
   guest: string;
@@ -145,7 +184,6 @@ export function firstName(speaker: string): string {
 export type AudiogramMotionConfig = {
   bgDrift: boolean;
   breathe: boolean;
-  filmTexture: boolean;
   guestWay: ColourwayKey;
   hasImage: boolean;
   /** "auto" scores the strongest line, "off" disables, a number forces that
@@ -303,9 +341,10 @@ export function highlightIndex(
   return best;
 }
 
-/* Per-word entrance + active-word accent (feature 5). The spoken word carries
-   the accent colour, settling back to ink over ACCENT_SETTLE once the next word
-   lands; earlier/later words fade + rise into place. */
+/* Per-word entrance + active-word accent (feature 5). Each word appears the
+   instant its start time is reached — a hard cut, not a fade or rise — then
+   carries the accent colour, settling back to ink over ACCENT_SETTLE once the
+   next word lands. */
 export function wordVisual(
   word: AudiogramWord,
   nextStart: number,
@@ -313,12 +352,12 @@ export function wordVisual(
   ink: string,
   accent: string,
   wordAccent: boolean,
-): { color: string; opacity: number; rise: number } {
+): { color: string; opacity: number } {
   const t = timeSeconds + SYNC_LEAD;
-  const opacity = clamp01((t - word.start) / WORD_FADE);
+  const opacity = t >= word.start ? 1 : 0;
   const color = wordAccent ? hexMix(accent, ink, clamp01((t - nextStart) / ACCENT_SETTLE)) : ink;
 
-  return { color, opacity, rise: (1 - opacity) * WORD_RISE_PX };
+  return { color, opacity };
 }
 
 /* Slow, clip-length-scaled ground motion (feature 10): a gentle push-in on
@@ -345,54 +384,6 @@ export function groundMotion(
   const ty = image && motion ? -10 * p : 0;
 
   return { scale, tx, ty };
-}
-
-/* Gate weave (film-texture): a slow filmic wander of the whole frame plus a
-   whisper of rotation, re-seeded at 6Hz so it drifts rather than trembles. */
-export function gateWeave(
-  config: AudiogramMotionConfig,
-  timeSeconds: number,
-): { wr: number; wx: number; wy: number } {
-  if (!config.filmTexture) {
-    return { wr: 0, wx: 0, wy: 0 };
-  }
-
-  const boil = Math.floor(Math.floor(timeSeconds * AUDIOGRAM_FPS) / 2);
-
-  return {
-    wr: Math.sin(timeSeconds * 0.3 + 2.6) * 0.028,
-    wx: Math.sin(timeSeconds * 0.45 + 1.7) * 1.2 + (frand(boil * 3 + 11) * 2 - 1) * 0.3,
-    wy: Math.cos(timeSeconds * 0.35 + 0.4) * 1.2 + (frand(boil * 3 + 77) * 2 - 1) * 0.3,
-  };
-}
-
-/* Text zoom (film-texture): a slow push on the live caption; a stronger arc on
-   the highlight set piece. Returns the caption block's scale for this frame. */
-export function captionZoom(
-  block: AudiogramSpeechBlock | null,
-  isHighlight: boolean,
-  config: AudiogramMotionConfig,
-  timeSeconds: number,
-): number {
-  if (!config.filmTexture || !block) {
-    return 1;
-  }
-
-  const span = Math.max(1.2, block.end - block.start || 1.2);
-  const progress = clamp01((timeSeconds + SYNC_LEAD - block.start) / span);
-
-  return isHighlight ? 0.98 + 0.1 * progress : 1 + 0.035 * progress;
-}
-
-/* Living grain (feature 4): the noise tile jumps to a fresh deterministic
-   offset at 6Hz (half of 12fps) — reads as film grain rather than TV static. */
-export function livingGrainOffset(timeSeconds: number): { gx: number; gy: number } {
-  const step = Math.floor(Math.floor(timeSeconds * AUDIOGRAM_FPS) / 2);
-
-  return {
-    gx: Math.round(frand(step) * 280),
-    gy: Math.round(frand(step + 9173) * 280),
-  };
 }
 
 /* Audio-envelope breathing (feature 3): a per-frame RMS envelope of the decoded
@@ -486,21 +477,3 @@ export function outroFadeAt(
    two body lines, symbol). */
 export const OUTRO_FADE_DELAYS = { line1: 0.55, line2: 0.95, symbol: 1.35, title: 0.15 } as const;
 
-/* Mid-grey luminance-noise SVG data URI for the living-grain tile. Composited
-   with overlay/soft-light: 50% grey is a no-op, so the ground colour stays true
-   on average and only gains local tooth. Used as a CSS background in the DOM
-   preview (the offline export generates the same noise as raw pixels to avoid
-   canvas taint). */
-export const GRAIN_TILE_SIZE = 280;
-export const GRAIN_DATA_URI =
-  "data:image/svg+xml;charset=utf-8," +
-  encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${GRAIN_TILE_SIZE}" height="${GRAIN_TILE_SIZE}"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="matrix" values="0.28 0 0 0 0.36 0.28 0 0 0 0.36 0.28 0 0 0 0.36 0 0 0 0 1"/></filter><rect width="${GRAIN_TILE_SIZE}" height="${GRAIN_TILE_SIZE}" filter="url(#n)"/></svg>`,
-  );
-
-/* Overlay does nothing on pure black; fall back to screen at low strength. */
-export function grainCompositing(bg: string): { blend: string; opacity: number } {
-  return bg === "#000000"
-    ? { blend: "screen", opacity: 0.09 }
-    : { blend: "overlay", opacity: 0.35 };
-}
