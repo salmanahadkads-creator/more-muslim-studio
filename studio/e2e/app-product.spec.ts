@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 
 import { expect, test, type Download, type Page } from "@playwright/test";
 
+import { dragToolcraftSliderByLabel } from "./performance-helpers";
 import {
   expectToolcraftProductObservableToChange,
   getToolcraftProductObservableSnapshot,
@@ -304,8 +305,46 @@ const textCases: {
   { label: "Dialogue", name: "app controls: editing content.quote.dialogue updates the slide text", template: "Quote exchange", value: "Amel: We kept going." },
   { label: "Body", name: "app controls: editing content.synopsis.body updates the slide text", template: "Synopsis", value: "A story about return.\n\nAnd renewal." },
   { label: "Outro", name: "app controls: editing content.streaming.lines updates the slide text", template: "Now streaming", value: "Listen now.\nEverywhere." },
-  { label: "Credits", name: "app controls: editing content.credits.list updates the slide text", template: "Episode credits", value: "Amel Mukhtar — Producer" },
 ];
+
+test("runtime: credits editor adds, edits, and removes a credit row", async ({ page }) => {
+  await openStudio(page);
+  await chooseSelectOption(page, "Template", "Episode credits");
+
+  const firstName = page.getByRole("textbox", { name: "Credit 1 name" });
+
+  await expect(firstName).toBeVisible();
+
+  // A hyphenated name reaches the slide whole — the exact failure the old
+  // "Name — Role" delimiter parsing had.
+  await expectToolcraftProductObservableToChange(
+    page,
+    async () => {
+      await firstName.fill("Yassmin Abdel-Magied");
+    },
+    { selector: slideSelector },
+  );
+  await expect(page.locator(slideSelector)).toContainText("Yassmin Abdel-Magied", {
+    ignoreCase: true,
+  });
+
+  // Add a credit, fill its separate Name and Title boxes, see it render.
+  const initialRows = await page.getByRole("textbox", { name: /Credit \d+ name/ }).count();
+
+  await page.getByRole("button", { name: "Add credit" }).click();
+
+  const addedIndex = initialRows + 1;
+
+  await page.getByRole("textbox", { name: `Credit ${addedIndex} name` }).fill("New Crew");
+  await page.getByRole("textbox", { name: `Credit ${addedIndex} title` }).fill("Runner");
+  await expect(page.locator(slideSelector)).toContainText("New Crew", { ignoreCase: true });
+
+  // Remove it again.
+  await page.getByRole("button", { name: `Remove credit ${addedIndex}` }).click();
+  await expect(page.locator(slideSelector)).not.toContainText("New Crew", {
+    ignoreCase: true,
+  });
+});
 
 for (const { label, name, template, value } of textCases) {
   test(name, async ({ page }) => {
@@ -749,6 +788,75 @@ test("runtime: audiogram outro text renders", async ({ page }) => {
     "Custom outro line for the closing card.",
     { timeout: 8000 },
   );
+});
+
+test("runtime: audiogram automation keyframes evaluate while scrubbing", async ({ page }) => {
+  await setupAudiogram(page);
+
+  // The caption element's computed font size is the directly observable
+  // product output that Caption size automation drives.
+  const captionSelector = `${slideSelector} [data-audiogram-caption]`;
+
+  // Pause playback so the playhead only moves when we scrub.
+  const transport = page.getByRole("button", { name: /(play|pause) playback/i }).first();
+
+  if (/pause/i.test((await transport.getAttribute("aria-label")) ?? "")) {
+    await transport.click();
+  }
+
+  // Open the expanded keyframe editor (the collapsible bottom timeline).
+  await page.getByRole("button", { name: "Expand timeline panel" }).click();
+
+  // Control diamonds create one labelled automation lane per parameter.
+  await page.getByRole("button", { name: "Add Caption size keyframe" }).click();
+
+  const lanes = page.locator('[data-slot="timeline-keyframe-row"]');
+
+  await expect(lanes).toHaveCount(1);
+
+  await page.getByRole("button", { name: "Add Motion intensity keyframe" }).click();
+  await expect(lanes).toHaveCount(2);
+
+  // Scrub forward, then change the control — the runtime records a second
+  // keyframe on the Caption size lane at the new playhead time, and the
+  // caption's rendered font size changes live. Creating a keyframe selects
+  // it and arrows would move the SELECTED keyframe, so deselect first.
+  const scrubber = page.getByRole("slider", { name: "Playback position" }).first();
+
+  await scrubber.focus();
+  await scrubber.press("Escape");
+  await scrubber.press("ArrowRight");
+  await scrubber.press("ArrowRight");
+
+  await expectToolcraftProductObservableToChange(
+    page,
+    async () => {
+      await dragToolcraftSliderByLabel(page, "Caption size", 1);
+    },
+    { selector: captionSelector },
+  );
+  await expect(
+    page.getByRole("button", { name: /Caption size keyframe at/ }).nth(1),
+  ).toBeVisible();
+
+  // Scrubbing back re-evaluates the keyframed value: the caption size returns
+  // toward the 100% recorded at t=0 and the earlier caption block renders.
+  // The upsert selected the new keyframe, so deselect before scrubbing again.
+  await expectToolcraftProductObservableToChange(
+    page,
+    async () => {
+      await scrubber.focus();
+      await scrubber.press("Escape");
+
+      for (let press = 0; press < 12; press += 1) {
+        await scrubber.press("ArrowLeft");
+      }
+    },
+    { selector: captionSelector },
+  );
+  await expect(page.locator(slideSelector)).toContainText("The first line.", {
+    ignoreCase: true,
+  });
 });
 
 test("app controls: uploading audio sets the timeline duration", async ({ page }) => {

@@ -6,6 +6,7 @@
 import * as React from "react";
 
 import {
+  evaluateToolcraftTimelineValues,
   shouldIncludeToolcraftPreviewBackground,
   toolcraftTimelinePanelExtendedTarget,
   type ToolcraftState,
@@ -25,6 +26,7 @@ import {
   makeSlideLayerId,
   readCarouselSlides,
   writeCarouselSlides,
+  type CarouselSlides,
 } from "./carousel";
 import {
   applyBlockTextOverrides,
@@ -32,7 +34,9 @@ import {
   computeAudioEnvelope,
   speakersOf,
   type AudiogramMotionConfig,
+  type BlockTextOverride,
 } from "./audiogram-motion";
+import { readCredits } from "./credits";
 import { parseSrt } from "./srt";
 import {
   AudiogramPost,
@@ -49,21 +53,39 @@ function readString(value: unknown, fallback = ""): string {
   return typeof value === "string" ? value : fallback;
 }
 
+/* Percent sliders (0–200%) arrive as numbers; renderers use them as factors.
+   Keyframe interpolation can hand back fractional values — pass them through
+   untouched so automation curves stay smooth. */
+export function readPercentFactor(value: unknown, fallbackFactor: number): number {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.max(0, value / 100)
+    : fallbackFactor;
+}
+
 /* Highlight-picker typo-fix overrides: a plain object keyed by 0-based block
-   index, written by the custom control (see audiogram-highlight-picker.tsx).
-   Read defensively — an empty/missing value means no corrections yet. */
-export function readBlockOverrides(value: unknown): Record<number, string> {
+   index, each entry recording the original line (`from`) alongside the
+   correction (`to`) so a fix never applies to a different caption file's
+   line. Written by the custom control (see audiogram-highlight-picker.tsx).
+   Read defensively — an empty/missing/legacy-shaped value means no
+   corrections yet. */
+export function readBlockOverrides(value: unknown): Record<number, BlockTextOverride> {
   if (typeof value !== "object" || value === null) {
     return {};
   }
 
-  const out: Record<number, string> = {};
+  const out: Record<number, BlockTextOverride> = {};
 
   for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
     const index = Number(key);
 
-    if (Number.isInteger(index) && typeof entry === "string") {
-      out[index] = entry;
+    if (!Number.isInteger(index) || typeof entry !== "object" || entry === null) {
+      continue;
+    }
+
+    const record = entry as Record<string, unknown>;
+
+    if (typeof record.from === "string" && typeof record.to === "string") {
+      out[index] = { from: record.from, to: record.to };
     }
   }
 
@@ -269,7 +291,7 @@ export function PostSlide({
           format={format}
           scene={scene}
           values={{
-            credits: readString(values["content.credits.list"]),
+            credits: readCredits(values["content.credits.list"]),
             episode: readString(values["content.episode"]),
           }}
           way={way}
@@ -449,6 +471,13 @@ function SetupPrefill(): null {
     const setValue = (target: string, value: unknown) =>
       dispatch({ historyGroup: "setup-prefill", target, type: "controls.setValue", value });
 
+    // Completing the wizard starts a NEW post: drop slide layers left over
+    // from earlier work (e.g. an old episode set that led with a cover) so the
+    // filmstrip starts from the post being set up, not a stale carousel.
+    for (const layer of state.layers) {
+      dispatch({ layerId: layer.id, type: "layers.delete" });
+    }
+
     setValue("post.colourway", way);
 
     const episodeEntry =
@@ -469,8 +498,10 @@ function SetupPrefill(): null {
 
     if (mode === "audiogram") {
       setValue("post.template", "audiogram");
+      writeCarouselSlides(dispatch, {});
     } else if (mode === "carousel") {
-      const slides = readCarouselSlides(state);
+      // Fresh set, not appended to leftovers — the layers were cleared above.
+      const slides: CarouselSlides = {};
       const set = buildEpisodeSetSnapshots(
         captureSlideValues(state),
         episodeEntry?.value ?? "ep1",
@@ -495,6 +526,7 @@ function SetupPrefill(): null {
       }
     } else {
       setValue("post.template", "cover");
+      writeCarouselSlides(dispatch, {});
 
       if (episodeEntry) {
         const label = params.get("title");
@@ -643,6 +675,12 @@ export function PostRenderer(): React.JSX.Element {
       null)
     : null;
   const envelope = useAudioEnvelope(audioUrl);
+  // Keyframed automation (motion intensity, caption size) evaluates at the
+  // playhead so preview frames match the export's per-frame evaluation.
+  const evaluated = React.useMemo(
+    () => evaluateToolcraftTimelineValues(state, timelineTime),
+    [state, timelineTime],
+  );
   const highlightMode = readString(values["audiogram.highlight"], "auto");
   const highlightLine =
     typeof values["audiogram.highlightLine"] === "number"
@@ -651,6 +689,7 @@ export function PostRenderer(): React.JSX.Element {
   const audiogramConfig: AudiogramMotionConfig = {
     bgDrift: values["audiogram.breathing"] !== false,
     breathe: values["audiogram.breathing"] !== false,
+    captionScale: readPercentFactor(evaluated["audiogram.captionSize"], 1),
     guestWay: (readString(values["audiogram.guestColourway"], way) || way) as ColourwayKey,
     hasImage: !!scene.image,
     highlight:
@@ -660,6 +699,7 @@ export function PostRenderer(): React.JSX.Element {
           ? Math.max(0, Math.round(highlightLine) - 1)
           : "auto",
     hostWay: way,
+    motionScale: readPercentFactor(evaluated["audiogram.motionIntensity"], 1),
     solid: !scene.image && scene.pattern === false,
     speakerSwap: values["audiogram.crossfade"] !== false,
     wordAccent: values["audiogram.wordAccent"] !== false,

@@ -7,6 +7,9 @@ import { expect, test, type Page } from "@playwright/test";
 import { appPerformance } from "../src/app/app-performance";
 
 import {
+  dragToolcraftSliderByLabel,
+  dragToolcraftSliderToPerformanceStressValue,
+  expectToolcraftCanvasViewportStable,
   expectToolcraftScenarioPerformanceBudget,
   measureToolcraftInteraction,
 } from "./performance-helpers";
@@ -185,16 +188,12 @@ test("browser perf: content.credits.list change stays within budget", async ({ p
   await openStudio(page);
   await chooseSelectOption(page, "Template", "Episode credits");
 
-  const field = page
-    .getByRole("group")
-    .filter({ has: page.getByText("Credits", { exact: true }) })
-    .last()
-    .getByRole("textbox");
+  const field = page.getByRole("textbox", { name: "Credit 1 name" });
 
   await expect(field).toBeVisible();
 
   const result = await measureToolcraftInteraction(page, async () => {
-    await field.fill("Someone New — Editor");
+    await field.fill("Someone New");
   });
 
   expectToolcraftScenarioPerformanceBudget(result, appPerformance, "content-credits-list-change");
@@ -262,6 +261,60 @@ test("browser perf: audiogram.wordAccent change stays within budget", async ({ p
   await measureAudiogramSwitch(page, "Word accent", "audiogram-wordAccent-change");
 });
 
+test("browser perf: audiogram.motionIntensity drag stays within budget", async ({ page }) => {
+  await openAudiogram(page);
+
+  const result = await measureToolcraftInteraction(page, async () => {
+    await dragToolcraftSliderByLabel(page, "Motion intensity", 0.85);
+  });
+
+  expectToolcraftScenarioPerformanceBudget(
+    result,
+    appPerformance,
+    "audiogram-motionIntensity-drag",
+  );
+});
+
+test("browser perf: audiogram.captionSize drag stays within budget", async ({ page }) => {
+  await openAudiogram(page);
+
+  // Drag to the documented 150% stress value from app-performance.ts.
+  const result = await measureToolcraftInteraction(page, async () => {
+    await dragToolcraftSliderToPerformanceStressValue(
+      page,
+      "Caption size",
+      appPerformance,
+      "audiogram-captionSize-drag",
+    );
+  });
+
+  expectToolcraftScenarioPerformanceBudget(result, appPerformance, "audiogram-captionSize-drag");
+});
+
+test("browser perf: canvas stays stable while creating and scrubbing keyframes", async ({
+  page,
+}) => {
+  await openAudiogram(page);
+
+  // Zoom the canvas from the toolbar first — keyframe work must not nudge it.
+  await page.getByRole("button", { name: "Zoom in" }).click();
+
+  // Open the expanded keyframe editor and add a keyframe from the control diamond.
+  await page.getByRole("button", { name: "Expand timeline panel" }).click();
+  await page.getByRole("button", { name: "Add Motion intensity keyframe" }).click();
+  await expect(page.locator('[data-slot="timeline-keyframe-row"]').first()).toBeVisible();
+
+  await expectToolcraftCanvasViewportStable(page, async () => {
+    // Scrub the playhead, then move the automated value at the new time.
+    const scrubber = page.getByRole("slider", { name: "Playback position" }).first();
+
+    await scrubber.focus();
+    await scrubber.press("ArrowRight");
+    await scrubber.press("ArrowRight");
+    await dragToolcraftSliderByLabel(page, "Motion intensity", 0.2);
+  });
+});
+
 test("browser perf: audiogram.highlight change stays within budget", async ({ page }) => {
   await openAudiogram(page);
 
@@ -309,7 +362,6 @@ test("browser perf: audiogram.highlightLine change stays within budget", async (
     "audiogram-highlightLine-change",
   );
 });
-
 
 test("browser perf: audiogram.outro change stays within budget", async ({ page }) => {
   await openAudiogram(page);

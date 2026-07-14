@@ -10,6 +10,7 @@ import {
   writeCarouselSlides,
 } from "../app/carousel";
 import { CarouselFilmstrip } from "../app/carousel-filmstrip";
+import { CreditsEditor } from "../app/credits-editor";
 import { InlineTextEditor } from "../app/inline-text-editor";
 import { PostRenderer } from "../app/post-renderer";
 import { SceneImageControls } from "../app/scene-image-controls";
@@ -30,7 +31,10 @@ export function AppHome(): React.JSX.Element {
           </>
         }
       className="h-dvh min-h-dvh"
-      controlRenderers={{ audiogramHighlightPicker: AudiogramHighlightPicker }}
+      controlRenderers={{
+        audiogramHighlightPicker: AudiogramHighlightPicker,
+        creditsEditor: CreditsEditor,
+      }}
       onPanelAction={({ action, dispatch, reportProgress, state }) => {
         // Export pipelines are lazy-loaded so the heavy WebCodecs muxers and
         // Canvas painters stay out of the initial bundle until an export runs.

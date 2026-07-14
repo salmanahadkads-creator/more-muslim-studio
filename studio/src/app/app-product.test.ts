@@ -11,7 +11,18 @@ import type {
 import { COLOURWAY_KEYS, COLOURWAYS, EPISODE_ILLUSTRATIONS } from "./brand";
 import { appSchema } from "./app-schema";
 import { appAcceptance } from "./app-acceptance";
+import { evaluateToolcraftTimelineValue } from "@/toolcraft/runtime";
+
+import {
+  applyBlockTextOverrides,
+  blockText,
+  buildSpeechBlocks,
+  groundMotion,
+  type AudiogramMotionConfig,
+} from "./audiogram-motion";
 import { buildEpisodeSetSnapshots, SLIDE_VALUE_TARGETS } from "./carousel";
+import { readCredits, readCreditsDraft } from "./credits";
+import { parseSrt } from "./srt";
 
 function findControl(
   schema: ResolvedToolcraftAppSchema,
@@ -170,12 +181,72 @@ describe("More Muslim Social Studio schema", () => {
     expect(typeof control?.defaultValue).toBe("string");
     expect(String(control?.defaultValue)).not.toBe("");
   });
-  it("schema: content.credits.list is a visible code control with a default", () => {
+  it("audiogram: a typo override applies only while the line still reads its recorded original", () => {
+    const srt =
+      "1\n00:00:00,000 --> 00:00:01,000\nYassmin: The frist line.\n\n2\n00:00:01,200 --> 00:00:02,000\nRania: The second line.\n";
+    const blocks = buildSpeechBlocks(parseSrt(srt));
+    const fix = { 0: { from: blockText(blocks[0]), to: "The first line." } };
+
+    expect(blockText(applyBlockTextOverrides(blocks, fix)[0])).toBe("The first line.");
+
+    // Same fix against a re-uploaded SRT whose first line differs: stale, ignored.
+    const otherSrt =
+      "1\n00:00:00,000 --> 00:00:01,000\nYassmin: A different opener.\n\n2\n00:00:01,200 --> 00:00:02,000\nRania: The second line.\n";
+    const otherBlocks = buildSpeechBlocks(parseSrt(otherSrt));
+
+    expect(blockText(applyBlockTextOverrides(otherBlocks, fix)[0])).toBe("A different opener.");
+  });
+
+  it("credits: structured entries pass through and empty rows drop from the render", () => {
+    expect(
+      readCredits([
+        { name: "Yassmin Abdel-Magied", title: "Reporter" },
+        { name: "", title: "" },
+        { name: "  Sohaira Siddiqui  ", title: " Host " },
+      ]),
+    ).toEqual([
+      { name: "Yassmin Abdel-Magied", title: "Reporter" },
+      { name: "Sohaira Siddiqui", title: "Host" },
+    ]);
+  });
+
+  it("credits: legacy string lines keep hyphenated names whole", () => {
+    expect(
+      readCredits("Yassmin Abdel-Magied — Reporter\nSarah Qari: Story Editor\nAmel Mukhtar - Exec. Producer"),
+    ).toEqual([
+      { name: "Yassmin Abdel-Magied", title: "Reporter" },
+      { name: "Sarah Qari", title: "Story Editor" },
+      { name: "Amel Mukhtar", title: "Exec. Producer" },
+    ]);
+  });
+
+  it("credits: draft read keeps empty rows and never trims mid-typing text", () => {
+    expect(
+      readCreditsDraft([
+        { name: "Salman Ahad ", title: "" },
+        { name: "", title: "" },
+      ]),
+    ).toEqual([
+      { name: "Salman Ahad ", title: "" },
+      { name: "", title: "" },
+    ]);
+  });
+
+  it("schema: content.credits.list is a visible creditsEditor control with a default", () => {
     const control = findControl(appSchema, "content.credits.list");
 
-    expect(control?.type).toBe("code");
-    expect(typeof control?.defaultValue).toBe("string");
-    expect(String(control?.defaultValue)).not.toBe("");
+    expect(control?.type).toBe("creditsEditor");
+    expect(Array.isArray(control?.defaultValue)).toBe(true);
+
+    const defaults = control?.defaultValue as { name: string; title: string }[];
+
+    expect(defaults.length).toBeGreaterThan(0);
+
+    for (const credit of defaults) {
+      expect(typeof credit.name).toBe("string");
+      expect(credit.name).not.toBe("");
+      expect(typeof credit.title).toBe("string");
+    }
   });
 
   it("schema: export.includeBackground defaults to true", () => {
@@ -364,12 +435,98 @@ describe("More Muslim Social Studio schema", () => {
   it("schema: timeline playback drives the audiogram frame", () => {
     expect(appSchema.panels.timeline).toMatchObject({
       defaultDurationSeconds: 60,
-      mode: "playback",
+      mode: "keyframes",
     });
 
     const row = appAcceptance.find((entry) => entry.id === "runtime.timeline.playback");
 
     expect(row?.timelineCoverage).toBe("playback");
+  });
+
+  it("schema: keyframed audiogram values evaluate through the timeline evaluator", () => {
+    const row = appAcceptance.find((entry) => entry.id === "runtime.timeline.keyframes");
+
+    expect(row?.timelineCoverage).toBe("keyframes");
+
+    // The evaluator interpolates a keyframed slider value at the playhead —
+    // the exact call both renderers make per frame.
+    const state = {
+      timeline: {
+        currentTimeSeconds: 1,
+        keyframeGroups: [
+          {
+            controlId: "audiogram.motionIntensity",
+            keyframes: [
+              {
+                controlId: "audiogram.motionIntensity",
+                controlLabel: "Motion intensity",
+                id: "k1",
+                timeSeconds: 0,
+                value: 0,
+                valueLabel: "0",
+              },
+              {
+                controlId: "audiogram.motionIntensity",
+                controlLabel: "Motion intensity",
+                easing: { type: "linear" },
+                id: "k2",
+                timeSeconds: 2,
+                value: 200,
+                valueLabel: "200",
+              },
+            ],
+            label: "Motion intensity",
+          },
+        ],
+      },
+      values: { "audiogram.motionIntensity": 100 },
+    } as unknown as Parameters<typeof evaluateToolcraftTimelineValue>[0];
+
+    const midpoint = evaluateToolcraftTimelineValue(state, "audiogram.motionIntensity", 1);
+
+    expect(typeof midpoint).toBe("number");
+    expect(midpoint as number).toBeGreaterThan(0);
+    expect(midpoint as number).toBeLessThan(200);
+    expect(evaluateToolcraftTimelineValue(state, "audiogram.motionIntensity", 0)).toBe(0);
+    expect(evaluateToolcraftTimelineValue(state, "audiogram.motionIntensity", 2)).toBe(200);
+  });
+
+  it("schema: audiogram.motionIntensity scales the frame's ambient movement", () => {
+    const control = findControl(appSchema, "audiogram.motionIntensity");
+
+    expect(control?.type).toBe("slider");
+    expect(control?.defaultValue).toBe(100);
+
+    const base: AudiogramMotionConfig = {
+      bgDrift: true,
+      breathe: true,
+      captionScale: 1,
+      guestWay: "oak",
+      hasImage: false,
+      highlight: "off",
+      hostWay: "night",
+      motionScale: 1,
+      solid: false,
+      speakerSwap: true,
+      wordAccent: true,
+    };
+    const still = groundMotion({ ...base, motionScale: 0 }, 5, 60);
+    const brand = groundMotion(base, 5, 60);
+    const doubled = groundMotion({ ...base, motionScale: 2 }, 5, 60);
+
+    // Intensity 0 stops the pan entirely; higher intensity pans further.
+    expect(still.tx).toBe(0);
+    expect(Math.abs(doubled.tx)).toBeGreaterThan(Math.abs(brand.tx));
+    expect(doubled.scale).toBeGreaterThan(brand.scale);
+  });
+
+  it("schema: audiogram.captionSize scales the caption text", () => {
+    const control = findControl(appSchema, "audiogram.captionSize");
+
+    expect(control?.type).toBe("slider");
+    expect(control?.defaultValue).toBe(100);
+    expect(control?.min).toBe(50);
+    expect(control?.max).toBe(150);
   });
 
   it("filmstrip: the add button appends a slide", () => {

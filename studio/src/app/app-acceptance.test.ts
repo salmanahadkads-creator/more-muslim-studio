@@ -3156,6 +3156,8 @@ describe("Toolcraft template app acceptance coverage", () => {
       "audiogram.wordAccent",
       "audiogram.highlight",
       "audiogram.highlightLine",
+      "audiogram.motionIntensity",
+      "audiogram.captionSize",
       "audiogram.outro",
       "carousel.episode",
       "carousel.slides",
@@ -3172,7 +3174,7 @@ describe("Toolcraft template app acceptance coverage", () => {
     expect(appTransferMode.mode).toBe("new-toolcraft-app");
     expect(appTransferMode.animationIntent).toMatchObject({
       loopDuration: { seconds: 60, source: "product-derived" },
-      mode: "timeline-playback",
+      mode: "timeline-keyframes",
     });
   });
 

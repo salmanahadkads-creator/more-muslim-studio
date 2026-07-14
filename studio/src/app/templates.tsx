@@ -29,6 +29,7 @@ import {
   type AudiogramMotionConfig,
   type AudiogramSpeechBlock,
 } from "./audiogram-motion";
+import type { Credit } from "./credits";
 
 const CAPS_TRACKING = "0.165em";
 const MARIST = '"ABC Marist", Georgia, serif';
@@ -465,7 +466,7 @@ export function NowStreamingPost({
   );
 }
 
-export type CreditsValues = { credits: string; episode: string };
+export type CreditsValues = { credits: readonly Credit[]; episode: string };
 
 export function CreditsPost({
   format,
@@ -480,17 +481,7 @@ export function CreditsPost({
 }): React.JSX.Element {
   const c = COLOURWAYS[way];
   const isStory = format === "story";
-  const credits = values.credits
-    .split(/\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const match = line.match(/^(.*?)\s*[—:|-]\s*(.+)$/);
-
-      return match
-        ? { name: match[1].trim(), title: match[2].trim() }
-        : { name: line, title: "" };
-    });
+  const credits = values.credits;
 
   return (
     <PostFrame format={format} padBottom={isStory ? 370 : 85} padTop={isStory ? 370 : 85} way={way} {...scene}>
@@ -616,7 +607,7 @@ export function AudiogramPost({
 
   const ink = ground.ink;
   const accent = ground.accent;
-  const captionSize = isHighlight ? 82 : 69;
+  const captionSize = Math.round((isHighlight ? 82 : 69) * Math.max(0.1, config.captionScale));
   const outroWay = config.hostWay;
   const outroColour = COLOURWAYS[outroWay];
 
@@ -707,6 +698,7 @@ export function AudiogramPost({
               </div>
             )}
             <div
+              data-audiogram-caption=""
               data-toolcraft-product-text=""
               style={{
                 fontSize: captionSize,

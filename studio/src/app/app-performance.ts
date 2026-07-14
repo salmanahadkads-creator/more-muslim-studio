@@ -45,7 +45,12 @@ export const appPerformance: ToolcraftPerformanceConfig = defineToolcraftPerform
         interaction: "control-drag",
         invalidates: ["slide-dom"],
         mustNotInvalidate: ["export-raster"],
-        targets: ["scene.imagePosition", "scene.imageZoom"],
+        targets: [
+          "scene.imagePosition",
+          "scene.imageZoom",
+          "audiogram.motionIntensity",
+          "audiogram.captionSize",
+        ],
       },
       {
         interaction: "media-import",
@@ -305,6 +310,53 @@ export const appPerformance: ToolcraftPerformanceConfig = defineToolcraftPerform
       interaction: "control-change",
       target: "audiogram.guestColourway",
       workload: false,
+    },
+    {
+      automated: true,
+      automatedTestName: "performance: audiogram.motionIntensity scenario is declared",
+      browser: true,
+      browserTestName: "browser perf: audiogram.motionIntensity drag stays within budget",
+      // Drag budget matches scene-image-zoom-stability: the measured window
+      // includes the whole multi-step pointer gesture, not one commit.
+      budget: { maxFrameGapMs: 120, maxInteractionMs: 1500, maxLongTaskMs: 200 },
+      controlLabel: "Motion intensity",
+      expectedObservable:
+        "Dragging Motion intensity live re-renders the audiogram frame within the responsiveness budget.",
+      fixture: "Audiogram template with a two-speaker SRT fixture.",
+      id: "audiogram-motionIntensity-drag",
+      interaction: "control-drag",
+      target: "audiogram.motionIntensity",
+      workload: false,
+    },
+    {
+      automated: true,
+      automatedTestName: "performance: audiogram.captionSize scenario is declared",
+      browser: true,
+      browserTestName: "browser perf: audiogram.captionSize drag stays within budget",
+      budget: { maxFrameGapMs: 120, maxInteractionMs: 1500, maxLongTaskMs: 200 },
+      controlLabel: "Caption size",
+      expectedObservable:
+        "Dragging Caption size live re-lays-out the caption block within the responsiveness budget.",
+      fixture: "Audiogram template with a two-speaker SRT fixture.",
+      id: "audiogram-captionSize-drag",
+      interaction: "control-drag",
+      stress: true,
+      stressFixture: {
+        kind: "max-value",
+        loadProfile: {
+          hardLimit: 150,
+          metric: "custom",
+          smoothTarget: 150,
+          smoothTargetRatio: 1,
+          target: "audiogram.captionSize",
+          userFacingRange: "fully-guaranteed",
+        },
+        reason: "150% is the largest caption raster the slider allows.",
+        value: 150,
+      },
+      target: "audiogram.captionSize",
+      values: { default: 100, max: 150, min: 50 },
+      workload: true,
     },
     ...(
       [
@@ -568,6 +620,22 @@ export const appPerformance: ToolcraftPerformanceConfig = defineToolcraftPerform
         reason: "Viewport interactions must stay smooth with the decoded illustration.",
         value: { height: 5263, width: 5000 },
       },
+      workload: false,
+    },
+    {
+      automated: true,
+      automatedTestName: "performance: keyframe timeline viewport stability budget is declared",
+      browser: true,
+      browserTestName:
+        "browser perf: canvas stays stable while creating and scrubbing keyframes",
+      budget: { maxFrameGapMs: 120, maxInteractionMs: 1500 },
+      expectedObservable:
+        "With the timeline expanded, zooming the canvas, adding keyframes from control diamonds, and scrubbing/playing between them keeps the canvas viewport steady with no unexpected jumps.",
+      fixture:
+        "Audiogram with a two-block SRT fixture, the timeline panel expanded, and keyframes on Motion intensity.",
+      id: "timeline-keyframes-viewport-stability",
+      interaction: "viewport-stability",
+      target: "timeline.keyframes",
       workload: false,
     },
     {
@@ -900,6 +968,7 @@ export const appPerformance: ToolcraftPerformanceConfig = defineToolcraftPerform
     "export.image.resolution",
     "audiogram.audio",
     "audiogram.captions",
+    "audiogram.captionSize",
     "export.video.format",
     "export.video.resolution",
   ],

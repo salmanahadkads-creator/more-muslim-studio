@@ -62,7 +62,11 @@ export const AudiogramHighlightPicker: ToolcraftCustomControlRenderer = ({
         {blocks.map((block, index) => {
           const lineNumber = index + 1;
           const isSelected = selectedLine === lineNumber;
-          const text = overrides[index] ?? blockText(block);
+          const original = blockText(block);
+          const override = overrides[index];
+          // A correction recorded against different wording (a re-uploaded
+          // SRT) is stale: show and edit the pristine line instead.
+          const text = override && override.from === original ? override.to : original;
 
           return (
             <div
@@ -92,7 +96,7 @@ export const AudiogramHighlightPicker: ToolcraftCustomControlRenderer = ({
                     historyGroup: meta?.historyGroup,
                     target: "audiogram.blockOverrides",
                     type: "controls.setValue",
-                    value: { ...overrides, [index]: nextText },
+                    value: { ...overrides, [index]: { from: original, to: nextText } },
                   });
                 }}
                 showLabel={false}

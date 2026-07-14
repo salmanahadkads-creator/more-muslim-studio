@@ -21,7 +21,7 @@ describe("appSchema", () => {
       type: "aspectRatio",
     });
     expect(appSchema.panels.layers).toBeUndefined();
-    expect(appSchema.panels.timeline).toMatchObject({ defaultDurationSeconds: 60, mode: "playback" });
+    expect(appSchema.panels.timeline).toMatchObject({ defaultDurationSeconds: 60, mode: "keyframes" });
     expect(appSchema.toolbar).toEqual({
       history: true,
       radar: true,
@@ -68,6 +68,8 @@ describe("appSchema", () => {
       "audiogram.wordAccent",
       "audiogram.highlight",
       "audiogram.highlightLine",
+      "audiogram.motionIntensity",
+      "audiogram.captionSize",
       "audiogram.outro",
       "carousel.episode",
       "carousel.slides",
@@ -80,9 +82,9 @@ describe("appSchema", () => {
     ]);
   });
 
-  it("enables playback timeline behavior for the audiogram", () => {
+  it("enables keyframe timeline behavior for the audiogram", () => {
     expect(appSchema.assembly.capabilities).toContain("timeline.playback");
-    expect(appSchema.assembly.capabilities).not.toContain("timeline.keyframes");
+    expect(appSchema.assembly.capabilities).toContain("timeline.keyframes");
     expect(appSchema.assembly.commands).toContain("timeline.setCurrentTime");
   });
 
@@ -254,6 +256,35 @@ describe("appSchema", () => {
     );
 
     expect(scenario?.interaction).toBe("control-change");
+    expect(Object.keys(scenario?.budget ?? {}).length).toBeGreaterThan(0);
+  });
+
+  it("performance: audiogram.motionIntensity scenario is declared", () => {
+    const scenario = appPerformance.scenarios.find(
+      (entry) => entry.id === "audiogram-motionIntensity-drag",
+    );
+
+    expect(scenario?.interaction).toBe("control-drag");
+    expect(Object.keys(scenario?.budget ?? {}).length).toBeGreaterThan(0);
+  });
+
+  it("performance: audiogram.captionSize scenario is declared", () => {
+    const scenario = appPerformance.scenarios.find(
+      (entry) => entry.id === "audiogram-captionSize-drag",
+    );
+
+    expect(scenario?.interaction).toBe("control-drag");
+    expect(scenario?.workload).toBe(true);
+    expect(scenario?.values).toEqual({ default: 100, max: 150, min: 50 });
+  });
+
+  it("performance: keyframe timeline viewport stability budget is declared", () => {
+    const scenario = appPerformance.scenarios.find(
+      (entry) => entry.id === "timeline-keyframes-viewport-stability",
+    );
+
+    expect(scenario?.interaction).toBe("viewport-stability");
+    expect(scenario?.target).toBe("timeline.keyframes");
     expect(Object.keys(scenario?.budget ?? {}).length).toBeGreaterThan(0);
   });
 

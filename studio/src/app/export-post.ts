@@ -7,6 +7,7 @@
 
 import {
   createToolcraftPngExportCanvas,
+  evaluateToolcraftTimelineValue,
   type ToolcraftState,
 } from "@/toolcraft/runtime";
 
@@ -20,6 +21,7 @@ import {
   type ColourwayKey,
   type PostFormat,
 } from "./brand";
+import { readCredits } from "./credits";
 import { readFocusPercent } from "./post-renderer";
 import type { PostTemplateKey } from "./templates";
 import { createStoredZip } from "./zip-store";
@@ -51,7 +53,9 @@ function readString(value: unknown, fallback = ""): string {
 }
 
 function getPostExportBackground(state: ToolcraftState): string {
-  const value = state.values["appearance.background"];
+  // Evaluated at the playhead so a keyframed backdrop colour exports the
+  // colour visible at the currently selected time.
+  const value = evaluateToolcraftTimelineValue(state, "appearance.background");
 
   if (value && typeof value === "object" && "hex" in value) {
     const hex = (value as { hex?: unknown }).hex;
@@ -398,17 +402,7 @@ export async function paintSlide(
   } else {
     drawEyebrow("Episode Credits", contentTop);
 
-    const credits = readString(values["content.credits.list"])
-      .split(/\n/)
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line) => {
-        const match = line.match(/^(.*?)\s*[—:|-]\s*(.+)$/);
-
-        return match
-          ? { name: match[1].trim(), title: match[2].trim() }
-          : { name: line, title: "" };
-      });
+    const credits = readCredits(values["content.credits.list"]);
     const rowHeight = (credit: { title: string }): number =>
       32 * 1.2 * (credit.title ? 2 : 1);
     const totalHeight =

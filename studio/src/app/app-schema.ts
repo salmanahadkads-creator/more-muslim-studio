@@ -38,7 +38,7 @@ export const appSchema = defineToolcraft({
     },
   },
   panels: {
-    timeline: { defaultDurationSeconds: 60, mode: "playback" },
+    timeline: { defaultDurationSeconds: 60, mode: "keyframes" },
     controls: {
       sections: [
         {
@@ -134,16 +134,24 @@ export const appSchema = defineToolcraft({
               visibleWhen: whenTemplate("streaming"),
             },
             creditsList: {
-              defaultValue:
-                "Yassmin Abdel-Magied \u2014 Reporter\nTaqwa Sadiq \u2014 Producer\nSarah Qari \u2014 Story Editor\nAlexander Overington \u2014 Composer\nAmel Mukhtar \u2014 Exec. Producer",
-              description: "One credit per line as \u201cName \u2014 Role\u201d.",
+              defaultValue: [
+                { name: "Rowaida Abdelaziz", title: "Reporter" },
+                { name: "Heba Afify", title: "Producer" },
+                { name: "Salman Ahad Khan", title: "Story Editor, Sound Designer, and Composer" },
+                { name: "Heba Elorbany", title: "Fact Checker" },
+                { name: "Joe Plourde", title: "Mix Engineer" },
+                { name: "Lina Jaradat", title: "Illustrator" },
+                { name: "Sohaira Siddiqui", title: "Host" },
+              ],
+              description:
+                "One row per credit with separate name and role boxes, so names with hyphens or dashes never split wrongly.",
               label: "Credits",
               orderRole: "primary",
               performanceReason:
-                "Multiline text edits re-render one wrapped DOM text block.",
+                "Credit edits re-render one wrapped DOM text block.",
               performanceRole: "responsiveness",
               target: "content.credits.list",
-              type: "code",
+              type: "creditsEditor",
               visibleWhen: whenTemplate("credits"),
             },
           },
@@ -337,6 +345,40 @@ export const appSchema = defineToolcraft({
               target: "audiogram.highlightLine",
               type: "audiogramHighlightPicker",
               visibleWhen: { equals: "choose", target: "audiogram.highlight" },
+            },
+            motionIntensity: {
+              defaultValue: 100,
+              description:
+                "Depth of every ambient movement — breathing, ground pan, push-in, Ken Burns. Keyframe it on the timeline to automate calm-to-energetic swells.",
+              label: "Motion intensity",
+              max: 200,
+              min: 0,
+              orderRole: "primary",
+              performanceReason:
+                "Motion intensity rescales the per-frame ground transform and tile opacity.",
+              performanceRole: "responsiveness",
+              step: 5,
+              target: "audiogram.motionIntensity",
+              type: "slider",
+              unit: "%",
+              visibleWhen: { equals: "audiogram", target: "post.template" },
+            },
+            captionSize: {
+              defaultValue: 100,
+              description:
+                "Caption and pull-quote text scale. Keyframe it on the timeline to grow a line into a climax.",
+              label: "Caption size",
+              max: 150,
+              min: 50,
+              orderRole: "primary",
+              performanceReason:
+                "Caption scale re-lays-out the active caption block per frame.",
+              performanceRole: "workload",
+              step: 5,
+              target: "audiogram.captionSize",
+              type: "slider",
+              unit: "%",
+              visibleWhen: { equals: "audiogram", target: "post.template" },
             },
           },
           title: "Motion",

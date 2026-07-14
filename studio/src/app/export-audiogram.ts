@@ -15,6 +15,7 @@ import {
 } from "webm-muxer";
 
 import {
+  evaluateToolcraftTimelineValue,
   getToolcraftVideoExportSize,
   shouldIncludeToolcraftExportBackground,
   type ToolcraftState,
@@ -46,7 +47,7 @@ import {
   type AudiogramMotionConfig,
   type AudiogramSpeechBlock,
 } from "./audiogram-motion";
-import { readBlockOverrides, readFocusPercent } from "./post-renderer";
+import { readBlockOverrides, readFocusPercent, readPercentFactor } from "./post-renderer";
 import { parseSrt } from "./srt";
 
 const FPS = 24;
@@ -263,7 +264,7 @@ function paintAudiogramFrame(context: PaintContext, params: AudiogramFrameParams
 
   // Active caption — per-word entrance + accent
   if (active) {
-    const size = isHighlight ? 82 : 69;
+    const size = Math.round((isHighlight ? 82 : 69) * Math.max(0.1, config.captionScale));
     const lineHeight = size * 1.06;
     const maxWidth = isHighlight ? 880 : w - CAPTION_BOX.left * 2;
 
@@ -498,6 +499,7 @@ export async function exportAudiogramVideo(
   const config: AudiogramMotionConfig = {
     bgDrift: state.values["audiogram.breathing"] !== false,
     breathe: state.values["audiogram.breathing"] !== false,
+    captionScale: readPercentFactor(state.values["audiogram.captionSize"], 1),
     guestWay: COLOURWAYS[guestWay] ? guestWay : way,
     hasImage: !!sceneImageSrc,
     highlight:
@@ -507,10 +509,24 @@ export async function exportAudiogramVideo(
           ? Math.max(0, Math.round(highlightLine) - 1)
           : "auto",
     hostWay: way,
+    motionScale: readPercentFactor(state.values["audiogram.motionIntensity"], 1),
     solid: sceneSource === "solid",
     speakerSwap: state.values["audiogram.crossfade"] !== false,
     wordAccent: state.values["audiogram.wordAccent"] !== false,
   };
+  // Keyframed automation lanes evaluate per exported frame so the video
+  // matches what the preview showed while scrubbing the same times.
+  const configAt = (timeSeconds: number): AudiogramMotionConfig => ({
+    ...config,
+    captionScale: readPercentFactor(
+      evaluateToolcraftTimelineValue(state, "audiogram.captionSize", timeSeconds),
+      config.captionScale,
+    ),
+    motionScale: readPercentFactor(
+      evaluateToolcraftTimelineValue(state, "audiogram.motionIntensity", timeSeconds),
+      config.motionScale,
+    ),
+  });
   const outroLines = (typeof state.values["audiogram.outro"] === "string"
     ? (state.values["audiogram.outro"] as string)
     : "Listen to the full episode at moremuslim.org.\nOr search for “More Muslim” wherever you get your podcasts."
@@ -656,12 +672,14 @@ export async function exportAudiogramVideo(
     const posterStep = Math.floor(frameIndex / POSTERIZE);
 
     if (posterStep !== lastPaintedStep) {
+      const frameTimeSeconds = (posterStep * POSTERIZE) / FPS;
+
       paintAudiogramFrame(slideContext, {
-        assets,
+        assets: { ...assets, config: configAt(frameTimeSeconds) },
         durationSeconds,
         episode,
         outroLines,
-        timeSeconds: (posterStep * POSTERIZE) / FPS,
+        timeSeconds: frameTimeSeconds,
       });
       frameContext.drawImage(slideCanvas, 0, 0, width, height);
       lastPaintedStep = posterStep;

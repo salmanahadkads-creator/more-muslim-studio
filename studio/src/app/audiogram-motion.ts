@@ -107,25 +107,38 @@ export function blockText(block: AudiogramSpeechBlock): string {
   return block.words.map((word) => word.text).join(" ");
 }
 
+/* One typo fix: `to` replaces the line whose original wording was `from`.
+   Keeping the original text alongside the correction makes overrides
+   self-invalidating — if a different SRT is uploaded and the line at this
+   index no longer reads `from`, the stale fix is ignored instead of
+   corrupting the wrong line. */
+export type BlockTextOverride = { from: string; to: string };
+
 /* Typo-fix overrides keyed by 0-based block index, applied on top of the
-   parsed captions (feature: highlight picker text editing). Re-tokenises the
-   corrected line and redistributes word timing proportionally across the
-   block's ORIGINAL [start,end) span — the same weighting buildSpeechBlocks
-   uses — so a corrected word still lands at roughly the moment it's spoken
-   without needing to re-time the whole transcript. The uploaded SRT file
-   itself is never rewritten; this is a render-time correction layer. */
+   parsed captions (feature: highlight picker text editing). An override only
+   applies while the block's current text still matches its recorded `from`.
+   Re-tokenises the corrected line and redistributes word timing
+   proportionally across the block's ORIGINAL [start,end) span — the same
+   weighting buildSpeechBlocks uses — so a corrected word still lands at
+   roughly the moment it's spoken without needing to re-time the whole
+   transcript. The uploaded SRT file itself is never rewritten; this is a
+   render-time correction layer. */
 export function applyBlockTextOverrides(
   blocks: readonly AudiogramSpeechBlock[],
-  overrides: Readonly<Record<number, string>>,
+  overrides: Readonly<Record<number, BlockTextOverride>>,
 ): AudiogramSpeechBlock[] {
   return blocks.map((block, blockIndex) => {
-    const overrideText = overrides[blockIndex];
+    const override = overrides[blockIndex];
 
-    if (overrideText === undefined || overrideText === blockText(block)) {
+    if (
+      override === undefined ||
+      override.from !== blockText(block) ||
+      override.to === blockText(block)
+    ) {
       return block;
     }
 
-    const tokens = overrideText.split(/\s+/).filter(Boolean);
+    const tokens = override.to.split(/\s+/).filter(Boolean);
 
     if (tokens.length === 0) {
       return block;
@@ -184,12 +197,19 @@ export function firstName(speaker: string): string {
 export type AudiogramMotionConfig = {
   bgDrift: boolean;
   breathe: boolean;
+  /** Caption text scale as a factor (1 = brand size). Keyframeable via the
+   *  timeline: automate it to grow the pull-quote into a climax. */
+  captionScale: number;
   guestWay: ColourwayKey;
   hasImage: boolean;
   /** "auto" scores the strongest line, "off" disables, a number forces that
    *  0-based caption block as the highlight. */
   highlight: "auto" | "off" | number;
   hostWay: ColourwayKey;
+  /** Scales every ambient movement (breathing depth, ground pan, push-in,
+   *  Ken Burns drift) as a factor (0 = still frame, 1 = brand default,
+   *  2 = double). Keyframeable via the timeline for automation curves. */
+  motionScale: number;
   solid: boolean;
   speakerSwap: boolean;
   wordAccent: boolean;
@@ -372,16 +392,19 @@ export function groundMotion(
   const p = clamp01(timeSeconds / total);
   const motion = config.bgDrift;
   const image = config.hasImage;
+  // Motion intensity scales the moving deltas only — the resting push-in base
+  // stays put so intensity 0 is a perfectly still (but still zoomed) frame.
+  const amount = Math.max(0, config.motionScale);
   const scale = image
     ? motion
-      ? 1.09 + 0.05 * p
+      ? 1.09 + 0.05 * p * amount
       : 1.09
     : motion
-      ? 1.08 + 0.04 * p
+      ? 1.08 + 0.04 * p * amount
       : 1.08;
   const canPan = motion && (image || (!config.solid && !config.hasImage));
-  const tx = canPan ? Math.sin(timeSeconds * 0.18) * 24 : 0;
-  const ty = image && motion ? -10 * p : 0;
+  const tx = canPan ? Math.sin(timeSeconds * 0.18) * 24 * amount : 0;
+  const ty = image && motion ? -10 * p * amount : 0;
 
   return { scale, tx, ty };
 }
@@ -442,7 +465,11 @@ export function breatheOpacity(
     return 1;
   }
 
-  return 0.55 + 0.45 * envAt(envelope, timeSeconds);
+  // Motion intensity scales the breathing depth around the settled opacity a
+  // fully-voiced frame would have (1), so intensity 0 holds the tile steady.
+  const depth = clamp01(Math.max(0, config.motionScale) * 0.45);
+
+  return 1 - depth + depth * envAt(envelope, timeSeconds);
 }
 
 /* Staggered fade-only outro (feature 9). The branded "now streaming" card fades
