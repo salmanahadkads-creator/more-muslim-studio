@@ -79,7 +79,7 @@ const timelineExpandedTrackEndOffsetPx =
 const timelinePlayheadSafeZonePx = 7;
 const timelinePlayheadHitAreaWidthPx =
   timelineTrackColumnBorderWidthPx + timelinePlayheadSafeZonePx * 2;
-const maxTimelineDurationSeconds = 60;
+const maxTimelineDurationSeconds = 180;
 const minTimelineDurationSeconds = 1;
 const timelineScrubStepSeconds = 0.25;
 const timelinePanelExpandCollapseTransition = {

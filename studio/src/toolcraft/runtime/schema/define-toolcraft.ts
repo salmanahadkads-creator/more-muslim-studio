@@ -51,7 +51,7 @@ const canvasAspectRatioTarget = "canvas.aspectRatio";
 const canvasRenderScaleTarget = "canvas.renderScale";
 const defaultTimelineDurationSeconds = 8;
 const minTimelineDurationSeconds = 1;
-const maxTimelineDurationSeconds = 60;
+const maxTimelineDurationSeconds = 180;
 const defaultCanvasRenderScale = {
   defaultValue: 2,
   enabled: false,

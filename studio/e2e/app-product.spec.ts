@@ -947,6 +947,20 @@ test("app controls: uploading audio sets the timeline duration", async ({ page }
   );
 });
 
+test("runtime: audio longer than the old 60s ceiling sets the full timeline duration", async ({
+  page,
+}) => {
+  // Real episode clips can run well past a minute (e.g. the Dr. Rania
+  // segment at 73.5s); the runtime's max timeline duration was raised from
+  // 60s to 180s so uploaded audio is never silently truncated.
+  await setupAudiogram(page, 90);
+
+  await expect(page.getByRole("button", { name: "Edit timeline duration" })).toHaveText(
+    "90s",
+    { timeout: 8000 },
+  );
+});
+
 test("runtime: selecting the audiogram reveals the extended timeline", async ({ page }) => {
   await openStudio(page);
 
