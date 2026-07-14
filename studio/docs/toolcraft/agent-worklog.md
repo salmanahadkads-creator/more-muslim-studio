@@ -178,6 +178,23 @@ Mode: product
 - Skipped checks: ai:check and the toolcraft integrity check (both pre-existing, documented in Iteration 8); the remaining pre-existing environment-bound spec families.
 - Risks: Risk: keyboard is the only reliable automated slider interaction — synthetic pointer drags on the Base UI slider track are ignored in the fallback runner, so drag-based perf measurements exercise pointer handling but may not commit a value change; the acceptance test covers the real value path via keyboard.
 
+### Iteration 11 — Caption/audio sync: lock the render clock to the audio clock
+
+- Request: "check if audiogram is responding perfectly to text, there seems to be a bit of a delay".
+- Task type: Playback clock discipline in the AudiogramAudioSync app-chrome component; no schema or renderer-math changes.
+- User-visible result: Captions, word reveals, and every time-driven visual now stay locked to the voice the listener actually hears. Previously the audio element followed the wall-clock timeline and was only re-seeked when it drifted more than 0.35s, so playback start latency, pause/resume cycles, scrubs, and loop wraps could park a permanent offset of up to a third of a second between the voice and the captions — the reported delay.
+- Source/reference checked: AudiogramAudioSync (the 0.35s play-branch tolerance), the runtime's useTimelineClock (wall-clock rAF accumulator resolving against live runtime state, so external timeline.setCurrentTime dispatches are respected), SYNC_LEAD (0.12s perceptual caption lead, unchanged — it tunes feel, not correctness).
+- Reference inputs: Live agent-browser measurement via temporary instrumentation (removed before commit): with the fix, audio.currentTime and the timeline stayed within 36ms mid-playback; the earlier "stuck playhead" observations during measurement were traced to the preview pane throttling requestAnimationFrame while backgrounded, not to product behavior.
+- Docs/contracts read: assembly-workflow.md (timeline is runtime-owned; apps drive it via runtime commands — timeline.setCurrentTime is the sanctioned write).
+- Contract rules applied: no hand-built transport; the app only dispatches timeline.setCurrentTime from real audio state; the frame stays a pure function of timeline time, which now tracks the audible clock.
+- Decision: While playing, the audio element's clock is the master. A per-frame loop compares audio.currentTime with the timeline: offsets in (0.04s, 0.2s) snap the timeline to the audio (clock skew — what is heard wins); offsets ≥ 0.2s mean the playhead was moved on purpose (scrub step, drag, loop wrap), so the audio seeks to the timeline instead. Starting playback always aligns the audio exactly to the playhead (the old code tolerated a 0.35s gap at start). Paused behavior is unchanged (audio follows scrubs at a 0.1s tolerance).
+- Alternatives rejected: shrinking the old one-way tolerance (still lets the wall-clock drift from the audible clock between corrections); driving the timeline exclusively from audio timeupdate events (fires at ~4Hz — worse than the drift being fixed); increasing SYNC_LEAD to mask the offset (the offset was variable per session, so no constant lead can cancel it).
+- State/output mapping: audio.currentTime → (delta 0.04–0.2s) dispatch timeline.setCurrentTime → state.timeline.currentTimeSeconds → every audiogram visual; timeline.currentTimeSeconds → (delta ≥ 0.2s) audio.currentTime seek → the voice follows deliberate playhead moves.
+- Files changed: src/app/post-renderer.tsx (AudiogramAudioSync only).
+- Verification: pnpm typecheck passed; vitest 310/310 passed; pnpm build passed; Playwright 9/9 audiogram+timeline sweep passed (transport, loop, duration, scrub, keyframe automation, outro reach); live agent-browser: 36ms audio↔timeline lock mid-playback, loop wrap continuing cleanly, captions swapping blocks at their SRT windows.
+- Skipped checks: ai:check and the toolcraft integrity check (pre-existing, documented in Iteration 8); pre-existing environment-bound spec families.
+- Risks: Risk: scrub moves smaller than 0.2s made while playing are treated as clock skew and snapped back to the audio clock — the runtime's smallest keyboard scrub step is 0.25s, so no built-in interaction falls in that band, but a custom sub-0.2s programmatic nudge during playback would be overridden.
+
 ## Decisions
 
 ### Renderer

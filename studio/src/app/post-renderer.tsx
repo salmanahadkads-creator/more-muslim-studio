@@ -369,6 +369,11 @@ function AudiogramAudioSync(): null {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [audioUrl]);
 
+  const wasPlayingRef = React.useRef(false);
+  const timelineTimeRef = React.useRef(state.timeline.currentTimeSeconds);
+
+  timelineTimeRef.current = state.timeline.currentTimeSeconds;
+
   React.useEffect(() => {
     const audio = audioRef.current;
 
@@ -377,7 +382,10 @@ function AudiogramAudioSync(): null {
     }
 
     if (state.timeline.isPlaying) {
-      if (Math.abs(audio.currentTime - state.timeline.currentTimeSeconds) > 0.35) {
+      // Starting playback aligns the audio exactly to the playhead — the old
+      // 0.35s tolerance here let the voice start a third of a second away
+      // from the captions and stay there.
+      if (!wasPlayingRef.current) {
         audio.currentTime = state.timeline.currentTimeSeconds;
       }
 
@@ -389,7 +397,54 @@ function AudiogramAudioSync(): null {
         audio.currentTime = state.timeline.currentTimeSeconds;
       }
     }
+
+    wasPlayingRef.current = state.timeline.isPlaying;
   }, [state.timeline.isPlaying, state.timeline.currentTimeSeconds]);
+
+  // While playing, the audio element's own clock is the master: it is what
+  // the listener actually hears, including output latency and any element
+  // drift the wall-clock timeline cannot see. Each frame the timeline is
+  // snapped to audio.currentTime, so captions and words stay locked to the
+  // voice instead of tolerating a growing offset. A LARGE gap means the
+  // playhead was moved on purpose (scrub or loop wrap) — then the audio
+  // follows the timeline instead.
+  React.useEffect(() => {
+    const audio = audioRef.current;
+
+    if (!audio || !state.timeline.isPlaying) {
+      return;
+    }
+
+    let frame = 0;
+
+    const tick = () => {
+      if (!audio.paused && !audio.seeking) {
+        const delta = audio.currentTime - timelineTimeRef.current;
+
+        // Element-clock drift accumulates gradually, so anything beyond 0.2s
+        // is an intentional playhead move (scrub step, drag, loop wrap): the
+        // audio follows the timeline. Small offsets are clock skew between
+        // what is heard and what is drawn: the timeline follows the audio.
+        if (Math.abs(delta) >= 0.2) {
+          audio.currentTime = timelineTimeRef.current;
+        } else if (Math.abs(delta) > 0.04) {
+          dispatch({
+            currentTimeSeconds: audio.currentTime,
+            type: "timeline.setCurrentTime",
+          });
+        }
+      }
+
+      frame = window.requestAnimationFrame(tick);
+    };
+
+    frame = window.requestAnimationFrame(tick);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.timeline.isPlaying, audioUrl]);
 
   return null;
 }
