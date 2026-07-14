@@ -769,13 +769,15 @@ test("runtime: audiogram motion controls change the frame", async ({ page }) => 
   await chooseSelectOption(page, "Highlight", "Auto");
 });
 
-test("runtime: audiogram highlight picker selects and edits a line", async ({ page }) => {
+test("runtime: audiogram highlight picker stars multiple lines and edits text", async ({
+  page,
+}) => {
   await setupAudiogram(page);
-  await chooseSelectOption(page, "Highlight", "Choose line");
+  await chooseSelectOption(page, "Highlight", "Choose lines");
 
   const highlightGroup = page
     .getByRole("group")
-    .filter({ has: page.getByText("Highlight line", { exact: true }) })
+    .filter({ has: page.getByText("Highlight lines", { exact: true }) })
     .last();
   const lines = highlightGroup.getByRole("textbox");
 
@@ -784,11 +786,14 @@ test("runtime: audiogram highlight picker selects and edits a line", async ({ pa
   await expect(lines.first()).toHaveValue("The first line.");
   await expect(lines.nth(1)).toHaveValue("The second line.");
 
-  // Clicking a line selects it — the row picks up the selected styling.
-  await lines.nth(1).click();
-  await expect(
-    highlightGroup.locator('[data-selected="true"]').getByRole("textbox"),
-  ).toHaveValue("The second line.");
+  // Line 1 is starred by default; star line 2 as well — MULTIPLE lines can be
+  // pinned as large pull-quotes at once.
+  await page.getByRole("button", { name: "Add line 2 to highlights" }).click();
+  await expect(highlightGroup.locator('[data-selected="true"]')).toHaveCount(2);
+
+  // Un-starring removes it from the highlight set.
+  await page.getByRole("button", { name: "Remove line 2 from highlights" }).click();
+  await expect(highlightGroup.locator('[data-selected="true"]')).toHaveCount(1);
 
   // Editing a line's text is a typo fix: it changes the rendered caption
   // words for that block's original time span, without touching the
@@ -1009,9 +1014,10 @@ test("app controls: guest colourway crossfades the audiogram ground", async ({ p
   test.setTimeout(60_000);
   await setupAudiogram(page);
 
-  // Host stays on the default night ground; give the guest speaker a distinct
-  // ivory-beige ground so the crossfade is measurable on the frame background.
-  await chooseSelectOption(page, "Guest colourway", "Ivory Beige");
+  // Host stays on the default ivory-beige ground; give the guest speaker a
+  // distinct night-blue ground so the crossfade is measurable on the frame
+  // background.
+  await chooseSelectOption(page, "Guest colourway", "Night Blue");
 
   const guestSelect = page
     .getByRole("group")
@@ -1019,7 +1025,7 @@ test("app controls: guest colourway crossfades the audiogram ground", async ({ p
     .last()
     .getByRole("combobox");
 
-  await expect(guestSelect).toContainText("Ivory Beige");
+  await expect(guestSelect).toContainText("Night Blue");
 
   const frameBackground = () =>
     page.evaluate(() => {
@@ -1028,8 +1034,8 @@ test("app controls: guest colourway crossfades the audiogram ground", async ({ p
       return frame ? getComputedStyle(frame).backgroundColor : "";
     });
 
-  // At the head of the clip the host (night) ground shows.
-  await expect.poll(frameBackground).toBe("rgb(25, 33, 54)");
+  // At the head of the clip the host (ivory beige) ground shows.
+  await expect.poll(frameBackground).toBe("rgb(251, 242, 233)");
 
   const transport = page.getByRole("button", { name: /(play|pause) playback/i }).first();
 
@@ -1052,9 +1058,51 @@ test("app controls: guest colourway crossfades the audiogram ground", async ({ p
     await durationInput.press("Enter");
   }
 
-  // Playing into the guest speaker's block crossfades the ground to ivory beige.
+  // Playing into the guest speaker's block crossfades the ground to night blue.
   await transport.click();
-  await expect.poll(frameBackground, { timeout: 12_000 }).toBe("rgb(251, 242, 233)");
+  await expect.poll(frameBackground, { timeout: 12_000 }).toBe("rgb(25, 33, 54)");
+});
+
+test("app controls: host colourway sets the first speaker's ground", async ({ page }) => {
+  await setupAudiogram(page);
+
+  const frameBackground = () =>
+    page.evaluate(() => {
+      const frame = document.querySelector("#mm-post-slide [data-mm-post-frame]");
+
+      return frame ? getComputedStyle(frame).backgroundColor : "";
+    });
+
+  // The host (first speaker) ground defaults to ivory beige.
+  await expect.poll(frameBackground).toBe("rgb(251, 242, 233)");
+
+  // Choosing a different host colourway restyles that ground at the head of
+  // the clip (before any speaker change).
+  await chooseSelectOption(page, "Host colourway", "Night Blue");
+  await expect.poll(frameBackground).toBe("rgb(25, 33, 54)");
+});
+
+test("app controls: editing audiogram.eyebrow updates the slide text", async ({ page }) => {
+  await setupAudiogram(page);
+
+  const eyebrow = page
+    .getByRole("group")
+    .filter({ has: page.getByText("Eyebrow", { exact: true }) })
+    .last()
+    .getByRole("textbox");
+
+  await expect(eyebrow).toBeVisible();
+  await expectToolcraftProductObservableToChange(
+    page,
+    async () => {
+      await eyebrow.fill("In Therapy, with SheikhaGPT");
+    },
+    { selector: slideSelector },
+  );
+  await expect(page.locator(`${slideSelector} [data-audiogram-eyebrow]`)).toContainText(
+    "In Therapy, with SheikhaGPT",
+    { ignoreCase: true },
+  );
 });
 
 test("app controls: video format drives the exported container", async ({ page }) => {

@@ -296,6 +296,39 @@ export const appPerformance: ToolcraftPerformanceConfig = defineToolcraftPerform
     },
     {
       automated: true,
+      automatedTestName: "performance: audiogram.hostColourway scenario is declared",
+      browser: true,
+      browserTestName: "browser perf: audiogram.hostColourway change stays within budget",
+      // Select popups open a portal in the now-busier audiogram panel (an extra
+      // colourway select alongside the guest one); the render stays smooth
+      // (frame gap) while the popup wall-clock runs a little longer.
+      budget: { maxFrameGapMs: 120, maxInteractionMs: 1000, maxLongTaskMs: 200 },
+      controlLabel: "Host colourway",
+      expectedObservable:
+        "Changing the host colourway restyles the first speaker's ground within the responsiveness budget.",
+      fixture: "Audiogram template with a two-speaker SRT fixture.",
+      id: "audiogram-host-colourway-change",
+      interaction: "control-change",
+      target: "audiogram.hostColourway",
+      workload: false,
+    },
+    {
+      automated: true,
+      automatedTestName: "performance: audiogram.eyebrow scenario is declared",
+      browser: true,
+      browserTestName: "browser perf: audiogram.eyebrow change stays within budget",
+      budget: { maxFrameGapMs: 120, maxInteractionMs: 500, maxLongTaskMs: 200 },
+      controlLabel: "Eyebrow",
+      expectedObservable:
+        "Editing the eyebrow re-renders the top label within the responsiveness budget.",
+      fixture: "Audiogram template with a two-speaker SRT fixture.",
+      id: "audiogram-eyebrow-change",
+      interaction: "control-change",
+      target: "audiogram.eyebrow",
+      workload: false,
+    },
+    {
+      automated: true,
       automatedTestName: "performance: audiogram.guestColourway scenario is declared",
       browser: true,
       browserTestName: "browser perf: audiogram.guestColourway change stays within budget",

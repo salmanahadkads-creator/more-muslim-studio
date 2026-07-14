@@ -3151,6 +3151,8 @@ describe("Toolcraft template app acceptance coverage", () => {
       "scene.imageOpacity",
       "audiogram.audio",
       "audiogram.captions",
+      "audiogram.eyebrow",
+      "audiogram.hostColourway",
       "audiogram.guestColourway",
       "audiogram.crossfade",
       "audiogram.breathing",

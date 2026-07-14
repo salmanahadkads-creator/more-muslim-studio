@@ -14,6 +14,7 @@ import {
 import { useToolcraft } from "@/toolcraft/runtime/react";
 
 import {
+  COLOURWAYS,
   getEpisodeIllustration,
   getPostFormat,
   POST_SIZES,
@@ -60,6 +61,24 @@ export function readPercentFactor(value: unknown, fallbackFactor: number): numbe
   return typeof value === "number" && Number.isFinite(value)
     ? Math.max(0, value / 100)
     : fallbackFactor;
+}
+
+/* Highlight-picker line selection: the user can pin one or many caption lines
+   as large pull-quotes. Stored as an array of 1-based line numbers (a legacy
+   single number is still accepted). Returns sorted, de-duplicated 0-based
+   block indices. */
+export function readHighlightLines(value: unknown): number[] {
+  const raw = Array.isArray(value)
+    ? value
+    : typeof value === "number"
+      ? [value]
+      : [];
+  const indices = raw
+    .filter((entry): entry is number => typeof entry === "number" && Number.isFinite(entry))
+    .map((line) => Math.round(line) - 1)
+    .filter((index) => index >= 0);
+
+  return [...new Set(indices)].sort((first, second) => first - second);
 }
 
 /* Highlight-picker typo-fix overrides: a plain object keyed by 0-based block
@@ -745,28 +764,28 @@ export function PostRenderer(): React.JSX.Element {
     [state, timelineTime],
   );
   const highlightMode = readString(values["audiogram.highlight"], "auto");
-  const highlightLine =
-    typeof values["audiogram.highlightLine"] === "number"
-      ? (values["audiogram.highlightLine"] as number)
-      : 1;
+  const guestWay = (readString(values["audiogram.guestColourway"], "oak") || "oak") as ColourwayKey;
+  const hostWay = (readString(values["audiogram.hostColourway"], "beige") || "beige") as ColourwayKey;
   const audiogramConfig: AudiogramMotionConfig = {
     bgDrift: values["audiogram.breathing"] !== false,
     breathe: values["audiogram.breathing"] !== false,
     captionScale: readPercentFactor(evaluated["audiogram.captionSize"], 1),
-    guestWay: (readString(values["audiogram.guestColourway"], way) || way) as ColourwayKey,
+    guestWay: COLOURWAYS[guestWay] ? guestWay : "oak",
     hasImage: !!scene.image,
     highlight:
       highlightMode === "off"
         ? "off"
         : highlightMode === "choose"
-          ? Math.max(0, Math.round(highlightLine) - 1)
+          ? readHighlightLines(values["audiogram.highlightLine"])
           : "auto",
-    hostWay: way,
+    hostWay: COLOURWAYS[hostWay] ? hostWay : "beige",
     motionScale: readPercentFactor(evaluated["audiogram.motionIntensity"], 1),
     solid: !scene.image && scene.pattern === false,
     speakerSwap: values["audiogram.crossfade"] !== false,
     wordAccent: values["audiogram.wordAccent"] !== false,
   };
+  const audiogramEyebrow =
+    readString(values["audiogram.eyebrow"]).trim() || readString(values["content.episode"]);
   const audiogramOutro = readString(
     values["audiogram.outro"],
     "Listen to the full episode at moremuslim.org.\nOr search for “More Muslim” wherever you get your podcasts.",
@@ -810,6 +829,7 @@ export function PostRenderer(): React.JSX.Element {
               durationSeconds: timelineDuration,
               envelope,
               episode: readString(values["content.episode"]),
+              eyebrow: audiogramEyebrow,
               guest,
               outroLines: audiogramOutro,
               timeSeconds: timelineTime,

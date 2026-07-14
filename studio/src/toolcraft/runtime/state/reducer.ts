@@ -30,7 +30,7 @@ import type {
 } from "./types";
 
 const minTimelineDurationSeconds = 1;
-const maxTimelineDurationSeconds = 180;
+const maxTimelineDurationSeconds = 86_400;
 const canvasAspectRatioTarget = "canvas.aspectRatio";
 const canvasSizeWidthTarget = "canvas.size.width";
 const canvasSizeHeightTarget = "canvas.size.height";

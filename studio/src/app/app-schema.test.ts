@@ -63,6 +63,8 @@ describe("appSchema", () => {
       "scene.imageOpacity",
       "audiogram.audio",
       "audiogram.captions",
+      "audiogram.eyebrow",
+      "audiogram.hostColourway",
       "audiogram.guestColourway",
       "audiogram.crossfade",
       "audiogram.breathing",
@@ -213,6 +215,30 @@ describe("appSchema", () => {
 
     expect(scenario?.interaction).toBe("control-change");
     expect(scenario?.browserTestName).toBe("browser perf: post.colourway change stays within budget");
+    expect(Object.keys(scenario?.budget ?? {}).length).toBeGreaterThan(0);
+  });
+
+  it("performance: audiogram.hostColourway scenario is declared", () => {
+    const scenario = appPerformance.scenarios.find(
+      (entry) => entry.id === "audiogram-host-colourway-change",
+    );
+
+    expect(scenario?.interaction).toBe("control-change");
+    expect(scenario?.browserTestName).toBe(
+      "browser perf: audiogram.hostColourway change stays within budget",
+    );
+    expect(Object.keys(scenario?.budget ?? {}).length).toBeGreaterThan(0);
+  });
+
+  it("performance: audiogram.eyebrow scenario is declared", () => {
+    const scenario = appPerformance.scenarios.find(
+      (entry) => entry.id === "audiogram-eyebrow-change",
+    );
+
+    expect(scenario?.interaction).toBe("control-change");
+    expect(scenario?.browserTestName).toBe(
+      "browser perf: audiogram.eyebrow change stays within budget",
+    );
     expect(Object.keys(scenario?.budget ?? {}).length).toBeGreaterThan(0);
   });
 

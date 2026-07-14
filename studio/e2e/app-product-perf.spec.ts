@@ -226,6 +226,40 @@ test("browser perf: audiogram.guestColourway change stays within budget", async 
   );
 });
 
+test("browser perf: audiogram.hostColourway change stays within budget", async ({
+  page,
+}) => {
+  await openStudio(page);
+  await chooseSelectOption(page, "Template", "Audiogram");
+
+  const result = await measureToolcraftInteraction(page, async () => {
+    await chooseSelectOption(page, "Host colourway", "Terracotta");
+  });
+
+  expectToolcraftScenarioPerformanceBudget(
+    result,
+    appPerformance,
+    "audiogram-host-colourway-change",
+  );
+});
+
+test("browser perf: audiogram.eyebrow change stays within budget", async ({ page }) => {
+  await openStudio(page);
+  await chooseSelectOption(page, "Template", "Audiogram");
+
+  const eyebrow = page
+    .getByRole("group")
+    .filter({ has: page.getByText("Eyebrow", { exact: true }) })
+    .last()
+    .getByRole("textbox");
+
+  const result = await measureToolcraftInteraction(page, async () => {
+    await eyebrow.fill("In Therapy");
+  });
+
+  expectToolcraftScenarioPerformanceBudget(result, appPerformance, "audiogram-eyebrow-change");
+});
+
 function audiogramSwitch(page: Page, label: string) {
   return page
     .getByRole("group")
@@ -366,16 +400,10 @@ test("browser perf: audiogram.highlightLine change stays within budget", async (
     mimeType: "text/plain",
     name: "perf-captions.srt",
   });
-  await chooseSelectOption(page, "Highlight", "Choose line");
-
-  const lines = page
-    .getByRole("group")
-    .filter({ has: page.getByText("Highlight line", { exact: true }) })
-    .last()
-    .getByRole("textbox");
+  await chooseSelectOption(page, "Highlight", "Choose lines");
 
   const result = await measureToolcraftInteraction(page, async () => {
-    await lines.nth(1).click();
+    await page.getByRole("button", { name: "Add line 2 to highlights" }).click();
   });
 
   expectToolcraftScenarioPerformanceBudget(

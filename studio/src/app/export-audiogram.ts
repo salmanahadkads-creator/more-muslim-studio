@@ -34,10 +34,11 @@ import {
   breatheOpacity,
   buildSpeechBlocks,
   computeAudioEnvelope,
+  finalCardProgress,
   firstName,
   groundMotion,
   groundState,
-  highlightIndex,
+  highlightSet,
   outroFadeAt,
   OUTRO_FADE_DELAYS,
   outroProgress,
@@ -47,7 +48,12 @@ import {
   type AudiogramMotionConfig,
   type AudiogramSpeechBlock,
 } from "./audiogram-motion";
-import { readBlockOverrides, readFocusPercent, readPercentFactor } from "./post-renderer";
+import {
+  readBlockOverrides,
+  readFocusPercent,
+  readHighlightLines,
+  readPercentFactor,
+} from "./post-renderer";
 import { parseSrt } from "./srt";
 
 const FPS = 24;
@@ -133,6 +139,7 @@ type AudiogramFrameParams = {
   assets: AudiogramFrameAssets;
   durationSeconds: number;
   episode: string;
+  eyebrow: string;
   outroLines: readonly string[];
   timeSeconds: number;
 };
@@ -243,11 +250,12 @@ function paintAudiogramFrame(context: PaintContext, params: AudiogramFrameParams
   const ground = groundState(blocks, guest, config, timeSeconds);
   const activeIndex = activeBlockIndex(blocks, timeSeconds);
   const active = activeIndex >= 0 ? blocks[activeIndex] : null;
-  const highlight = highlightIndex(blocks, config);
-  const isHighlight = highlight >= 0 && activeIndex === highlight;
+  const highlights = highlightSet(blocks, config);
+  const isHighlight = highlights.has(activeIndex);
   const contentEnd = blocks.length ? blocks[blocks.length - 1].end : 0;
   const outroStart = outroStartAt(durationSeconds, contentEnd);
   const outroProg = outroProgress(timeSeconds, outroStart);
+  const finalCardProg = finalCardProgress(timeSeconds, durationSeconds);
   const chromeOp = (1 - outroProg) * (isHighlight ? 0.35 : 1);
   const ink = ground.ink;
   const accent = ground.accent;
@@ -332,6 +340,17 @@ function paintAudiogramFrame(context: PaintContext, params: AudiogramFrameParams
     context.textBaseline = "alphabetic";
   }
 
+  // Eyebrow — episode name at the top (matches the DOM top: 370 placement)
+  if (params.eyebrow) {
+    context.save();
+    context.globalAlpha = chromeOp;
+    context.fillStyle = ink;
+    context.textAlign = "center";
+    setFont(context, 32, { tracked: true });
+    context.fillText(params.eyebrow.toUpperCase(), centerX, 370 + 32);
+    context.restore();
+  }
+
   // Footer mark
   context.save();
   context.globalAlpha = chromeOp;
@@ -392,6 +411,33 @@ function paintAudiogramFrame(context: PaintContext, params: AudiogramFrameParams
 
     context.restore();
   }
+
+  // Final logo card — the clip ends on the symbol centred on a clean ground,
+  // crossfading over the now-streaming card.
+  if (finalCardProg > 0) {
+    const outroWay = config.hostWay;
+    const outroColour = COLOURWAYS[outroWay];
+
+    context.save();
+    context.globalAlpha = finalCardProg;
+    context.fillStyle = outroColour.bg;
+    context.fillRect(0, 0, w, h);
+
+    if (!assets.scene) {
+      paintTexturedGround(context, outroWay, 1, {
+        ...params,
+        assets: { ...assets, config: { ...config, hasImage: false } },
+      });
+    }
+
+    const symbol = assets.symbols[outroColour.logo];
+
+    if (symbol) {
+      context.drawImage(symbol, centerX - 160, h / 2 - 160, 320, 320);
+    }
+
+    context.restore();
+  }
 }
 
 export async function exportAudiogramVideo(
@@ -413,6 +459,12 @@ export async function exportAudiogramVideo(
     typeof state.values["content.episode"] === "string"
       ? (state.values["content.episode"] as string)
       : "";
+  // Eyebrow (episode name) label at the top; blank falls back to the marker.
+  const eyebrowRaw =
+    typeof state.values["audiogram.eyebrow"] === "string"
+      ? (state.values["audiogram.eyebrow"] as string).trim()
+      : "";
+  const eyebrow = eyebrowRaw || episode;
   const captionAsset = state.mediaAssets.find(
     (asset) => asset.sourceTarget === "audiogram.captions",
   );
@@ -494,28 +546,27 @@ export async function exportAudiogramVideo(
   const focus = readFocusPercent(state.values["scene.imagePosition"]);
   const guestWay = (typeof state.values["audiogram.guestColourway"] === "string"
     ? state.values["audiogram.guestColourway"]
-    : way) as ColourwayKey;
+    : "oak") as ColourwayKey;
+  const hostWay = (typeof state.values["audiogram.hostColourway"] === "string"
+    ? state.values["audiogram.hostColourway"]
+    : "beige") as ColourwayKey;
   const highlightMode =
     typeof state.values["audiogram.highlight"] === "string"
       ? (state.values["audiogram.highlight"] as string)
       : "auto";
-  const highlightLine =
-    typeof state.values["audiogram.highlightLine"] === "number"
-      ? (state.values["audiogram.highlightLine"] as number)
-      : 1;
   const config: AudiogramMotionConfig = {
     bgDrift: state.values["audiogram.breathing"] !== false,
     breathe: state.values["audiogram.breathing"] !== false,
     captionScale: readPercentFactor(state.values["audiogram.captionSize"], 1),
-    guestWay: COLOURWAYS[guestWay] ? guestWay : way,
+    guestWay: COLOURWAYS[guestWay] ? guestWay : "oak",
     hasImage: !!sceneImageSrc,
     highlight:
       highlightMode === "off"
         ? "off"
         : highlightMode === "choose"
-          ? Math.max(0, Math.round(highlightLine) - 1)
+          ? readHighlightLines(state.values["audiogram.highlightLine"])
           : "auto",
-    hostWay: way,
+    hostWay: COLOURWAYS[hostWay] ? hostWay : "beige",
     motionScale: readPercentFactor(state.values["audiogram.motionIntensity"], 1),
     solid: sceneSource === "solid",
     speakerSwap: state.values["audiogram.crossfade"] !== false,
@@ -703,6 +754,7 @@ export async function exportAudiogramVideo(
         },
         durationSeconds,
         episode,
+        eyebrow,
         outroLines,
         timeSeconds: frameTimeSeconds,
       });

@@ -17,12 +17,14 @@ import {
   applyBlockTextOverrides,
   blockText,
   buildSpeechBlocks,
+  finalCardProgress,
   groundMotion,
+  highlightSet,
   type AudiogramMotionConfig,
 } from "./audiogram-motion";
 import { buildEpisodeSetSnapshots, SLIDE_VALUE_TARGETS } from "./carousel";
 import { readCredits, readCreditsDraft } from "./credits";
-import { slideViewFromValues } from "./post-renderer";
+import { readHighlightLines, slideViewFromValues } from "./post-renderer";
 import { parseSrt } from "./srt";
 
 function findControl(
@@ -378,6 +380,29 @@ describe("More Muslim Social Studio schema", () => {
     });
   });
 
+  it("schema: audiogram.hostColourway offers all nine colourways", () => {
+    const control = findControl(appSchema, "audiogram.hostColourway");
+
+    expect(control?.type).toBe("select");
+    expect(control?.defaultValue).toBe("beige");
+    expect(optionValues(control)).toEqual([...COLOURWAY_KEYS]);
+    expect(control?.visibleWhen).toEqual({
+      equals: "audiogram",
+      target: "post.template",
+    });
+  });
+
+  it("schema: audiogram.eyebrow is a visible text control with a default", () => {
+    const control = findControl(appSchema, "audiogram.eyebrow");
+
+    expect(control?.type).toBe("text");
+    expect(typeof control?.defaultValue).toBe("string");
+    expect(control?.visibleWhen).toEqual({
+      equals: "audiogram",
+      target: "post.template",
+    });
+  });
+
   it("schema: audiogram.guestColourway offers all nine colourways", () => {
     const control = findControl(appSchema, "audiogram.guestColourway");
 
@@ -408,10 +433,11 @@ describe("More Muslim Social Studio schema", () => {
     expect(optionValues(control)).toEqual(["auto", "off", "choose"]);
   });
 
-  it("schema: audiogram.highlightLine picks the highlighted caption block", () => {
+  it("schema: audiogram.highlightLine picks the highlighted caption blocks", () => {
     const control = findControl(appSchema, "audiogram.highlightLine");
 
     expect(control?.type).toBe("audiogramHighlightPicker");
+    expect(control?.defaultValue).toEqual([1]);
     expect(control?.visibleWhen).toEqual({ equals: "choose", target: "audiogram.highlight" });
   });
 
@@ -550,6 +576,50 @@ describe("More Muslim Social Studio schema", () => {
     expect(control?.defaultValue).toBe(100);
     expect(control?.min).toBe(50);
     expect(control?.max).toBe(150);
+  });
+
+  it("audiogram: highlight lines read as sorted, de-duplicated 0-based indices", () => {
+    // Stored as 1-based line numbers; legacy single number still works.
+    expect(readHighlightLines([3, 1, 1, 5])).toEqual([0, 2, 4]);
+    expect(readHighlightLines(2)).toEqual([1]);
+    expect(readHighlightLines(undefined)).toEqual([]);
+    expect(readHighlightLines([0, -2, "x"])).toEqual([]);
+  });
+
+  it("audiogram: highlightSet pins every chosen line as a large pull-quote", () => {
+    const srt =
+      "1\n00:00:00,000 --> 00:00:01,000\nA: One.\n\n2\n00:00:01,200 --> 00:00:02,000\nA: Two.\n\n3\n00:00:02,200 --> 00:00:03,000\nA: Three.\n";
+    const blocks = buildSpeechBlocks(parseSrt(srt));
+    const base: AudiogramMotionConfig = {
+      bgDrift: true,
+      breathe: true,
+      captionScale: 1,
+      guestWay: "oak",
+      hasImage: false,
+      highlight: "off",
+      hostWay: "beige",
+      motionScale: 1,
+      solid: false,
+      speakerSwap: true,
+      wordAccent: true,
+    };
+
+    expect([...highlightSet(blocks, { ...base, highlight: "off" })]).toEqual([]);
+    // Multiple pinned lines all render large.
+    expect([...highlightSet(blocks, { ...base, highlight: [0, 2] })].sort()).toEqual([0, 2]);
+    // Out-of-range indices are dropped.
+    expect([...highlightSet(blocks, { ...base, highlight: [1, 9] })]).toEqual([1]);
+    // Auto returns exactly one.
+    expect(highlightSet(blocks, { ...base, highlight: "auto" }).size).toBe(1);
+  });
+
+  it("audiogram: the final logo card ramps up only at the very end", () => {
+    // No final card until the last ~1.8s; fully covering by the end.
+    expect(finalCardProgress(30, 60)).toBe(0);
+    expect(finalCardProgress(59, 60)).toBeGreaterThan(0);
+    expect(finalCardProgress(60, 60)).toBe(1);
+    // A clip shorter than the final-card window shows no separate card.
+    expect(finalCardProgress(1, 1)).toBe(0);
   });
 
   it("filmstrip: the add button appends a slide", () => {

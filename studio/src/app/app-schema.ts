@@ -285,10 +285,41 @@ export const appSchema = defineToolcraft({
         },
         {
           controls: {
+            eyebrow: {
+              defaultValue: "",
+              description:
+                "Label at the top of the audiogram (the episode name). Leave blank to use the episode marker.",
+              label: "Eyebrow",
+              orderRole: "input",
+              performanceReason: "Eyebrow text re-renders one line at the top of the frame.",
+              performanceRole: "responsiveness",
+              target: "audiogram.eyebrow",
+              type: "text",
+              visibleWhen: { equals: "audiogram", target: "post.template" },
+            },
+          },
+          title: "Eyebrow",
+        },
+        {
+          controls: {
+            hostColourway: {
+              defaultValue: "beige",
+              description:
+                "Ground colourway for the host speaker (the first voice, e.g. Yassmin). Ivory Beige by default.",
+              label: "Host colourway",
+              options: colourwayOptions,
+              orderRole: "mode",
+              performanceReason:
+                "The host colourway only reblends the ground crossfade per frame from timeline time.",
+              performanceRole: "responsiveness",
+              target: "audiogram.hostColourway",
+              type: "select",
+              visibleWhen: { equals: "audiogram", target: "post.template" },
+            },
             guestColourway: {
               defaultValue: "oak",
               description:
-                "Ground colourway for the guest speaker; the audiogram crossfades between the post colourway (host) and this one as speakers alternate. Set it to the host colourway to disable the swap.",
+                "Ground colourway for the guest speaker; the audiogram crossfades between the host and this one as speakers alternate. Set it to the host colourway to disable the swap.",
               label: "Guest colourway",
               options: colourwayOptions,
               orderRole: "mode",
@@ -337,27 +368,27 @@ export const appSchema = defineToolcraft({
             highlight: {
               defaultValue: "auto",
               description:
-                "Render one line as a large italic pull-quote: Auto picks the strongest line, Off disables it, Choose lets you set the line number below.",
+                "Render lines as large italic pull-quotes: Auto picks the strongest line, Off disables it, Choose lets you star one or more lines below.",
               label: "Highlight",
               options: [
                 { label: "Auto", value: "auto" },
                 { label: "Off", value: "off" },
-                { label: "Choose line", value: "choose" },
+                { label: "Choose lines", value: "choose" },
               ],
               orderRole: "mode",
-              performanceReason: "Selects which caption block is scored for the highlight per frame.",
+              performanceReason: "Selects which caption blocks are scored for the highlight per frame.",
               performanceRole: "responsiveness",
               target: "audiogram.highlight",
               type: "select",
               visibleWhen: { equals: "audiogram", target: "post.template" },
             },
             highlightLine: {
-              defaultValue: 1,
+              defaultValue: [1],
               description:
-                "Shows every parsed caption line so you can see the exact wording before choosing the highlight, and fix typos inline.",
-              label: "Highlight line",
+                "Shows every parsed caption line so you can see the exact wording; star one or more lines to render them large, and fix typos inline.",
+              label: "Highlight lines",
               orderRole: "mode",
-              performanceReason: "Chooses which caption block is the highlight per frame.",
+              performanceReason: "Chooses which caption blocks render large per frame.",
               performanceRole: "responsiveness",
               target: "audiogram.highlightLine",
               type: "audiogramHighlightPicker",

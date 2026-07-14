@@ -830,6 +830,38 @@ export const appAcceptance: readonly ToolcraftComponentAcceptance[] = [
     target: "audiogram.captions",
     userAction: "Upload an SRT file, scrub the timeline across both blocks, then remove it.",
   },
+  textControlRow(
+    "audiogram.eyebrow.text",
+    "audiogram.eyebrow",
+    "Audiogram template active.",
+    "The eyebrow text renders as the top label above the caption; leaving it blank falls back to the episode marker; visible only while the audiogram template is selected and hidden for other templates.",
+  ),
+  {
+    automated: true,
+    automatedTestName: "schema: audiogram.hostColourway offers all nine colourways",
+    browser: true,
+    browserTestName: "app controls: host colourway sets the first speaker's ground",
+    componentType: "select",
+    evidence: "product-output",
+    expectedObservable:
+      "Choosing a host colourway sets the ground of the first speaker (Yassmin), defaulting to Ivory Beige; the audiogram crossfades between it and the guest ground as speakers alternate; the control is visible only for the audiogram template.",
+    fixture: "Audiogram with a two-speaker SRT fixture.",
+    id: "audiogram.hostColourway.select",
+    kind: "control",
+    optionCoverage: [
+      "night",
+      "oak",
+      "beige",
+      "harvest",
+      "terracotta",
+      "mist",
+      "coastal",
+      "stone",
+      "black",
+    ],
+    target: "audiogram.hostColourway",
+    userAction: "Choose a host colourway and observe the first speaker's ground.",
+  },
   {
     automated: true,
     automatedTestName: "schema: audiogram.guestColourway offers all nine colourways",
@@ -838,7 +870,7 @@ export const appAcceptance: readonly ToolcraftComponentAcceptance[] = [
     componentType: "select",
     evidence: "product-output",
     expectedObservable:
-      "Choosing a guest colourway makes the audiogram ground crossfade between the host (post colourway) and guest grounds as speakers alternate; matching it to the host colourway disables the swap; the control is visible only for the audiogram template.",
+      "Choosing a guest colourway makes the audiogram ground crossfade between the host and guest grounds as speakers alternate; matching it to the host colourway disables the swap; the control is visible only for the audiogram template.",
     fixture: "Audiogram with a two-speaker SRT fixture.",
     id: "audiogram.guestColourway.select",
     kind: "control",
@@ -919,27 +951,27 @@ export const appAcceptance: readonly ToolcraftComponentAcceptance[] = [
   },
   {
     automated: true,
-    automatedTestName: "schema: audiogram.highlightLine picks the highlighted caption block",
+    automatedTestName: "schema: audiogram.highlightLine picks the highlighted caption blocks",
     browser: true,
-    browserTestName: "runtime: audiogram highlight picker selects and edits a line",
+    browserTestName: "runtime: audiogram highlight picker stars multiple lines and edits text",
     builtInFitCheck: {
       checkedBuiltIns: ["select", "code", "collectionActions"],
       closestBuiltIn: "select",
       whyInsufficient:
-        "Select only shows static option labels baked in at schema-build time, so it cannot display the actual, currently-uploaded caption text per line or update when the caption file changes. Code is one free-form textarea with no concept of discrete, selectable lines. CollectionActions owns an independently growable and shrinkable item list, but caption lines are entirely derived from the uploaded SRT file — the set of lines is fixed by the file; the client only ever picks a line and corrects its wording.",
+        "Select only shows static option labels baked in at schema-build time, so it cannot display the actual, currently-uploaded caption text per line or update when the caption file changes, and a multi-select would still only list opaque indices. Code is one free-form textarea with no concept of discrete, toggleable lines. CollectionActions owns an independently growable and shrinkable item list, but caption lines are entirely derived from the uploaded SRT file — the set of lines is fixed by the file; the client only ever stars one or more lines and corrects their wording.",
       productObservable:
-        "Clicking a line sets which caption block renders as the large italic pull-quote; editing a line's text changes the words rendered for that block's original time span, without altering the uploaded SRT file.",
+        "Starring one or more lines sets which caption blocks render as large italic pull-quotes; editing a line's text changes the words rendered for that block's original time span, without altering the uploaded SRT file.",
     },
     componentType: "audiogramHighlightPicker",
     customControlCoverage: "all-custom-control-behavior",
     evidence: "product-output",
     expectedObservable:
-      "With Highlight set to Choose, every parsed caption line renders as its real text; clicking a line renders it as the pull-quote, and editing a line's text changes the corresponding caption words; visible only while Highlight is Choose.",
-    fixture: "Audiogram with a multi-block SRT fixture and Highlight set to Choose.",
+      "With Highlight set to Choose lines, every parsed caption line renders as its real text with a star toggle; starring one or more lines renders each of those blocks as a pull-quote, and editing a line's text changes the corresponding caption words; visible only while Highlight is Choose lines.",
+    fixture: "Audiogram with a multi-block SRT fixture and Highlight set to Choose lines.",
     id: "audiogram.highlightLine.picker",
     kind: "control",
     target: "audiogram.highlightLine",
-    userAction: "Set Highlight to Choose, click a caption line, then edit its text.",
+    userAction: "Set Highlight to Choose lines, star two caption lines, then edit one's text.",
   },
   {
     automated: true,
@@ -1135,10 +1167,17 @@ export const starterControlSectionInventory: readonly ToolcraftControlSectionInv
     title: "Sound & Captions",
   },
   {
+    entity: "Audiogram eyebrow",
+    groupingReason:
+      "The eyebrow is the single top label (episode name) on the audiogram frame, distinct from the sound sources and the speaker grounds.",
+    targets: ["audiogram.eyebrow"],
+    title: "Eyebrow",
+  },
+  {
     entity: "Audiogram speaker grounds",
     groupingReason:
-      "The guest colourway is a single whole-slide brand entity — the second ground the audiogram's speaker crossfade blends into as speakers alternate — so it stands apart from the sound source uploads.",
-    targets: ["audiogram.guestColourway"],
+      "The host and guest colourways are whole-slide brand entities — the two grounds the audiogram's speaker crossfade blends between as speakers alternate — so they stand apart from the sound source uploads.",
+    targets: ["audiogram.hostColourway", "audiogram.guestColourway"],
     title: "Speaker Grounds",
   },
   {

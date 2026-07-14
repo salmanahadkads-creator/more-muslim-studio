@@ -17,10 +17,11 @@ import {
 import {
   activeBlockIndex,
   breatheOpacity,
+  finalCardProgress,
   firstName,
   groundMotion,
   groundState,
-  highlightIndex,
+  highlightSet,
   outroFadeAt,
   OUTRO_FADE_DELAYS,
   outroProgress,
@@ -524,6 +525,8 @@ export type AudiogramMotionProps = {
   blocks: readonly AudiogramSpeechBlock[];
   config: AudiogramMotionConfig;
   durationSeconds: number;
+  /** Top label above the caption (episode name); blank hides it. */
+  eyebrow: string;
   envelope: Float32Array | null;
   episode: string;
   guest: string;
@@ -597,17 +600,18 @@ export function AudiogramPost({
   scene: SceneProps;
   way: ColourwayKey;
 }): React.JSX.Element {
-  const { blocks, config, durationSeconds, envelope, episode, guest, timeSeconds } = motion;
+  const { blocks, config, durationSeconds, envelope, episode, eyebrow, guest, timeSeconds } = motion;
   const hasImage = !!scene.image;
   const ground = groundState(blocks, guest, config, timeSeconds);
   const activeIndex = activeBlockIndex(blocks, timeSeconds);
   const active = activeIndex >= 0 ? blocks[activeIndex] : null;
-  const highlight = highlightIndex(blocks, config);
-  const isHighlight = highlight >= 0 && activeIndex === highlight;
+  const highlights = highlightSet(blocks, config);
+  const isHighlight = highlights.has(activeIndex);
 
   const contentEnd = blocks.length ? blocks[blocks.length - 1].end : 0;
   const outroStart = outroStartAt(durationSeconds, contentEnd);
   const outroProg = outroProgress(timeSeconds, outroStart);
+  const finalCardProg = finalCardProgress(timeSeconds, durationSeconds);
   const chromeOp = (1 - outroProg) * (isHighlight ? 0.35 : 1);
 
   const ink = ground.ink;
@@ -676,6 +680,31 @@ export function AudiogramPost({
             />
           </>
         )
+      ) : null}
+
+      {/* Eyebrow — episode name at the top */}
+      {eyebrow ? (
+        <div
+          data-audiogram-eyebrow=""
+          data-toolcraft-product-text=""
+          style={{
+            color: ink,
+            fontSize: 32,
+            left: 0,
+            letterSpacing: CAPS_TRACKING,
+            opacity: chromeOp,
+            padding: "0 60px",
+            position: "absolute",
+            right: 0,
+            textAlign: "center",
+            textOverflow: "ellipsis",
+            textTransform: "uppercase",
+            top: 370,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {eyebrow}
+        </div>
       ) : null}
 
       {/* Active caption */}
@@ -828,6 +857,42 @@ export function AudiogramPost({
                 ),
                 width: 190,
               }}
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {/* Final logo card — the clip ends on the symbol centred on a clean
+          ground, crossfading over the now-streaming card. */}
+      {finalCardProg > 0 ? (
+        <div style={{ inset: 0, opacity: finalCardProg, position: "absolute" }}>
+          {scene.includeBackground ? (
+            <AudiogramGround
+              config={{ ...config, hasImage: false }}
+              durationSeconds={durationSeconds}
+              envelope={envelope}
+              opacity={1}
+              timeSeconds={timeSeconds}
+              way={outroWay}
+            />
+          ) : (
+            <div
+              style={{ background: outroColour.bg, inset: 0, position: "absolute" }}
+            />
+          )}
+          <div
+            style={{
+              alignItems: "center",
+              display: "flex",
+              height: "100%",
+              justifyContent: "center",
+              position: "relative",
+            }}
+          >
+            <img
+              alt=""
+              src={SYMBOLS[outroColour.logo]}
+              style={{ height: 320, width: 320 }}
             />
           </div>
         </div>

@@ -202,9 +202,9 @@ export type AudiogramMotionConfig = {
   captionScale: number;
   guestWay: ColourwayKey;
   hasImage: boolean;
-  /** "auto" scores the strongest line, "off" disables, a number forces that
-   *  0-based caption block as the highlight. */
-  highlight: "auto" | "off" | number;
+  /** "auto" scores the strongest line, "off" disables, an array forces those
+   *  0-based caption blocks to render as large pull-quotes (one or many). */
+  highlight: "auto" | "off" | readonly number[];
   hostWay: ColourwayKey;
   /** Scales every ambient movement (breathing depth, ground pan, push-in,
    *  Ken Burns drift) as a factor (0 = still frame, 1 = brand default,
@@ -305,23 +305,32 @@ export function groundState(
   };
 }
 
-/* Which block earns the large italic set-piece treatment (feature 7). "off"
-   disables it; "auto" scores blocks by length, punctuation, quotes, and
-   position, preferring a punchy line in the back half of the clip. */
-export function highlightIndex(
+/* Which blocks earn the large italic set-piece treatment (feature 7). "off"
+   disables it; an array pins those 0-based blocks (one or many lines the user
+   chose); "auto" scores blocks by length, punctuation, quotes, and position,
+   preferring a punchy line in the back half of the clip, and returns exactly
+   one. Returns the set of block indices that should render large. */
+export function highlightSet(
   blocks: readonly AudiogramSpeechBlock[],
   config: AudiogramMotionConfig,
-): number {
+): Set<number> {
   if (config.highlight === "off" || blocks.length === 0) {
-    return -1;
+    return new Set();
   }
 
-  if (typeof config.highlight === "number") {
-    return config.highlight >= 0 && config.highlight < blocks.length
-      ? config.highlight
-      : -1;
+  if (Array.isArray(config.highlight)) {
+    return new Set(
+      config.highlight.filter((index) => index >= 0 && index < blocks.length),
+    );
   }
 
+  const best = autoHighlightIndex(blocks);
+
+  return best >= 0 ? new Set([best]) : new Set();
+}
+
+/* Auto scorer: the single strongest line for the default one-line highlight. */
+function autoHighlightIndex(blocks: readonly AudiogramSpeechBlock[]): number {
   const contentEnd = blocks[blocks.length - 1]?.end ?? 0;
   let best = -1;
   let bestScore = -Infinity;
@@ -503,4 +512,20 @@ export function outroFadeAt(
 /* Staggered fade delays for the outro's four elements (episode/now-streaming,
    two body lines, symbol). */
 export const OUTRO_FADE_DELAYS = { line1: 0.55, line2: 0.95, symbol: 1.35, title: 0.15 } as const;
+
+/* The clip closes on a clean final slide: just the More Muslim symbol centred.
+   It crossfades up over the last FINAL_CARD_DURATION seconds, covering the
+   now-streaming card so the video ends on the logo lockup. */
+export const FINAL_CARD_DURATION = 1.8;
+
+export function finalCardProgress(
+  timeSeconds: number,
+  durationSeconds: number,
+): number {
+  if (!durationSeconds || durationSeconds <= FINAL_CARD_DURATION) {
+    return 0;
+  }
+
+  return clamp01((timeSeconds - (durationSeconds - FINAL_CARD_DURATION)) / 0.6);
+}
 
