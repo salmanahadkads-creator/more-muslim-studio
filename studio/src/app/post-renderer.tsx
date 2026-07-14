@@ -210,6 +210,7 @@ export function slideViewFromValues(
     imageRotation,
     imageOffsetX: position.x,
     imageOffsetY: position.y,
+    imageOpacity: Math.min(1, readPercentFactor(values["scene.imageOpacity"], 1)),
     imageZoom: zoom,
     includeBackground,
     pattern: source !== "solid",
@@ -220,13 +221,20 @@ export function slideViewFromValues(
 
 export function usePostSlideValues() {
   const { state } = useToolcraft();
+  // The live preview reads keyframe-evaluated values at the playhead so
+  // automated targets (image opacity, backdrop colour) render their
+  // in-between values; filmstrip thumbnails keep their raw snapshots.
+  const values = React.useMemo(
+    () => evaluateToolcraftTimelineValues(state, state.timeline.currentTimeSeconds),
+    [state],
+  );
   const view = slideViewFromValues(
-    state.values,
+    values,
     state.mediaAssets,
     shouldIncludeToolcraftPreviewBackground({ state }),
   );
 
-  return { ...view, state, values: state.values };
+  return { ...view, state, values };
 }
 
 export function PostSlide({

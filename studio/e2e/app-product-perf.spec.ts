@@ -261,6 +261,28 @@ test("browser perf: audiogram.wordAccent change stays within budget", async ({ p
   await measureAudiogramSwitch(page, "Word accent", "audiogram-wordAccent-change");
 });
 
+test("browser perf: scene.imageOpacity drag stays within budget", async ({ page }) => {
+  await openStudio(page);
+  await chooseSelectOption(page, "Scene", "Episode illustration");
+
+  const slider = page.getByRole("slider", { name: "Image opacity" });
+
+  await expect(slider).toBeVisible();
+
+  const result = await measureToolcraftInteraction(page, async () => {
+    await dragToolcraftSliderByLabel(page, "Image opacity", 0.3);
+  });
+
+  expectToolcraftScenarioPerformanceBudget(result, appPerformance, "scene-imageOpacity-drag");
+
+  // Outside the measured window, prove the slider really restyles the image
+  // ground layer: two keyboard steps down from 100% land at 90%.
+  await slider.focus();
+  await slider.press("ArrowLeft");
+  await slider.press("ArrowLeft");
+  await expect(page.locator("#mm-post-slide img").first()).toHaveCSS("opacity", "0.9");
+});
+
 test("browser perf: audiogram.motionIntensity drag stays within budget", async ({ page }) => {
   await openAudiogram(page);
 

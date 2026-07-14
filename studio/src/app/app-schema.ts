@@ -226,6 +226,23 @@ export const appSchema = defineToolcraft({
               type: "fileDrop",
               visibleWhen: { equals: "upload", target: "scene.source" },
             },
+            imageOpacity: {
+              defaultValue: 100,
+              description:
+                "Fades the illustration or uploaded image into the colourway ground — lower it when text needs more legibility. Keyframeable on the audiogram timeline.",
+              label: "Image opacity",
+              max: 100,
+              min: 0,
+              orderRole: "primary",
+              performanceReason:
+                "Image opacity restyles one ground layer per change.",
+              performanceRole: "responsiveness",
+              step: 5,
+              target: "scene.imageOpacity",
+              type: "slider",
+              unit: "%",
+              visibleWhen: { oneOf: ["illustration", "upload"], target: "scene.source" },
+            },
           },
           title: "Scene",
         },

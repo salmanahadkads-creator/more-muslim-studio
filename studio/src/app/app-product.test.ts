@@ -22,6 +22,7 @@ import {
 } from "./audiogram-motion";
 import { buildEpisodeSetSnapshots, SLIDE_VALUE_TARGETS } from "./carousel";
 import { readCredits, readCreditsDraft } from "./credits";
+import { slideViewFromValues } from "./post-renderer";
 import { parseSrt } from "./srt";
 
 function findControl(
@@ -489,6 +490,28 @@ describe("More Muslim Social Studio schema", () => {
     expect(midpoint as number).toBeLessThan(200);
     expect(evaluateToolcraftTimelineValue(state, "audiogram.motionIntensity", 0)).toBe(0);
     expect(evaluateToolcraftTimelineValue(state, "audiogram.motionIntensity", 2)).toBe(200);
+  });
+
+  it("schema: scene.imageOpacity fades the image into the ground", () => {
+    const control = findControl(appSchema, "scene.imageOpacity");
+
+    expect(control?.type).toBe("slider");
+    expect(control?.defaultValue).toBe(100);
+    expect(control?.min).toBe(0);
+    expect(control?.max).toBe(100);
+    expect(control?.visibleWhen).toEqual({
+      oneOf: ["illustration", "upload"],
+      target: "scene.source",
+    });
+
+    // The shared scene derivation clamps the percent to a 0–1 CSS factor.
+    const view = slideViewFromValues(
+      { "post.template": "cover", "scene.imageOpacity": 40, "scene.source": "illustration", "scene.illustration": "ep1" },
+      [],
+      true,
+    );
+
+    expect(view.scene.imageOpacity).toBeCloseTo(0.4);
   });
 
   it("schema: audiogram.motionIntensity scales the frame's ambient movement", () => {

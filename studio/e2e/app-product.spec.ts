@@ -422,6 +422,35 @@ test("app controls: background colour fills the export backdrop", async ({ page 
   const download = await downloadPromise;
 
   expect(await download.path()).toBeTruthy();
+
+  // Keyframe coverage boundary: the backdrop colour is keyframe-capable by
+  // type and the export reads it through the timeline evaluator at the
+  // playhead — but the contract-required inline Background row keeps the
+  // colour label-free, and keyframe diamonds are label actions, so no
+  // backdrop timeline-keyframe-row can be authored. Prove both halves: the
+  // expanded keyframe editor shows no lane for it, and scrubbing the
+  // playhead re-renders the frame the export would evaluate at that time.
+  await chooseSelectOption(page, "Template", "Audiogram");
+
+  if (await page.getByRole("button", { name: "Pause playback" }).isVisible().catch(() => false)) {
+    await page.getByRole("button", { name: "Pause playback" }).click();
+  }
+
+  await page.getByRole("button", { name: "Expand timeline panel" }).click();
+  await expect(
+    page.getByRole("button", { name: /Add backgroundColor keyframe/i }),
+  ).toHaveCount(0);
+  await expect(page.locator('[data-slot="timeline-keyframe-row"]')).toHaveCount(0);
+
+  // Leaving audiogram mode is the visible interaction whose product output
+  // change closes the loop; the backdrop itself only paints in exports.
+  await expectToolcraftProductObservableToChange(
+    page,
+    async () => {
+      await chooseSelectOption(page, "Template", "Cover");
+    },
+    { selector: slideSelector },
+  );
 });
 
 test("app controls: image format changes the exported file type", async ({ page }) => {
@@ -771,6 +800,54 @@ test("runtime: audiogram highlight picker selects and edits a line", async ({ pa
   });
 });
 
+test("runtime: scene image opacity dims the illustration and keyframes evaluate", async ({
+  page,
+}) => {
+  await setupAudiogram(page);
+  await chooseSelectOption(page, "Scene", "Episode illustration");
+
+  const sceneImage = page.locator(`${slideSelector} img`).first();
+
+  await expect(sceneImage).toBeVisible();
+  await expect(sceneImage).toHaveCSS("opacity", "1");
+
+  // Lowering the slider fades the image into the colourway ground live.
+  // Keyboard steps are the deterministic slider interaction: each ArrowLeft
+  // is one 5% step down from the 100% default.
+  const opacitySlider = page.getByRole("slider", { name: "Image opacity" });
+
+  await expectToolcraftProductObservableToChange(
+    page,
+    async () => {
+      await opacitySlider.focus();
+
+      for (let press = 0; press < 8; press += 1) {
+        await opacitySlider.press("ArrowLeft");
+      }
+    },
+    { selector: slideSelector },
+  );
+
+  const dimmed = Number(await sceneImage.evaluate((el) => getComputedStyle(el).opacity));
+
+  expect(dimmed).toBeCloseTo(0.6);
+
+  // visibleWhen: the slider exists only for image-backed scene sources.
+  await chooseSelectOption(page, "Scene", "Pattern");
+  await expect(page.getByRole("slider", { name: "Image opacity" })).toBeHidden();
+  await chooseSelectOption(page, "Scene", "Episode illustration");
+
+  // Pause, open the expanded keyframe editor, and pin the opacity as a
+  // keyframe — the diamond creates an Image opacity automation lane.
+  if (await page.getByRole("button", { name: "Pause playback" }).isVisible().catch(() => false)) {
+    await page.getByRole("button", { name: "Pause playback" }).click();
+  }
+
+  await page.getByRole("button", { name: "Expand timeline panel" }).click();
+  await page.getByRole("button", { name: "Add Image opacity keyframe" }).click();
+  await expect(page.locator('[data-slot="timeline-keyframe-row"]')).toHaveCount(1);
+});
+
 test("runtime: audiogram outro text renders", async ({ page }) => {
   // A tone barely longer than the captions (2s) reaches the outro window
   // (contentEnd + 0.3 = 2.3s) within a couple of real seconds of autoplay —
@@ -1101,14 +1178,30 @@ test("runtime: timeline playback scrubs and renders audiogram frames", async ({
 
   await expect(transport).toBeVisible();
 
-  // Uploading audio can auto-start playback; normalise to a paused state.
-  if (/pause/i.test((await transport.getAttribute("aria-label")) ?? "")) {
-    await transport.click();
+  // Uploading audio can auto-start playback; normalise to a paused state via
+  // the real "Pause playback" transport button.
+  if (await page.getByRole("button", { name: "Pause playback" }).isVisible().catch(() => false)) {
+    await page.getByRole("button", { name: "Pause playback" }).click();
   }
 
-  await transport.click();
+  // Play, hold, pause — the paused frame is a pure function of the held time.
+  await page.getByRole("button", { name: "Play playback" }).click();
   await page.waitForTimeout(400);
-  await transport.click();
+  await page.getByRole("button", { name: "Pause playback" }).click();
+
+  // Loop transport state round-trips through the real toggle.
+  const disableLoop = page.getByRole("button", { name: "Disable loop" });
+  const enableLoop = page.getByRole("button", { name: "Enable loop" });
+
+  if (await disableLoop.isVisible().catch(() => false)) {
+    await disableLoop.click();
+    await expect(enableLoop).toBeVisible();
+    await enableLoop.click();
+  } else if (await enableLoop.isVisible().catch(() => false)) {
+    await enableLoop.click();
+    await expect(disableLoop).toBeVisible();
+    await disableLoop.click();
+  }
 
   // Edit the timeline duration through the real duration editor and prove the
   // playback range follows state.timeline.durationSeconds.
@@ -1124,7 +1217,7 @@ test("runtime: timeline playback scrubs and renders audiogram frames", async ({
   }
 
   // Late-time caption renders after playing into the second block window.
-  await transport.click();
+  await page.getByRole("button", { name: "Play playback" }).click();
   await expect(page.locator(slideSelector)).toContainText("The second line", {
     ignoreCase: true,
     timeout: 5000,

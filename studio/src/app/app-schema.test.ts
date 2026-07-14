@@ -60,6 +60,7 @@ describe("appSchema", () => {
       "scene.source",
       "scene.illustration",
       "scene.upload",
+      "scene.imageOpacity",
       "audiogram.audio",
       "audiogram.captions",
       "audiogram.guestColourway",
@@ -256,6 +257,16 @@ describe("appSchema", () => {
     );
 
     expect(scenario?.interaction).toBe("control-change");
+    expect(Object.keys(scenario?.budget ?? {}).length).toBeGreaterThan(0);
+  });
+
+  it("performance: scene.imageOpacity scenario is declared", () => {
+    const scenario = appPerformance.scenarios.find(
+      (entry) => entry.id === "scene-imageOpacity-drag",
+    );
+
+    expect(scenario?.interaction).toBe("control-drag");
+    expect(scenario?.target).toBe("scene.imageOpacity");
     expect(Object.keys(scenario?.budget ?? {}).length).toBeGreaterThan(0);
   });
 

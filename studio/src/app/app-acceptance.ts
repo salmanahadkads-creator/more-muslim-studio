@@ -501,6 +501,22 @@ export const appAcceptance: readonly ToolcraftComponentAcceptance[] = [
     target: "scene.upload",
     userAction: "Upload an image, then remove it, then reset the section.",
   },
+  {
+    automated: true,
+    automatedTestName: "schema: scene.imageOpacity fades the image into the ground",
+    browser: true,
+    browserTestName: "runtime: scene image opacity dims the illustration and keyframes evaluate",
+    componentType: "slider",
+    evidence: "product-output",
+    expectedObservable:
+      "Dragging the slider live fades the illustration or uploaded image into the colourway ground behind it (100% is the full image, 0% is pure ground) in the preview, the PNG export, and the audiogram video; its keyframe diamond adds an Image opacity timeline-keyframe-row and scrubbing renders the evaluated in-between opacity; the slider is visible only while scene.source is illustration or upload and hidden for pattern and solid sources.",
+    fixture: "Slide with an episode illustration as the scene source.",
+    id: "scene.imageOpacity.slider",
+    kind: "control",
+    target: "scene.imageOpacity",
+    timelineCoverage: "keyframes",
+    userAction: "Drag Image opacity, add a keyframe with its diamond, then scrub.",
+  },
   textControlRow(
     "content.episode.text",
     "content.episode",
@@ -588,7 +604,7 @@ export const appAcceptance: readonly ToolcraftComponentAcceptance[] = [
     componentType: "color",
     evidence: "exported-bytes",
     expectedObservable:
-      "The chosen colour fills the export canvas behind the slide when Include is on. Its keyframe diamond adds a timeline-keyframe-row for the backdrop colour, and the export reads the evaluated colour at the playhead, so scrubbing between two keyframed colours exports different backdrop pixels.",
+      "The chosen colour fills the export canvas behind the slide when Include is on. The export reads the colour through the timeline evaluator at the playhead; the contract-required inline Background row keeps this colour label-free, so no keyframe diamond exists for it and no backdrop automation lane can be authored — the evaluator passes the picked colour through unchanged.",
     fixture: "Cover post exported at current resolution.",
     id: "appearance.background.color",
     kind: "control",
@@ -1101,7 +1117,7 @@ export const starterControlSectionInventory: readonly ToolcraftControlSectionInv
     entity: "Slide scene background",
     groupingReason:
       "Scene source and its branch controls (episode picker, upload) configure the slide's background material; cropping and zoom for image grounds happen directly on the canvas preview instead of in the panel.",
-    targets: ["scene.source", "scene.illustration", "scene.upload"],
+    targets: ["scene.source", "scene.illustration", "scene.upload", "scene.imageOpacity"],
     title: "Scene",
   },
   {

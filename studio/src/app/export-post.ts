@@ -22,7 +22,7 @@ import {
   type PostFormat,
 } from "./brand";
 import { readCredits } from "./credits";
-import { readFocusPercent } from "./post-renderer";
+import { readFocusPercent, readPercentFactor } from "./post-renderer";
 import type { PostTemplateKey } from "./templates";
 import { createStoredZip } from "./zip-store";
 
@@ -232,8 +232,21 @@ export async function paintSlide(
         typeof values["scene.imageZoom"] === "number"
           ? (values["scene.imageZoom"] as number)
           : 1;
+      // Evaluated at the playhead so a keyframed opacity exports the value
+      // visible at the currently selected time; the ground colour behind it
+      // is already painted, matching the DOM preview's CSS opacity blend.
+      const imageOpacity = Math.min(
+        1,
+        readPercentFactor(
+          evaluateToolcraftTimelineValue(state, "scene.imageOpacity"),
+          1,
+        ),
+      );
 
+      context.save();
+      context.globalAlpha = imageOpacity;
       drawCoverImage(context, sceneImage, w, h, position.x, position.y, zoom);
+      context.restore();
     } else {
       if (source !== "solid" && c.tile) {
         const tile = await loadImage(c.tile);

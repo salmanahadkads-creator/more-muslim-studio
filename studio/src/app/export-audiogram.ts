@@ -121,6 +121,8 @@ type AudiogramFrameAssets = {
     focusX: number;
     focusY: number;
     image: HTMLImageElement;
+    /** 0-1; below 1 the image fades into the base ground fill behind it. */
+    opacity: number;
     zoom: number;
   } | null;
   symbols: Record<string, HTMLImageElement>;
@@ -180,13 +182,17 @@ function paintImageGround(context: PaintContext, params: AudiogramFrameParams): 
     return;
   }
 
-  const { focusX, focusY, image, zoom } = assets.scene;
+  const { focusX, focusY, image, opacity, zoom } = assets.scene;
   const { h, w } = POST_SIZES.story;
   const move = groundMotion(assets.config, timeSeconds, durationSeconds);
   const scale = Math.max(w / image.width, h / image.height) * zoom * move.scale;
   const drawW = image.width * scale;
   const drawH = image.height * scale;
 
+  // Below 1 the image blends toward the base ground fill painted behind it,
+  // matching the DOM preview's CSS opacity.
+  context.save();
+  context.globalAlpha = opacity;
   context.drawImage(
     image,
     (w - drawW) * (focusX / 100),
@@ -194,6 +200,7 @@ function paintImageGround(context: PaintContext, params: AudiogramFrameParams): 
     drawW,
     drawH,
   );
+  context.restore();
 }
 
 /* Lay out a block's words within maxWidth (word advance = measured width +
@@ -527,6 +534,14 @@ export async function exportAudiogramVideo(
       config.motionScale,
     ),
   });
+  const sceneOpacityAt = (timeSeconds: number): number =>
+    Math.min(
+      1,
+      readPercentFactor(
+        evaluateToolcraftTimelineValue(state, "scene.imageOpacity", timeSeconds),
+        1,
+      ),
+    );
   const outroLines = (typeof state.values["audiogram.outro"] === "string"
     ? (state.values["audiogram.outro"] as string)
     : "Listen to the full episode at moremuslim.org.\nOr search for “More Muslim” wherever you get your podcasts."
@@ -569,6 +584,10 @@ export async function exportAudiogramVideo(
           focusX: focus.x,
           focusY: focus.y,
           image: await loadImage(sceneImageSrc),
+          opacity: Math.min(
+            1,
+            readPercentFactor(state.values["scene.imageOpacity"], 1),
+          ),
           zoom:
             typeof state.values["scene.imageZoom"] === "number"
               ? (state.values["scene.imageZoom"] as number)
@@ -675,7 +694,13 @@ export async function exportAudiogramVideo(
       const frameTimeSeconds = (posterStep * POSTERIZE) / FPS;
 
       paintAudiogramFrame(slideContext, {
-        assets: { ...assets, config: configAt(frameTimeSeconds) },
+        assets: {
+          ...assets,
+          config: configAt(frameTimeSeconds),
+          scene: assets.scene
+            ? { ...assets.scene, opacity: sceneOpacityAt(frameTimeSeconds) }
+            : null,
+        },
         durationSeconds,
         episode,
         outroLines,

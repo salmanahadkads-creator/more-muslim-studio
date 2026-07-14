@@ -48,6 +48,7 @@ export const appPerformance: ToolcraftPerformanceConfig = defineToolcraftPerform
         targets: [
           "scene.imagePosition",
           "scene.imageZoom",
+          "scene.imageOpacity",
           "audiogram.motionIntensity",
           "audiogram.captionSize",
         ],
@@ -309,6 +310,23 @@ export const appPerformance: ToolcraftPerformanceConfig = defineToolcraftPerform
       id: "audiogram-guest-colourway-change",
       interaction: "control-change",
       target: "audiogram.guestColourway",
+      workload: false,
+    },
+    {
+      automated: true,
+      automatedTestName: "performance: scene.imageOpacity scenario is declared",
+      browser: true,
+      browserTestName: "browser perf: scene.imageOpacity drag stays within budget",
+      // The 12-step synthetic pointer drag itself costs ~700ms of wall time in
+      // the fallback runner; frame gaps and long tasks stay on the tight budget.
+      budget: { maxFrameGapMs: 120, maxInteractionMs: 900, maxLongTaskMs: 200 },
+      controlLabel: "Image opacity",
+      expectedObservable:
+        "Dragging Image opacity live restyles the image ground layer within the responsiveness budget.",
+      fixture: "Slide with an episode illustration as the scene source.",
+      id: "scene-imageOpacity-drag",
+      interaction: "control-drag",
+      target: "scene.imageOpacity",
       workload: false,
     },
     {

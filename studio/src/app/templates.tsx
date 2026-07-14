@@ -49,6 +49,9 @@ export type SceneProps = {
   imageFlipVertical?: boolean;
   imageOffsetX?: number;
   imageOffsetY?: number;
+  /** 0–1 factor; below 1 the image fades into the colourway ground behind it,
+   *  trading image presence for text legibility. */
+  imageOpacity?: number;
   imageRotation?: number;
   imageZoom?: number;
   includeBackground?: boolean;
@@ -91,6 +94,7 @@ export function PostFrame({
   imageFlipVertical = false,
   imageOffsetX = 50,
   imageOffsetY = 50,
+  imageOpacity = 1,
   imageRotation = 0,
   imageZoom = 1,
   includeBackground = true,
@@ -125,6 +129,7 @@ export function PostFrame({
             inset: 0,
             objectFit: "cover",
             objectPosition: `${imageOffsetX}% ${imageOffsetY}%`,
+            opacity: imageOpacity,
             position: "absolute",
             transform: `scale(${imageZoom}) rotate(${imageRotation}deg) scale(${imageFlipHorizontal ? -1 : 1}, ${imageFlipVertical ? -1 : 1})`,
             transformOrigin: `${imageOffsetX}% ${imageOffsetY}%`,
@@ -642,6 +647,7 @@ export function AudiogramPost({
               inset: 0,
               objectFit: "cover",
               objectPosition: `${scene.imageOffsetX ?? 50}% ${scene.imageOffsetY ?? 50}%`,
+              opacity: scene.imageOpacity ?? 1,
               position: "absolute",
               transform: `scale(${(scene.imageZoom ?? 1) * groundMotion(config, timeSeconds, durationSeconds).scale}) rotate(${scene.imageRotation ?? 0}deg) scale(${scene.imageFlipHorizontal ? -1 : 1}, ${scene.imageFlipVertical ? -1 : 1})`,
               transformOrigin: `${scene.imageOffsetX ?? 50}% ${scene.imageOffsetY ?? 50}%`,
