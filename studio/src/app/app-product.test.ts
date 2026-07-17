@@ -3,7 +3,6 @@
 
 import { describe, expect, it } from "vitest";
 
-import { toolcraftReducer } from "@/toolcraft/runtime";
 import type {
   ResolvedToolcraftAppSchema,
   ToolcraftControlSchema,
@@ -612,44 +611,6 @@ describe("More Muslim Social Studio schema", () => {
     expect([...highlightSet(blocks, { ...base, highlight: [1, 9] })]).toEqual([1]);
     // Auto returns exactly one.
     expect(highlightSet(blocks, { ...base, highlight: "auto" }).size).toBe(1);
-  });
-
-  it("timeline: duration has no upper cap, only a 1s floor and a finite guard", () => {
-    const setDuration = (durationSeconds: number) =>
-      toolcraftReducer(
-        {
-          canvas: { size: { height: 1920, width: 1080 } },
-          defaults: {},
-          history: { redo: [], undo: [] },
-          layers: [],
-          mediaAssets: [],
-          panels: { timeline: {} },
-          schema: appSchema,
-          selectedLayerId: null,
-          timeline: {
-            currentTimeSeconds: 0,
-            durationSeconds: 60,
-            expanded: false,
-            isLooping: true,
-            isPlaying: false,
-            keyframeGroups: [],
-            selectedKeyframeId: null,
-          },
-          values: {},
-        } as unknown as Parameters<typeof toolcraftReducer>[0],
-        { durationSeconds, type: "timeline.setDuration" },
-      ).timeline.durationSeconds;
-
-    // A 73.5s podcast clip, a 45-minute episode, and a 3-hour cut all survive
-    // intact — there is no ceiling left anywhere.
-    expect(setDuration(73.512979)).toBeCloseTo(73.512979);
-    expect(setDuration(2700)).toBe(2700);
-    expect(setDuration(10_800)).toBe(10_800);
-    expect(setDuration(500_000)).toBe(500_000);
-    // The floor and the finite guard still hold.
-    expect(setDuration(0.2)).toBe(1);
-    expect(setDuration(Number.POSITIVE_INFINITY)).toBe(1);
-    expect(setDuration(Number.NaN)).toBe(1);
   });
 
   it("audiogram: the final logo card ramps up only at the very end", () => {

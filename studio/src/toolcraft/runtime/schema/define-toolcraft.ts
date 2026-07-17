@@ -1438,8 +1438,10 @@ function normalizeTimelineDurationSeconds(value: unknown): number {
     return defaultTimelineDurationSeconds;
   }
 
-  // No upper bound: a timeline is as long as its source media. The
-  // isFinite guard above already rejects Infinity/NaN.
+  // SANCTIONED RUNTIME DELTA (see AGENTS.md "Sanctioned runtime deltas"):
+  // no upper bound — a timeline is as long as its source media, so the
+  // maxTimelineDurationSeconds ceiling was removed here. The isFinite guard
+  // above already rejects Infinity/NaN. Re-apply after any regeneration.
   return Math.max(minTimelineDurationSeconds, value);
 }
 
