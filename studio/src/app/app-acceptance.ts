@@ -1106,14 +1106,14 @@ export const appAcceptance: readonly ToolcraftComponentAcceptance[] = [
   },
   {
     automated: true,
-    automatedTestName: "schema: persistence stores values, canvas, and panels in localStorage",
+    automatedTestName: "schema: persistence stores values, canvas, panels, and timeline in localStorage",
     browser: true,
     browserTestName: "runtime: edited settings survive a page reload",
     componentType: "runtime",
     evidence: "persistence-state",
     expectedObservable:
-      "After changing the colourway and reloading, the restored slide renders the persisted colourway.",
-    fixture: "Colourway changed to terracotta before reload.",
+      "After changing the colourway and reloading, the restored slide renders the persisted colourway; authored keyframe automation lanes and the timeline duration also survive the reload.",
+    fixture: "Colourway changed to terracotta before reload; a Motion intensity keyframe authored before reload.",
     id: "runtime.persistence.reload",
     kind: "runtime",
     persistenceCoverage: "reload",

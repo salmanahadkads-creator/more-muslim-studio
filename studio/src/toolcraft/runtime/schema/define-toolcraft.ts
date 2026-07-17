@@ -51,7 +51,6 @@ const canvasAspectRatioTarget = "canvas.aspectRatio";
 const canvasRenderScaleTarget = "canvas.renderScale";
 const defaultTimelineDurationSeconds = 8;
 const minTimelineDurationSeconds = 1;
-const maxTimelineDurationSeconds = 86_400;
 const defaultCanvasRenderScale = {
   defaultValue: 2,
   enabled: false,
@@ -1439,7 +1438,9 @@ function normalizeTimelineDurationSeconds(value: unknown): number {
     return defaultTimelineDurationSeconds;
   }
 
-  return Math.min(maxTimelineDurationSeconds, Math.max(minTimelineDurationSeconds, value));
+  // No upper bound: a timeline is as long as its source media. The
+  // isFinite guard above already rejects Infinity/NaN.
+  return Math.max(minTimelineDurationSeconds, value);
 }
 
 function hasVisibleRuntimePanel({

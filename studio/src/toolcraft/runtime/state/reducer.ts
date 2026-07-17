@@ -30,7 +30,6 @@ import type {
 } from "./types";
 
 const minTimelineDurationSeconds = 1;
-const maxTimelineDurationSeconds = 86_400;
 const canvasAspectRatioTarget = "canvas.aspectRatio";
 const canvasSizeWidthTarget = "canvas.size.width";
 const canvasSizeHeightTarget = "canvas.size.height";
@@ -332,7 +331,9 @@ function clampTimelineDuration(value: number): number {
     return minTimelineDurationSeconds;
   }
 
-  return Math.max(minTimelineDurationSeconds, Math.min(maxTimelineDurationSeconds, value));
+  // No upper bound: a timeline is as long as its source media. The
+  // isFinite guard above already rejects Infinity/NaN.
+  return Math.max(minTimelineDurationSeconds, value);
 }
 
 function clampTimelineTime(value: number, durationSeconds: number): number {

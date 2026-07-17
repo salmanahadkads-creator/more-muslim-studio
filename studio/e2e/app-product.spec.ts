@@ -538,6 +538,38 @@ test("runtime: edited settings survive a page reload", async ({ page }) => {
   expect(frameBackground).toBe("rgb(193, 90, 58)");
 });
 
+test("runtime: authored keyframe lanes survive a page reload", async ({ page }) => {
+  await setupAudiogram(page);
+
+  // Pause so the playhead stays put, then author one automation lane.
+  if (await page.getByRole("button", { name: "Pause playback" }).isVisible().catch(() => false)) {
+    await page.getByRole("button", { name: "Pause playback" }).click();
+  }
+
+  await page.getByRole("button", { name: "Expand timeline panel" }).click();
+  await page.getByRole("button", { name: "Add Motion intensity keyframe" }).click();
+  await expect(page.locator('[data-slot="timeline-keyframe-row"]')).toHaveCount(1);
+
+  // Give persistence a moment to write, then reload.
+  await page.waitForTimeout(400);
+  await page.reload();
+  await expect(page.locator(slideSelector)).toBeVisible();
+
+  // The lane and its diamond come back — timeline state is persisted, so the
+  // client does not lose authored automation on refresh. The expanded state
+  // persists too, so only expand if it came back collapsed.
+  const expandAgain = page.getByRole("button", { name: "Expand timeline panel" });
+
+  if (await expandAgain.isVisible().catch(() => false)) {
+    await expandAgain.click();
+  }
+
+  await expect(page.locator('[data-slot="timeline-keyframe-row"]')).toHaveCount(1);
+  await expect(
+    page.getByRole("button", { name: /Motion intensity keyframe at/ }),
+  ).toHaveCount(1);
+});
+
 async function buildEpisodeSet(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Build episode set" }).click();
   await expect(filmstripSlides(page)).toHaveCount(5);

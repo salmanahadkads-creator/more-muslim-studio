@@ -637,7 +637,10 @@ export const appSchema = defineToolcraft({
     },
   },
   persistence: {
-    include: ["values", "canvas", "panels"],
+    // "timeline" keeps authored keyframe automation lanes (and the duration)
+    // across a reload — without it the slider values survived but every lane
+    // the client had drawn was lost.
+    include: ["values", "canvas", "panels", "timeline"],
     key: "toolcraft:more-muslim-social-studio:state:v1",
     storage: "localStorage",
     version: 1,

@@ -79,7 +79,6 @@ const timelineExpandedTrackEndOffsetPx =
 const timelinePlayheadSafeZonePx = 7;
 const timelinePlayheadHitAreaWidthPx =
   timelineTrackColumnBorderWidthPx + timelinePlayheadSafeZonePx * 2;
-const maxTimelineDurationSeconds = 86_400;
 const minTimelineDurationSeconds = 1;
 const timelineScrubStepSeconds = 0.25;
 const timelinePanelExpandCollapseTransition = {
@@ -310,7 +309,9 @@ function clampTimelineDuration(value: number): number {
     return 8;
   }
 
-  return Math.max(minTimelineDurationSeconds, Math.min(maxTimelineDurationSeconds, value));
+  // No upper bound: a timeline is as long as its source media. The
+  // isFinite guard above already rejects Infinity/NaN.
+  return Math.max(minTimelineDurationSeconds, value);
 }
 
 function clampTimelineTime(value: number, durationSeconds: number): number {
