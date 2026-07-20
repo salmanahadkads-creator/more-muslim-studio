@@ -2,6 +2,9 @@
    Caption lines may start with "Speaker: text"; the speaker is split out so
    the slide can render the name in tracked caps above the line. */
 
+/** How long a caption stays on screen past its own end time. */
+const CAPTION_HOLD_SECONDS = 0.75;
+
 export type CaptionBlock = {
   end: number;
   speaker: string;
@@ -72,5 +75,9 @@ export function activeCaptionAt(
     }
   }
 
-  return active && timeSeconds <= active.end + 0.75 ? active : active;
+  // Both branches used to return `active`, so the hold window below was inert
+  // and a caption could never expire — it simply stayed on screen until the
+  // next cue started. The function has no callers today, so this only matters
+  // for the next one, which is exactly when a silently-wrong helper bites.
+  return active && timeSeconds <= active.end + CAPTION_HOLD_SECONDS ? active : null;
 }

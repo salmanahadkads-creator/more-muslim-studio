@@ -8,6 +8,7 @@
 import {
   createToolcraftPngExportCanvas,
   evaluateToolcraftTimelineValue,
+  type ToolcraftMediaAsset,
   type ToolcraftState,
 } from "@/toolcraft/runtime";
 
@@ -134,6 +135,9 @@ function drawCoverImage(
   focusX: number,
   focusY: number,
   zoom: number,
+  rotationDeg = 0,
+  flipHorizontal = false,
+  flipVertical = false,
 ): void {
   const scale = Math.max(frameW / image.width, frameH / image.height) * zoom;
   const drawW = image.width * scale;
@@ -143,7 +147,30 @@ function drawCoverImage(
   const x = (frameW - drawW) * (focusX / 100);
   const y = (frameH - drawH) * (focusY / 100);
 
+  // The preview applies `scale(zoom) rotate(R) scale(flipX, flipY)` about the
+  // same focus origin (templates.tsx). Uniform zoom commutes with rotation and
+  // reflection, so baking it into the cover scale above and applying rotate then
+  // flip here reproduces the CSS matrix exactly. Without this the export
+  // silently dropped both transforms — a rotated upload previewed upright and
+  // exported sideways.
+  const rotated = rotationDeg !== 0 || flipHorizontal || flipVertical;
+
+  if (rotated) {
+    const originX = frameW * (focusX / 100);
+    const originY = frameH * (focusY / 100);
+
+    context.save();
+    context.translate(originX, originY);
+    context.rotate((rotationDeg * Math.PI) / 180);
+    context.scale(flipHorizontal ? -1 : 1, flipVertical ? -1 : 1);
+    context.translate(-originX, -originY);
+  }
+
   context.drawImage(image, x, y, drawW, drawH);
+
+  if (rotated) {
+    context.restore();
+  }
 }
 
 let grainImagePromise: Promise<HTMLImageElement> | null = null;
@@ -213,6 +240,9 @@ export async function paintSlide(
     context.fillRect(0, 0, w, h);
 
     let sceneImage: HTMLImageElement | null = null;
+    // Only an upload carries a rotate/flip transform — built-in illustrations
+    // ship correctly oriented, which is how the preview reads it too.
+    let sceneTransform: ToolcraftMediaAsset["transform"] | undefined;
 
     if (source === "illustration") {
       const entry = getEpisodeIllustration(values["scene.illustration"]);
@@ -224,6 +254,7 @@ export async function paintSlide(
       );
 
       sceneImage = uploaded ? await loadImage(uploaded.dataUrl) : null;
+      sceneTransform = uploaded?.transform;
     }
 
     if (sceneImage) {
@@ -245,7 +276,18 @@ export async function paintSlide(
 
       context.save();
       context.globalAlpha = imageOpacity;
-      drawCoverImage(context, sceneImage, w, h, position.x, position.y, zoom);
+      drawCoverImage(
+        context,
+        sceneImage,
+        w,
+        h,
+        position.x,
+        position.y,
+        zoom,
+        sceneTransform?.rotationDeg ?? 0,
+        sceneTransform?.flipHorizontal ?? false,
+        sceneTransform?.flipVertical ?? false,
+      );
       context.restore();
     } else {
       if (source !== "solid" && c.tile) {

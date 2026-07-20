@@ -640,7 +640,11 @@ export const appSchema = defineToolcraft({
     // "timeline" keeps authored keyframe automation lanes (and the duration)
     // across a reload — without it the slider values survived but every lane
     // the client had drawn was lost.
-    include: ["values", "canvas", "panels", "timeline"],
+    // "layers" keeps the carousel itself. Slide copy lives in values under
+    // `carousel.slides`, keyed by layer id — so without the layers those
+    // snapshots persisted as orphans no UI could ever reach again, and a
+    // reload silently emptied a finished multi-slide carousel.
+    include: ["values", "canvas", "panels", "timeline", "layers"],
     key: "toolcraft:more-muslim-social-studio:state:v1",
     storage: "localStorage",
     version: 1,

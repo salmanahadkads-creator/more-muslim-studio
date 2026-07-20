@@ -18,6 +18,7 @@ import {
   evaluateToolcraftTimelineValue,
   getToolcraftVideoExportSize,
   shouldIncludeToolcraftExportBackground,
+  type ToolcraftMediaAsset,
   type ToolcraftState,
 } from "@/toolcraft/runtime";
 
@@ -49,6 +50,7 @@ import {
   type AudiogramSpeechBlock,
 } from "./audiogram-motion";
 import {
+  decodeCaptionAsset,
   readBlockOverrides,
   readFocusPercent,
   readHighlightLines,
@@ -183,32 +185,6 @@ export function toBareAudioSpecificConfig(
   return unwrapped;
 }
 
-function decodeTextAsset(dataUrl: string): string {
-  const commaIndex = dataUrl.indexOf(",");
-
-  if (commaIndex === -1) {
-    return "";
-  }
-
-  const payload = dataUrl.slice(commaIndex + 1);
-
-  try {
-    if (/;base64/i.test(dataUrl.slice(0, commaIndex))) {
-      const bytes = atob(payload);
-
-      return decodeURIComponent(
-        Array.from(bytes, (char) =>
-          `%${char.charCodeAt(0).toString(16).padStart(2, "0")}`,
-        ).join(""),
-      );
-    }
-
-    return decodeURIComponent(payload);
-  } catch {
-    return "";
-  }
-}
-
 const frameImageCache = new Map<string, Promise<HTMLImageElement>>();
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -245,11 +221,14 @@ type AudiogramFrameAssets = {
   envelope: Float32Array | null;
   guest: string;
   scene: {
+    flipHorizontal: boolean;
+    flipVertical: boolean;
     focusX: number;
     focusY: number;
     image: HTMLImageElement;
     /** 0-1; below 1 the image fades into the base ground fill behind it. */
     opacity: number;
+    rotationDeg: number;
     zoom: number;
   } | null;
   symbols: Record<string, HTMLImageElement>;
@@ -310,7 +289,8 @@ function paintImageGround(context: PaintContext, params: AudiogramFrameParams): 
     return;
   }
 
-  const { focusX, focusY, image, opacity, zoom } = assets.scene;
+  const { flipHorizontal, flipVertical, focusX, focusY, image, opacity, rotationDeg, zoom } =
+    assets.scene;
   const { h, w } = POST_SIZES.story;
   const move = groundMotion(assets.config, timeSeconds, durationSeconds);
   const scale = Math.max(w / image.width, h / image.height) * zoom * move.scale;
@@ -321,6 +301,22 @@ function paintImageGround(context: PaintContext, params: AudiogramFrameParams): 
   // matching the DOM preview's CSS opacity.
   context.save();
   context.globalAlpha = opacity;
+
+  // The preview applies `scale(zoom * motion) rotate(R) scale(flipX, flipY)`
+  // about the focus origin (templates.tsx). Uniform scale commutes with both
+  // rotation and reflection, so applying rotate then flip about that origin
+  // here reproduces the CSS matrix. Without this the export silently dropped
+  // both transforms — a rotated upload previewed upright and exported sideways.
+  if (rotationDeg !== 0 || flipHorizontal || flipVertical) {
+    const originX = w * (focusX / 100);
+    const originY = h * (focusY / 100);
+
+    context.translate(originX, originY);
+    context.rotate((rotationDeg * Math.PI) / 180);
+    context.scale(flipHorizontal ? -1 : 1, flipVertical ? -1 : 1);
+    context.translate(-originX, -originY);
+  }
+
   context.drawImage(
     image,
     (w - drawW) * (focusX / 100),
@@ -589,7 +585,7 @@ export async function exportAudiogramVideo(
   const captionAsset = state.mediaAssets.find(
     (asset) => asset.sourceTarget === "audiogram.captions",
   );
-  const captions = captionAsset ? parseSrt(decodeTextAsset(captionAsset.dataUrl)) : [];
+  const captions = captionAsset ? parseSrt(decodeCaptionAsset(captionAsset.dataUrl)) : [];
   const audioAsset = state.mediaAssets.find(
     (asset) => asset.sourceTarget === "audiogram.audio",
   );
@@ -599,10 +595,17 @@ export async function exportAudiogramVideo(
 
   if (audioAsset) {
     const bytes = await (await fetch(audioAsset.dataUrl)).arrayBuffer();
+    // `close()` must run even when decode rejects. Chrome caps concurrent
+    // AudioContexts (~6), so leaking one per failed export used to poison the
+    // session: after a handful of undecodable files, every later export —
+    // including ones that would decode fine — died on `new AudioContext()`.
     const audioContext = new AudioContext();
 
-    audioBuffer = await audioContext.decodeAudioData(bytes);
-    await audioContext.close();
+    try {
+      audioBuffer = await audioContext.decodeAudioData(bytes);
+    } finally {
+      await audioContext.close();
+    }
 
     // WebCodecs audio encoders only accept 44.1kHz or 48kHz; resample anything
     // else (e.g. an 8kHz voice memo) up to 48kHz through an OfflineAudioContext
@@ -656,12 +659,19 @@ export async function exportAudiogramVideo(
       : "pattern";
   let sceneImageSrc: string | null = null;
 
+  // Only an upload carries a rotate/flip transform — built-in illustrations
+  // ship correctly oriented, which is how the preview reads it too.
+  let sceneTransform: ToolcraftMediaAsset["transform"] | undefined;
+
   if (sceneSource === "illustration") {
     sceneImageSrc = getEpisodeIllustration(state.values["scene.illustration"])?.src ?? null;
   } else if (sceneSource === "upload") {
-    sceneImageSrc =
-      state.mediaAssets.find((asset) => asset.sourceTarget === "scene.upload")?.dataUrl ??
-      null;
+    const uploaded = state.mediaAssets.find(
+      (asset) => asset.sourceTarget === "scene.upload",
+    );
+
+    sceneImageSrc = uploaded?.dataUrl ?? null;
+    sceneTransform = uploaded?.transform;
   }
 
   const focus = readFocusPercent(state.values["scene.imagePosition"]);
@@ -753,6 +763,8 @@ export async function exportAudiogramVideo(
     guest,
     scene: sceneImageSrc
       ? {
+          flipHorizontal: sceneTransform?.flipHorizontal ?? false,
+          flipVertical: sceneTransform?.flipVertical ?? false,
           focusX: focus.x,
           focusY: focus.y,
           image: await loadImage(sceneImageSrc),
@@ -760,6 +772,7 @@ export async function exportAudiogramVideo(
             1,
             readPercentFactor(state.values["scene.imageOpacity"], 1),
           ),
+          rotationDeg: sceneTransform?.rotationDeg ?? 0,
           zoom:
             typeof state.values["scene.imageZoom"] === "number"
               ? (state.values["scene.imageZoom"] as number)

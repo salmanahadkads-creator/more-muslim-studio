@@ -123,13 +123,22 @@ export function decodeCaptionAsset(dataUrl: string): string {
 
   try {
     if (/;base64/i.test(dataUrl.slice(0, commaIndex))) {
-      const bytes = atob(payload);
+      const binary = atob(payload);
+      const bytes = new Uint8Array(binary.length);
 
-      return decodeURIComponent(
-        Array.from(bytes, (char) =>
-          `%${char.charCodeAt(0).toString(16).padStart(2, "0")}`,
-        ).join(""),
-      );
+      for (let index = 0; index < binary.length; index += 1) {
+        bytes[index] = binary.charCodeAt(index);
+      }
+
+      // TextDecoder, not the decodeURIComponent(percent-escape) idiom this
+      // used to use. That idiom threw URIError on any non-UTF-8 byte, and the
+      // catch below turned the throw into "" — so a Windows-1252 .srt (a very
+      // common subtitle-tool output) rendered an audiogram with NO captions at
+      // all and no error. TextDecoder substitutes U+FFFD instead of throwing,
+      // so a stray byte costs one glyph rather than the whole transcript.
+      // It also avoids allocating one string per byte of the file, which this
+      // runs on every render via the highlight picker.
+      return new TextDecoder().decode(bytes);
     }
 
     return decodeURIComponent(payload);
@@ -686,10 +695,18 @@ function useAudioEnvelope(audioUrl: string | null): Float32Array | null {
     void (async () => {
       try {
         const bytes = await (await fetch(audioUrl)).arrayBuffer();
+        // `close()` must run even when decode rejects — the catch below
+        // swallows the error, so a leaked context here would be invisible and
+        // would accumulate on every failed upload until Chrome's concurrent
+        // AudioContext cap made the whole app unable to read audio.
         const audioContext = new AudioContext();
-        const buffer = await audioContext.decodeAudioData(bytes);
+        let buffer: AudioBuffer;
 
-        await audioContext.close();
+        try {
+          buffer = await audioContext.decodeAudioData(bytes);
+        } finally {
+          await audioContext.close();
+        }
 
         const computed = computeAudioEnvelope(buffer);
 
