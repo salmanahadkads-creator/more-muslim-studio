@@ -62,6 +62,127 @@ const CAPS_TRACKING_EM = 0.165;
 
 type PaintContext = CanvasRenderingContext2D & { letterSpacing?: string };
 
+/* Walk an MPEG-4 descriptor tree and return the DecoderSpecificInfo (tag 5)
+   payload — for AAC that is the AudioSpecificConfig. Handles the nested
+   ES_Descriptor (3) → DecoderConfigDescriptor (4) → DecoderSpecificInfo (5)
+   shape, including the optional ES_Descriptor fields. */
+function findDecoderSpecificInfo(
+  bytes: Uint8Array,
+  start: number,
+  end: number,
+): Uint8Array | null {
+  let index = start;
+
+  while (index < end) {
+    const tag = bytes[index];
+
+    index += 1;
+
+    let length = 0;
+
+    for (;;) {
+      if (index >= end) {
+        return null;
+      }
+
+      const byte = bytes[index];
+
+      index += 1;
+      length = (length << 7) | (byte & 0x7f);
+
+      if (!(byte & 0x80)) {
+        break;
+      }
+    }
+
+    const payloadEnd = Math.min(index + length, end);
+
+    if (tag === 0x05) {
+      return bytes.subarray(index, payloadEnd);
+    }
+
+    if (tag === 0x03) {
+      // ES_Descriptor: ES_ID (2) + flags (1), then optional fields.
+      const flags = bytes[index + 2];
+      let nested = index + 3;
+
+      if (flags & 0x80) {
+        nested += 2; // dependsOn_ES_ID
+      }
+
+      if (flags & 0x40) {
+        nested += 1 + bytes[nested]; // URLlength + URLstring
+      }
+
+      if (flags & 0x20) {
+        nested += 2; // OCR_ES_Id
+      }
+
+      const found = findDecoderSpecificInfo(bytes, nested, payloadEnd);
+
+      if (found) {
+        return found;
+      }
+    } else if (tag === 0x04) {
+      // DecoderConfigDescriptor: 13 fixed bytes, then nested descriptors.
+      const found = findDecoderSpecificInfo(bytes, index + 13, payloadEnd);
+
+      if (found) {
+        return found;
+      }
+    }
+
+    index = payloadEnd;
+  }
+
+  return null;
+}
+
+/* mp4-muxer builds the whole MPEG-4 descriptor tree itself and splices
+   `decoderConfig.description` in where the bare AudioSpecificConfig belongs.
+   Chrome's AAC encoder, however, can hand back a FULL ES_Descriptor. Passing
+   that through nests one descriptor inside another, so the ASC a player reads
+   starts with tag 0x03 (audioObjectType 0 — invalid), the AAC decoder never
+   initialises, and the exported MP4 plays silent even though the audio track,
+   its samples, and its duration are all present and correct.
+
+   Unwrap to the bare AudioSpecificConfig (e.g. 0x1190 = AAC-LC/48kHz/stereo).
+   A description that is already bare is returned untouched. */
+export function toBareAudioSpecificConfig(
+  description: AllowSharedBufferSource,
+): Uint8Array<ArrayBuffer> {
+  const source = ArrayBuffer.isView(description)
+    ? new Uint8Array(
+        description.buffer as ArrayBuffer,
+        description.byteOffset,
+        description.byteLength,
+      )
+    : new Uint8Array(description as ArrayBuffer);
+  // Copy into a fresh ArrayBuffer-backed view so the result is a valid
+  // BufferSource regardless of how the encoder allocated its description.
+  const bytes = new Uint8Array(source.byteLength);
+
+  bytes.set(source);
+
+  // Only the ES_Descriptor form (tag 0x03) needs unwrapping; a bare ASC starts
+  // with its 5-bit audioObjectType, and Opus descriptions start with "Opus".
+  if (bytes.byteLength === 0 || bytes[0] !== 0x03) {
+    return bytes;
+  }
+
+  const asc = findDecoderSpecificInfo(bytes, 0, bytes.byteLength);
+
+  if (!asc) {
+    return bytes;
+  }
+
+  const unwrapped = new Uint8Array(asc.byteLength);
+
+  unwrapped.set(asc);
+
+  return unwrapped;
+}
+
 function decodeTextAsset(dataUrl: string): string {
   const commaIndex = dataUrl.indexOf(",");
 
@@ -789,11 +910,27 @@ export async function exportAudiogramVideo(
       error: (error) => {
         throw error;
       },
-      output: (chunk, metadata) =>
+      output: (chunk, metadata) => {
+        // MP4/AAC only: hand the muxer the bare AudioSpecificConfig, never the
+        // wrapped ES_Descriptor Chrome may emit (see toBareAudioSpecificConfig
+        // — passing the wrapped form through makes the export play silent).
+        const description = metadata?.decoderConfig?.description;
+        const normalized =
+          container === "mp4" && metadata?.decoderConfig && description
+            ? {
+                ...metadata,
+                decoderConfig: {
+                  ...metadata.decoderConfig,
+                  description: toBareAudioSpecificConfig(description),
+                },
+              }
+            : metadata;
+
         (muxer as { addAudioChunk: (c: EncodedAudioChunk, m?: EncodedAudioChunkMetadata) => void }).addAudioChunk(
           chunk,
-          metadata,
-        ),
+          normalized,
+        );
+      },
     });
 
     audioEncoder.configure({
