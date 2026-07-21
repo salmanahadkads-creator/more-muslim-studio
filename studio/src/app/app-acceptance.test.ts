@@ -1079,7 +1079,16 @@ function sourceHandlesVideoRecorderOrEncoderErrors(source: string): boolean {
   const videoEncoderRejectsErrors =
     /\bnew\s+VideoEncoder\s*\(\s*\{[\s\S]{0,1200}\berror\s*:[\s\S]{0,700}\b(?:reject|throw|Promise\.reject)\b/.test(
       source,
-    );
+    ) ||
+    // Capture-and-rethrow: WebCodecs invokes `error` callbacks on their own
+    // task, so an inline `throw` there never rejects the export promise (it
+    // surfaces as an uncaught error while the export sits frozen). The sound
+    // pattern stores the failure in the callback and rethrows it from the
+    // encode loop, where a throw actually propagates to the caller.
+    (/\berror\s*:\s*\(\s*error\s*\)\s*=>\s*\{\s*encoderFailure\s*=\s*error\b/.test(
+      source,
+    ) &&
+      /\bthrow\s+encoderFailure\b/.test(source));
 
   if (usesMediaRecorder && !mediaRecorderRejectsErrors) {
     return false;

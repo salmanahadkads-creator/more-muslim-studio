@@ -1,3 +1,5 @@
+import { toast, Toaster } from "sonner";
+
 import { ToolcraftApp } from "@/toolcraft/runtime/react";
 
 import { appSchema } from "../app/app-schema";
@@ -17,9 +19,27 @@ import { SceneImageControls } from "../app/scene-image-controls";
 import { StudioChrome } from "../app/studio-chrome";
 import "../app/brand.css";
 
+/* Every export failure used to die in the runtime's console.error — the
+   client saw the progress bar vanish, no file, no explanation. Route every
+   export promise through here so a failure becomes a visible toast. The
+   rejection is swallowed on purpose: the toast IS the surfacing, and the
+   runtime's own catch would only log it a second time. */
+function surfaceExportErrors(work: Promise<void>, label: string): Promise<void> {
+  return work.catch((error: unknown) => {
+    const detail =
+      error instanceof Error && error.message
+        ? error.message
+        : "Something went wrong — try again, or try the other format.";
+
+    toast.error(`${label} failed`, { description: detail, duration: 10_000 });
+    console.error(`${label} failed.`, error);
+  });
+}
+
 export function AppHome(): React.JSX.Element {
   return (
     <>
+      <Toaster closeButton position="top-center" richColors />
       <StudioChrome />
       <ToolcraftApp
       canvasContent={
@@ -39,18 +59,34 @@ export function AppHome(): React.JSX.Element {
         // Export pipelines are lazy-loaded so the heavy WebCodecs muxers and
         // Canvas painters stay out of the initial bundle until an export runs.
         if (action.value === "export-png") {
-          return import("../app/export-post").then((m) => m.exportPostImage(state));
+          return surfaceExportErrors(
+            import("../app/export-post").then((m) => m.exportPostImage(state)),
+            "PNG export",
+          );
         }
 
         if (action.value === "export-zip") {
-          return import("../app/export-post").then((m) =>
-            m.exportCarouselZip(state, reportProgress),
+          return surfaceExportErrors(
+            import("../app/export-post").then((m) =>
+              m.exportCarouselZip(state, reportProgress),
+            ),
+            "Carousel export",
           );
         }
 
         if (action.value === "export-video") {
-          return import("../app/export-audiogram").then((m) =>
-            m.exportAudiogramVideo(state, reportProgress),
+          // Pause the preview first: autoplay keeps the whole app re-rendering
+          // every frame, which competes with the encode loop for the main
+          // thread and roughly doubles export time for no benefit.
+          if (state.timeline.isPlaying) {
+            dispatch({ isPlaying: false, type: "timeline.setPlaying" });
+          }
+
+          return surfaceExportErrors(
+            import("../app/export-audiogram").then((m) =>
+              m.exportAudiogramVideo(state, reportProgress),
+            ),
+            "Video export",
           );
         }
 

@@ -565,6 +565,22 @@ function SetupPrefill(): null {
     // Completing the wizard starts a NEW post: drop slide layers left over
     // from earlier work (e.g. an old episode set that led with a cover) so the
     // filmstrip starts from the post being set up, not a stale carousel.
+    // But never silently — the "New post" pill is one click from anywhere, and
+    // this wipe used to destroy a finished multi-slide carousel with no
+    // warning and no way back. If slides exist, the user decides.
+    if (state.layers.length > 0) {
+      const proceed = window.confirm(
+        `Start the new post? This replaces your current ${state.layers.length} ` +
+          `slide${state.layers.length === 1 ? "" : "s"}. ` +
+          `Press Cancel to keep everything as it was.`,
+      );
+
+      if (!proceed) {
+        window.history.replaceState(null, "", window.location.pathname);
+        return;
+      }
+    }
+
     for (const layer of state.layers) {
       dispatch({ layerId: layer.id, type: "layers.delete" });
     }

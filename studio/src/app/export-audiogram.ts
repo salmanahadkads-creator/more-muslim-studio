@@ -185,6 +185,24 @@ export function toBareAudioSpecificConfig(
   return unwrapped;
 }
 
+/* Yield to the event loop WITHOUT setTimeout. Hidden pages throttle timers to
+   ~1 tick per second, which turned every yield below into a full second — an
+   export in an unfocused tab crawled at roughly one loop iteration per second
+   and looked exactly like a hang (this is what "WebM export silently fails"
+   actually was). MessageChannel posts are never throttled. */
+const yieldToEventLoop = (() => {
+  const channel = new MessageChannel();
+  const resolvers: (() => void)[] = [];
+
+  channel.port1.onmessage = () => resolvers.shift()?.();
+
+  return () =>
+    new Promise<void>((resolve) => {
+      resolvers.push(resolve);
+      channel.port2.postMessage(null);
+    });
+})();
+
 const frameImageCache = new Map<string, Promise<HTMLImageElement>>();
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -589,8 +607,11 @@ export async function exportAudiogramVideo(
   const audioAsset = state.mediaAssets.find(
     (asset) => asset.sourceTarget === "audiogram.audio",
   );
+  // Needed before decode: the container decides the audio codec, and the codec
+  // decides which sample rates are legal (see the resample note below).
+  const container = state.values["export.video.format"] === "webm" ? "webm" : "mp4";
 
-  // Decode audio for the AAC/Opus track; its duration drives the video duration.
+  // Decode audio for the AAC/Opus track.
   let audioBuffer: AudioBuffer | null = null;
 
   if (audioAsset) {
@@ -607,10 +628,19 @@ export async function exportAudiogramVideo(
       await audioContext.close();
     }
 
-    // WebCodecs audio encoders only accept 44.1kHz or 48kHz; resample anything
-    // else (e.g. an 8kHz voice memo) up to 48kHz through an OfflineAudioContext
-    // so the export never rejects an odd input rate.
-    if (audioBuffer.sampleRate !== 44_100 && audioBuffer.sampleRate !== 48_000) {
+    // Resample to a rate the codec actually accepts. AAC takes 44.1k or 48k,
+    // but Opus is a fixed-rate-family codec: only 8/12/16/24/48kHz are legal,
+    // so a 44.1kHz podcast MP3 — the most common master rate there is — used
+    // to reach `audioEncoder.configure()` unresampled on the WebM path and
+    // kill the export AFTER the entire video pass had already run, silently.
+    // (It also made the muxer declare 44100 on an Opus track, which players
+    // that trust the container clock drift against.)
+    const needsResample =
+      container === "webm"
+        ? audioBuffer.sampleRate !== 48_000
+        : audioBuffer.sampleRate !== 44_100 && audioBuffer.sampleRate !== 48_000;
+
+    if (needsResample) {
       const targetRate = 48_000;
       const offline = new OfflineAudioContext(
         audioBuffer.numberOfChannels,
@@ -626,11 +656,13 @@ export async function exportAudiogramVideo(
     }
   }
 
-  const durationSeconds = Math.max(
-    audioBuffer?.duration ?? 0,
-    state.timeline.durationSeconds,
-    1,
-  );
+  // The timeline duration is what the preview scrubber shows and ends at, so
+  // it is what exports. It used to be max(audio, timeline), which meant
+  // trimming a 20-minute episode down to a 60s clip still exported the full
+  // 20 minutes — none of which past 60s the user had ever previewed.
+  // (Uploading audio syncs the timeline to its length, so the default is
+  // still "export the whole clip".)
+  const durationSeconds = Math.max(1, state.timeline.durationSeconds);
   const { height, width } = getToolcraftVideoExportSize({
     resolution: state.values["export.video.resolution"] as string | undefined,
     state: {
@@ -803,7 +835,6 @@ export async function exportAudiogramVideo(
   await document.fonts.load(`400 64px ${MARIST}`);
   await document.fonts.load(`italic 400 56px ${MARIST}`);
 
-  const container = state.values["export.video.format"] === "webm" ? "webm" : "mp4";
   const channels = audioBuffer ? Math.min(2, audioBuffer.numberOfChannels) : 0;
   const muxer =
     container === "webm"
@@ -847,9 +878,35 @@ export async function exportAudiogramVideo(
     );
   }
 
+  const audioCodec = container === "webm" ? "opus" : "mp4a.40.2";
+
+  // Preflight the AUDIO codec too, and do it before the video pass — an
+  // unsupported audio config used to surface only after minutes of video
+  // encoding had already run (e.g. Chromium builds without an AAC encoder).
+  if (audioBuffer) {
+    const audioSupport = await AudioEncoder.isConfigSupported({
+      bitrate: 160_000,
+      codec: audioCodec,
+      numberOfChannels: channels,
+      sampleRate: audioBuffer.sampleRate,
+    });
+
+    if (!audioSupport.supported) {
+      throw new Error(
+        `This browser cannot encode ${container.toUpperCase()} audio (${audioCodec}); try the other format.`,
+      );
+    }
+  }
+
+  // WebCodecs invokes `error` callbacks on their own task, so throwing inside
+  // one never rejects this function's promise — it used to vanish as an
+  // uncaught error while the export sat frozen. Capture instead, and re-throw
+  // from the encode loops below where a throw actually propagates.
+  let encoderFailure: unknown = null;
+
   const encoder = new VideoEncoder({
     error: (error) => {
-      throw error;
+      encoderFailure = error;
     },
     output: (chunk, metadata) =>
       (muxer as { addVideoChunk: (c: EncodedVideoChunk, m?: EncodedVideoChunkMetadata) => void }).addVideoChunk(
@@ -857,145 +914,211 @@ export async function exportAudiogramVideo(
         metadata,
       ),
   });
+  let audioEncoder: AudioEncoder | null = null;
 
-  encoder.configure({
-    bitrate: 12_000_000,
-    codec: videoCodec,
-    framerate: FPS,
-    height,
-    width,
-  });
+  try {
+    encoder.configure({
+      bitrate: 12_000_000,
+      codec: videoCodec,
+      framerate: FPS,
+      height,
+      width,
+    });
 
-  // Posterize time: the visual is painted at 12fps and each frame is held for
-  // two 24fps output frames (the "vox"/stop-motion look). This halves the
-  // per-frame paint work while keeping the 24fps container.
-  const POSTERIZE = 2;
-  let lastPaintedStep = -1;
+    // Posterize time: the visual is painted at 12fps and each frame is held for
+    // two 24fps output frames (the "vox"/stop-motion look). This halves the
+    // per-frame paint work while keeping the 24fps container.
+    const POSTERIZE = 2;
+    let lastPaintedStep = -1;
 
-  for (let frameIndex = 0; frameIndex < totalFrames; frameIndex += 1) {
-    const posterStep = Math.floor(frameIndex / POSTERIZE);
+    for (let frameIndex = 0; frameIndex < totalFrames; frameIndex += 1) {
+      const posterStep = Math.floor(frameIndex / POSTERIZE);
 
-    if (posterStep !== lastPaintedStep) {
-      const frameTimeSeconds = (posterStep * POSTERIZE) / FPS;
+      if (posterStep !== lastPaintedStep) {
+        const frameTimeSeconds = (posterStep * POSTERIZE) / FPS;
 
-      paintAudiogramFrame(slideContext, {
-        assets: {
-          ...assets,
-          config: configAt(frameTimeSeconds),
-          scene: assets.scene
-            ? { ...assets.scene, opacity: sceneOpacityAt(frameTimeSeconds) }
-            : null,
-        },
-        durationSeconds,
-        episode,
-        eyebrow,
-        outroLines,
-        timeSeconds: frameTimeSeconds,
+        paintAudiogramFrame(slideContext, {
+          assets: {
+            ...assets,
+            config: configAt(frameTimeSeconds),
+            scene: assets.scene
+              ? { ...assets.scene, opacity: sceneOpacityAt(frameTimeSeconds) }
+              : null,
+          },
+          durationSeconds,
+          episode,
+          eyebrow,
+          outroLines,
+          timeSeconds: frameTimeSeconds,
+        });
+        frameContext.drawImage(slideCanvas, 0, 0, width, height);
+        lastPaintedStep = posterStep;
+      }
+
+      if (encoderFailure) {
+        throw encoderFailure;
+      }
+
+      const frame = new VideoFrame(frameCanvas, {
+        duration: Math.round(1e6 / FPS),
+        timestamp: Math.round((frameIndex * 1e6) / FPS),
       });
-      frameContext.drawImage(slideCanvas, 0, 0, width, height);
-      lastPaintedStep = posterStep;
-    }
 
-    const frame = new VideoFrame(frameCanvas, {
-      duration: Math.round(1e6 / FPS),
-      timestamp: Math.round((frameIndex * 1e6) / FPS),
-    });
+      try {
+        encoder.encode(frame, { keyFrame: frameIndex % (FPS * 2) === 0 });
+      } finally {
+        // Always close, even when encode throws on an errored encoder —
+        // otherwise the frame's backing memory leaks until GC gets around to it.
+        frame.close();
+      }
 
-    encoder.encode(frame, { keyFrame: frameIndex % (FPS * 2) === 0 });
-    frame.close();
+      if (frameIndex % 12 === 0) {
+        reportProgress?.(frameIndex / totalFrames);
+        // Unconditional yield: with a fast hardware encoder the backpressure
+        // loop below never awaits, and without this the whole export ran as one
+        // synchronous block — progress sat at 0% and the tab froze.
+        await yieldToEventLoop();
+      }
 
-    if (frameIndex % 12 === 0) {
-      reportProgress?.(frameIndex / totalFrames);
-    }
-
-    while (encoder.encodeQueueSize > 8) {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    }
-  }
-
-  await encoder.flush();
-  encoder.close();
-
-  if (audioBuffer) {
-    const sampleRate = audioBuffer.sampleRate;
-    const length = audioBuffer.length;
-    const audioEncoder = new AudioEncoder({
-      error: (error) => {
-        throw error;
-      },
-      output: (chunk, metadata) => {
-        // MP4/AAC only: hand the muxer the bare AudioSpecificConfig, never the
-        // wrapped ES_Descriptor Chrome may emit (see toBareAudioSpecificConfig
-        // — passing the wrapped form through makes the export play silent).
-        const description = metadata?.decoderConfig?.description;
-        const normalized =
-          container === "mp4" && metadata?.decoderConfig && description
-            ? {
-                ...metadata,
-                decoderConfig: {
-                  ...metadata.decoderConfig,
-                  description: toBareAudioSpecificConfig(description),
-                },
-              }
-            : metadata;
-
-        (muxer as { addAudioChunk: (c: EncodedAudioChunk, m?: EncodedAudioChunkMetadata) => void }).addAudioChunk(
-          chunk,
-          normalized,
-        );
-      },
-    });
-
-    audioEncoder.configure({
-      bitrate: 160_000,
-      codec: container === "webm" ? "opus" : "mp4a.40.2",
-      numberOfChannels: channels,
-      sampleRate,
-    });
-
-    const interleaved = new Float32Array(length * channels);
-
-    for (let channel = 0; channel < channels; channel += 1) {
-      const data = audioBuffer.getChannelData(channel);
-
-      for (let index = 0; index < length; index += 1) {
-        interleaved[index * channels + channel] = data[index];
+      while (encoder.encodeQueueSize > 8) {
+        await yieldToEventLoop();
       }
     }
 
-    const CHUNK = 8192;
+    await encoder.flush();
 
-    for (let offset = 0; offset < length; offset += CHUNK) {
-      const frames = Math.min(CHUNK, length - offset);
-      const audioData = new AudioData({
-        data: interleaved.subarray(offset * channels, (offset + frames) * channels),
-        format: "f32",
-        numberOfChannels: channels,
-        numberOfFrames: frames,
-        sampleRate,
-        timestamp: Math.round((offset / sampleRate) * 1e6),
-      });
-
-      audioEncoder.encode(audioData);
-      audioData.close();
+    if (encoderFailure) {
+      throw encoderFailure;
     }
 
-    await audioEncoder.flush();
-    audioEncoder.close();
+    encoder.close();
+
+    if (audioBuffer) {
+      const sampleRate = audioBuffer.sampleRate;
+      // Trim to the export duration: a 60s clip cut from a 20-minute episode
+      // carries 60s of audio, matching the video track it sits beside.
+      const length = Math.min(
+        audioBuffer.length,
+        Math.ceil(durationSeconds * sampleRate),
+      );
+
+      audioEncoder = new AudioEncoder({
+        error: (error) => {
+          encoderFailure = error;
+        },
+        output: (chunk, metadata) => {
+          // MP4/AAC only: hand the muxer the bare AudioSpecificConfig, never the
+          // wrapped ES_Descriptor Chrome may emit (see toBareAudioSpecificConfig
+          // — passing the wrapped form through makes the export play silent).
+          const description = metadata?.decoderConfig?.description;
+          const normalized =
+            container === "mp4" && metadata?.decoderConfig && description
+              ? {
+                  ...metadata,
+                  decoderConfig: {
+                    ...metadata.decoderConfig,
+                    description: toBareAudioSpecificConfig(description),
+                  },
+                }
+              : metadata;
+
+          (muxer as { addAudioChunk: (c: EncodedAudioChunk, m?: EncodedAudioChunkMetadata) => void }).addAudioChunk(
+            chunk,
+            normalized,
+          );
+        },
+      });
+
+      audioEncoder.configure({
+        bitrate: 160_000,
+        codec: audioCodec,
+        numberOfChannels: channels,
+        sampleRate,
+      });
+
+      // Interleave one chunk at a time into a reused buffer (AudioData copies on
+      // construction, so reuse is safe), and hold the encoder queue shallow. The
+      // old shape — a full-episode interleaved Float32Array plus every AudioData
+      // queued at once with no backpressure — peaked at ~2GB extra for a
+      // 45-minute episode and OOM-crashed the tab.
+      const CHUNK = 8192;
+      const channelData: Float32Array[] = [];
+
+      for (let channel = 0; channel < channels; channel += 1) {
+        channelData.push(audioBuffer.getChannelData(channel));
+      }
+
+      const chunkBuffer = new Float32Array(CHUNK * channels);
+
+      for (let offset = 0; offset < length; offset += CHUNK) {
+        if (encoderFailure) {
+          throw encoderFailure;
+        }
+
+        const frames = Math.min(CHUNK, length - offset);
+
+        for (let channel = 0; channel < channels; channel += 1) {
+          const data = channelData[channel];
+
+          for (let index = 0; index < frames; index += 1) {
+            chunkBuffer[index * channels + channel] = data[offset + index];
+          }
+        }
+
+        const audioData = new AudioData({
+          data: chunkBuffer.subarray(0, frames * channels),
+          format: "f32",
+          numberOfChannels: channels,
+          numberOfFrames: frames,
+          sampleRate,
+          timestamp: Math.round((offset / sampleRate) * 1e6),
+        });
+
+        try {
+          audioEncoder.encode(audioData);
+        } finally {
+          audioData.close();
+        }
+
+        while (audioEncoder.encodeQueueSize > 8) {
+          await yieldToEventLoop();
+        }
+      }
+
+      await audioEncoder.flush();
+
+      if (encoderFailure) {
+        throw encoderFailure;
+      }
+
+      audioEncoder.close();
+    }
+
+    muxer.finalize();
+    reportProgress?.(1);
+
+    const buffer = (muxer.target as { buffer: ArrayBuffer }).buffer;
+    const blob = new Blob([buffer], {
+      type: container === "webm" ? "video/webm" : "video/mp4",
+    });
+    const downloadUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+
+    anchor.download = `more-muslim-audiogram.${container}`;
+    anchor.href = downloadUrl;
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(downloadUrl), 10_000);
+  } finally {
+    // A failed export must not leave codec handles open: encoder slots are a
+    // finite browser resource, and an open encoder also pins every chunk the
+    // muxer has buffered. This is what used to make three failed exports in a
+    // session cost several hundred MB that never came back.
+    if (encoder.state !== "closed") {
+      encoder.close();
+    }
+
+    if (audioEncoder && audioEncoder.state !== "closed") {
+      audioEncoder.close();
+    }
   }
-
-  muxer.finalize();
-  reportProgress?.(1);
-
-  const buffer = (muxer.target as { buffer: ArrayBuffer }).buffer;
-  const blob = new Blob([buffer], {
-    type: container === "webm" ? "video/webm" : "video/mp4",
-  });
-  const downloadUrl = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-
-  anchor.download = `more-muslim-audiogram.${container}`;
-  anchor.href = downloadUrl;
-  anchor.click();
-  setTimeout(() => URL.revokeObjectURL(downloadUrl), 10_000);
 }
