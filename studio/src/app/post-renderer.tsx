@@ -817,8 +817,12 @@ export function PostRenderer(): React.JSX.Element {
     speakerSwap: values["audiogram.crossfade"] !== false,
     wordAccent: values["audiogram.wordAccent"] !== false,
   };
+  // Blank eyebrow falls back to the episode title only — no marker fallback.
+  // With both blank the preview renders no eyebrow and the video export asks
+  // the user to fill one in (export-audiogram.ts mirrors this chain).
   const audiogramEyebrow =
-    readString(values["audiogram.eyebrow"]).trim() || readString(values["content.episode"]);
+    readString(values["audiogram.eyebrow"]).trim() ||
+    readString(values["content.cover.title"]).trim();
   const audiogramOutro = readString(
     values["audiogram.outro"],
     "Listen to the full episode at moremuslim.org.\nOr search for “More Muslim” wherever you get your podcasts.",

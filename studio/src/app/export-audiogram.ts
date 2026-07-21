@@ -594,12 +594,25 @@ export async function exportAudiogramVideo(
     typeof state.values["content.episode"] === "string"
       ? (state.values["content.episode"] as string)
       : "";
-  // Eyebrow (episode name) label at the top; blank falls back to the marker.
+  // Eyebrow label at the top; blank falls back to the episode title (the
+  // episode's name). Must mirror post-renderer.tsx so the export matches the
+  // preview. No silent marker fallback: with both blank the user is asked to
+  // fill one in rather than shipping a clip stamped "S1 E1".
   const eyebrowRaw =
     typeof state.values["audiogram.eyebrow"] === "string"
       ? (state.values["audiogram.eyebrow"] as string).trim()
       : "";
-  const eyebrow = eyebrowRaw || episode;
+  const title =
+    typeof state.values["content.cover.title"] === "string"
+      ? (state.values["content.cover.title"] as string).trim()
+      : "";
+  const eyebrow = eyebrowRaw || title;
+
+  if (!eyebrow) {
+    throw new Error(
+      "Add an episode name first — fill the audiogram's Eyebrow field, or the Title in the Post section.",
+    );
+  }
   const captionAsset = state.mediaAssets.find(
     (asset) => asset.sourceTarget === "audiogram.captions",
   );

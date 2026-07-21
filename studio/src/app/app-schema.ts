@@ -288,7 +288,7 @@ export const appSchema = defineToolcraft({
             eyebrow: {
               defaultValue: "",
               description:
-                "Label at the top of the audiogram (the episode name). Leave blank to use the episode marker.",
+                "Label at the top of the audiogram (the episode name). Leave blank to use the post Title; one of the two must be filled before video export.",
               label: "Eyebrow",
               orderRole: "input",
               performanceReason: "Eyebrow text re-renders one line at the top of the frame.",
