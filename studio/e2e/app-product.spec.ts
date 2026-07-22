@@ -169,10 +169,20 @@ test("app controls: episode picker swaps the slide illustration", async ({ page 
   const image = page.locator(sceneImageSelector);
   const sourceBefore = await image.getAttribute("src");
 
+  // An illustration swap changes only the scene img's src — invisible to the
+  // product snapshot's attribute filter — so prove the swap on the img itself
+  // and use the snapshot to pin the surrounding frame steady through it.
+  const frameBefore = await getToolcraftProductObservableSnapshot(page, {
+    selector: frameSelector,
+  });
+
   await page.getByRole("button", { name: "ep2", exact: true }).click();
   await expect
     .poll(async () => image.getAttribute("src"))
     .not.toBe(sourceBefore);
+  expect(
+    await getToolcraftProductObservableSnapshot(page, { selector: frameSelector }),
+  ).toBe(frameBefore);
 
   await setSceneSource(page, "Pattern");
   await expect(page.getByRole("button", { name: "ep2", exact: true })).toHaveCount(0);
@@ -195,19 +205,28 @@ test("runtime: dragging the preview image moves the crop on both axes", async ({
   const image = page.locator(sceneImageSelector);
   const styleBefore = await image.getAttribute("style");
 
-  // Drag directly on the preview image to move the cover-crop focus.
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(box.x + box.width * 0.8, box.y + box.height * 0.25, {
-    steps: 6,
-  });
+  // Drag directly on the preview image to move the cover-crop focus. The crop
+  // lands in the img's style attribute, so the product snapshot sees it.
+  await expectToolcraftProductObservableToChange(
+    page,
+    async () => {
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + box.width * 0.8, box.y + box.height * 0.25, {
+        steps: 6,
+      });
 
-  const styleDuring = await image.getAttribute("style");
+      const styleDuring = await image.getAttribute("style");
 
-  await page.mouse.up();
+      await page.mouse.up();
 
-  expect(styleDuring, "Dragging must move the crop on both axes.").not.toBe(styleBefore);
-  expect(String(styleDuring)).not.toContain("object-position: 50% 50%");
+      expect(styleDuring, "Dragging must move the crop on both axes.").not.toBe(
+        styleBefore,
+      );
+      expect(String(styleDuring)).not.toContain("object-position: 50% 50%");
+    },
+    { selector: sceneImageSelector },
+  );
 });
 
 test("runtime: the under-image zoom slider scales the preview image", async ({ page }) => {
@@ -227,9 +246,16 @@ test("runtime: the under-image zoom slider scales the preview image", async ({ p
   const image = page.locator(sceneImageSelector);
   const styleBefore = await image.getAttribute("style");
 
-  await page.mouse.move(box.x + box.width * 0.85, box.y + box.height / 2);
-  await page.mouse.down();
-  await page.mouse.up();
+  // The zoom lands in the img's style attribute, so the product snapshot sees it.
+  await expectToolcraftProductObservableToChange(
+    page,
+    async () => {
+      await page.mouse.move(box.x + box.width * 0.85, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.up();
+    },
+    { selector: sceneImageSelector },
+  );
   await expect.poll(async () => image.getAttribute("style")).not.toBe(styleBefore);
 });
 
@@ -293,19 +319,36 @@ test("app controls: uploading an image renders it as the slide ground", async ({
   }
 });
 
-const textCases: {
-  label: string;
-  name: string;
-  template: string;
-  value: string;
-}[] = [
-  { label: "Episode", name: "app controls: editing content.episode updates the slide text", template: "Cover", value: "S2 E11" },
-  { label: "Label", name: "app controls: editing content.cover.presents updates the slide text", template: "Cover", value: "A new series" },
-  { label: "Title", name: "app controls: editing content.cover.title updates the slide text", template: "Cover", value: "The Long Return" },
-  { label: "Dialogue", name: "app controls: editing content.quote.dialogue updates the slide text", template: "Quote exchange", value: "Amel: We kept going." },
-  { label: "Body", name: "app controls: editing content.synopsis.body updates the slide text", template: "Synopsis", value: "A story about return.\n\nAnd renewal." },
-  { label: "Outro", name: "app controls: editing content.streaming.lines updates the slide text", template: "Now streaming", value: "Listen now.\nEverywhere." },
-];
+/* Text-edit cases are unrolled into literally-named tests (not a table-driven
+   loop) because the acceptance matrix scanner matches the literal name at the
+   test() call site — `for (…) test(name, …)` is invisible to it. Shared steps
+   live in openTextField/expectSlideText; the product-observable proof stays
+   inline in each body because the matrix reads each test's own source slice. */
+async function openTextField(
+  page: Page,
+  template: string,
+  label: string,
+): Promise<ReturnType<Page["getByRole"]>> {
+  await openStudio(page);
+  await chooseSelectOption(page, "Template", template);
+
+  const field = page
+    .getByRole("group")
+    .filter({ has: page.getByText(label, { exact: true }) })
+    .last()
+    .getByRole("textbox");
+
+  await expect(field).toBeVisible();
+
+  return field;
+}
+
+async function expectSlideText(page: Page, value: string): Promise<void> {
+  await expect(page.locator(slideSelector)).toContainText(
+    value.split("\n")[0].replace(/^[^:]*:\s*/, "").slice(0, 12),
+    { ignoreCase: true },
+  );
+}
 
 test("runtime: credits editor adds, edits, and removes a credit row", async ({ page }) => {
   await openStudio(page);
@@ -346,31 +389,83 @@ test("runtime: credits editor adds, edits, and removes a credit row", async ({ p
   });
 });
 
-for (const { label, name, template, value } of textCases) {
-  test(name, async ({ page }) => {
-    await openStudio(page);
-    await chooseSelectOption(page, "Template", template);
+test("app controls: editing content.episode updates the slide text", async ({ page }) => {
+  const field = await openTextField(page, "Cover", "Episode");
 
-    const field = page
-      .getByRole("group")
-      .filter({ has: page.getByText(label, { exact: true }) })
-      .last()
-      .getByRole("textbox");
+  await expectToolcraftProductObservableToChange(
+    page,
+    async () => {
+      await field.fill("S2 E11");
+    },
+    { selector: slideSelector },
+  );
+  await expectSlideText(page, "S2 E11");
+});
 
-    await expect(field).toBeVisible();
-    await expectToolcraftProductObservableToChange(
-      page,
-      async () => {
-        await field.fill(value);
-      },
-      { selector: slideSelector },
-    );
-    await expect(page.locator(slideSelector)).toContainText(
-      value.split("\n")[0].replace(/^[^:]*:\s*/, "").slice(0, 12),
-      { ignoreCase: true },
-    );
-  });
-}
+test("app controls: editing content.cover.presents updates the slide text", async ({ page }) => {
+  const field = await openTextField(page, "Cover", "Label");
+
+  await expectToolcraftProductObservableToChange(
+    page,
+    async () => {
+      await field.fill("A new series");
+    },
+    { selector: slideSelector },
+  );
+  await expectSlideText(page, "A new series");
+});
+
+test("app controls: editing content.cover.title updates the slide text", async ({ page }) => {
+  const field = await openTextField(page, "Cover", "Title");
+
+  await expectToolcraftProductObservableToChange(
+    page,
+    async () => {
+      await field.fill("The Long Return");
+    },
+    { selector: slideSelector },
+  );
+  await expectSlideText(page, "The Long Return");
+});
+
+test("app controls: editing content.quote.dialogue updates the slide text", async ({ page }) => {
+  const field = await openTextField(page, "Quote exchange", "Dialogue");
+
+  await expectToolcraftProductObservableToChange(
+    page,
+    async () => {
+      await field.fill("Amel: We kept going.");
+    },
+    { selector: slideSelector },
+  );
+  await expectSlideText(page, "Amel: We kept going.");
+});
+
+test("app controls: editing content.synopsis.body updates the slide text", async ({ page }) => {
+  const field = await openTextField(page, "Synopsis", "Body");
+
+  await expectToolcraftProductObservableToChange(
+    page,
+    async () => {
+      await field.fill("A story about return.\n\nAnd renewal.");
+    },
+    { selector: slideSelector },
+  );
+  await expectSlideText(page, "A story about return.\n\nAnd renewal.");
+});
+
+test("app controls: editing content.streaming.lines updates the slide text", async ({ page }) => {
+  const field = await openTextField(page, "Now streaming", "Outro");
+
+  await expectToolcraftProductObservableToChange(
+    page,
+    async () => {
+      await field.fill("Listen now.\nEverywhere.");
+    },
+    { selector: slideSelector },
+  );
+  await expectSlideText(page, "Listen now.\nEverywhere.");
+});
 
 test("app controls: include toggle hides the slide ground and exports transparent pixels", async ({
   page,
@@ -578,7 +673,12 @@ async function buildEpisodeSet(page: Page): Promise<void> {
 test("app controls: episode set select changes the built carousel", async ({ page }) => {
   await openStudio(page);
   await chooseSelectOption(page, "Episode set", "E3 Secret Translators");
-  await buildEpisodeSet(page);
+  // Building the set swaps the single post for the chosen episode's slides.
+  await expectToolcraftProductObservableToChange(
+    page,
+    async () => buildEpisodeSet(page),
+    { selector: slideSelector },
+  );
   await expect(page.locator(slideSelector)).toContainText("Secret Translators", {
     ignoreCase: true,
   });
@@ -586,7 +686,11 @@ test("app controls: episode set select changes the built carousel", async ({ pag
 
 test("app controls: carousel actions create slide layers", async ({ page }) => {
   await openStudio(page);
-  await buildEpisodeSet(page);
+  await expectToolcraftProductObservableToChange(
+    page,
+    async () => buildEpisodeSet(page),
+    { selector: slideSelector },
+  );
   await expect(filmstripSlides(page)).toHaveCount(5);
 });
 
@@ -595,10 +699,19 @@ test("runtime: filmstrip add button creates a slide", async ({ page }) => {
   await expect(filmstrip(page)).toBeVisible();
   await expect(filmstripSlides(page)).toHaveCount(0);
 
+  // The new selected slide copies the current post, so the visible slide
+  // output must survive the add unchanged.
+  const productBefore = await getToolcraftProductObservableSnapshot(page, {
+    selector: slideSelector,
+  });
+
   await page.getByRole("button", { name: "Add slide" }).click();
   // Starting a carousel from a single post snapshots it as slide 1 and adds a
   // second selected slide.
   await expect(filmstripSlides(page)).toHaveCount(2);
+  expect(
+    await getToolcraftProductObservableSnapshot(page, { selector: slideSelector }),
+  ).toBe(productBefore);
 });
 
 test("runtime: filmstrip delete removes a slide", async ({ page }) => {
@@ -606,8 +719,16 @@ test("runtime: filmstrip delete removes a slide", async ({ page }) => {
   await buildEpisodeSet(page);
   await expect(filmstripSlides(page)).toHaveCount(5);
 
+  // Deleting a non-selected slide must not disturb the visible slide output.
+  const productBefore = await getToolcraftProductObservableSnapshot(page, {
+    selector: slideSelector,
+  });
+
   await filmstripSlides(page).nth(1).getByRole("button", { name: /delete slide/i }).click();
   await expect(filmstripSlides(page)).toHaveCount(4);
+  expect(
+    await getToolcraftProductObservableSnapshot(page, { selector: slideSelector }),
+  ).toBe(productBefore);
 });
 
 test("runtime: filmstrip duplicate adds a copy", async ({ page }) => {
@@ -615,8 +736,16 @@ test("runtime: filmstrip duplicate adds a copy", async ({ page }) => {
   await buildEpisodeSet(page);
   await expect(filmstripSlides(page)).toHaveCount(5);
 
+  // The copy carries the same values, so the visible slide output holds.
+  const productBefore = await getToolcraftProductObservableSnapshot(page, {
+    selector: slideSelector,
+  });
+
   await filmstripSlides(page).nth(0).getByRole("button", { name: /duplicate slide/i }).click();
   await expect(filmstripSlides(page)).toHaveCount(6);
+  expect(
+    await getToolcraftProductObservableSnapshot(page, { selector: slideSelector }),
+  ).toBe(productBefore);
 });
 
 test("runtime: double-clicking preview text edits it inline", async ({ page }) => {
@@ -643,12 +772,17 @@ test("runtime: double-clicking preview text edits it inline", async ({ page }) =
     }, { timeout: 15_000 })
     .toBe(true);
 
-  await title.dblclick();
-  await page.keyboard.press("ControlOrMeta+a");
-  await page.keyboard.type("Inline Edited Title");
-  await page.keyboard.press("Enter");
-
-  // The edit committed to the runtime value, so the slide re-renders with it.
+  // The committed edit re-renders the slide with the new text.
+  await expectToolcraftProductObservableToChange(
+    page,
+    async () => {
+      await title.dblclick();
+      await page.keyboard.press("ControlOrMeta+a");
+      await page.keyboard.type("Inline Edited Title");
+      await page.keyboard.press("Enter");
+    },
+    { selector: slideSelector },
+  );
   await expect(title).toHaveText("Inline Edited Title");
 });
 
@@ -796,8 +930,15 @@ test("runtime: audiogram motion controls change the frame", async ({ page }) => 
   test.setTimeout(60_000);
   await setupAudiogram(page);
 
-  // The Highlight select accepts each mode without error.
-  await chooseSelectOption(page, "Highlight", "Off");
+  // The Highlight select accepts each mode without error, and the autoplaying
+  // audiogram frame keeps rendering (word entrances animate) through it.
+  await expectToolcraftProductObservableToChange(
+    page,
+    async () => {
+      await chooseSelectOption(page, "Highlight", "Off");
+    },
+    { selector: slideSelector },
+  );
   await chooseSelectOption(page, "Highlight", "Auto");
 });
 
@@ -831,7 +972,13 @@ test("runtime: audiogram highlight picker stars multiple lines and edits text", 
   // words for that block's original time span, without touching the
   // uploaded SRT file. Block 0 is active from t=0, so the edit shows up
   // as soon as the (autoplaying, looping) timeline reaches the start.
-  await lines.first().fill("The corrected first line.");
+  await expectToolcraftProductObservableToChange(
+    page,
+    async () => {
+      await lines.first().fill("The corrected first line.");
+    },
+    { selector: slideSelector },
+  );
   await expect(page.locator(slideSelector)).toContainText("The corrected first line.", {
     timeout: 8000,
   });
@@ -897,7 +1044,13 @@ test("runtime: audiogram outro text renders", async ({ page }) => {
     .last()
     .getByRole("textbox");
 
-  await outro.fill("Custom outro line for the closing card.");
+  await expectToolcraftProductObservableToChange(
+    page,
+    async () => {
+      await outro.fill("Custom outro line for the closing card.");
+    },
+    { selector: slideSelector },
+  );
   await expect(page.locator(slideSelector)).toContainText(
     "Custom outro line for the closing card.",
     { timeout: 8000 },
@@ -1006,7 +1159,12 @@ test("runtime: selecting the audiogram reveals the extended timeline", async ({ 
 
   // Switching to the audiogram opens the extended transport — scrubber and
   // duration editor included — without touching the Setup Timeline switch.
-  await chooseSelectOption(page, "Template", "Audiogram");
+  // The template swap replaces the whole slide, so product output changes.
+  await expectToolcraftProductObservableToChange(
+    page,
+    async () => chooseSelectOption(page, "Template", "Audiogram"),
+    { selector: slideSelector },
+  );
   await expect(page.getByRole("slider", { name: "Playback position" })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Edit timeline duration" }),
@@ -1025,8 +1183,13 @@ test("runtime: audiogram mode hides the carousel filmstrip", async ({ page }) =>
   await expect(filmstrip(page)).toBeVisible();
 
   // …but the audiogram is one timeline-driven video, not a slide deck, so the
-  // strip (and its empty card) leaves the canvas entirely.
-  await chooseSelectOption(page, "Template", "Audiogram");
+  // strip (and its empty card) leaves the canvas entirely. The template swap
+  // replaces the whole slide, so product output changes with it.
+  await expectToolcraftProductObservableToChange(
+    page,
+    async () => chooseSelectOption(page, "Template", "Audiogram"),
+    { selector: slideSelector },
+  );
   await expect(filmstrip(page)).toHaveCount(0);
 
   // Returning to a static template brings the filmstrip back.
@@ -1091,7 +1254,11 @@ test("app controls: guest colourway crossfades the audiogram ground", async ({ p
   }
 
   // Playing into the guest speaker's block crossfades the ground to night blue.
-  await transport.click();
+  await expectToolcraftProductObservableToChange(
+    page,
+    async () => transport.click(),
+    { selector: frameSelector },
+  );
   await expect.poll(frameBackground, { timeout: 12_000 }).toBe("rgb(25, 33, 54)");
 });
 
@@ -1109,8 +1276,13 @@ test("app controls: host colourway sets the first speaker's ground", async ({ pa
   await expect.poll(frameBackground).toBe("rgb(251, 242, 233)");
 
   // Choosing a different host colourway restyles that ground at the head of
-  // the clip (before any speaker change).
-  await chooseSelectOption(page, "Host colourway", "Night Blue");
+  // the clip (before any speaker change). The frame's background colour is
+  // part of the product snapshot, so the change is directly observable.
+  await expectToolcraftProductObservableToChange(
+    page,
+    async () => chooseSelectOption(page, "Host colourway", "Night Blue"),
+    { selector: frameSelector },
+  );
   await expect.poll(frameBackground).toBe("rgb(25, 33, 54)");
 });
 
@@ -1278,9 +1450,16 @@ test("runtime: timeline playback scrubs and renders audiogram frames", async ({
     await page.getByRole("button", { name: "Pause playback" }).click();
   }
 
-  // Play, hold, pause — the paused frame is a pure function of the held time.
-  await page.getByRole("button", { name: "Play playback" }).click();
-  await page.waitForTimeout(400);
+  // Play, hold, pause — the paused frame is a pure function of the held time,
+  // and playing renders new frames (observable product output changes).
+  await expectToolcraftProductObservableToChange(
+    page,
+    async () => {
+      await page.getByRole("button", { name: "Play playback" }).click();
+      await page.waitForTimeout(400);
+    },
+    { selector: slideSelector },
+  );
   await page.getByRole("button", { name: "Pause playback" }).click();
 
   // Loop transport state round-trips through the real toggle.

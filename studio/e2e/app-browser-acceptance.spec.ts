@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import {
   getRequiredToolcraftControlPartCoverage,
@@ -67,6 +67,14 @@ function readSiblingBrowserTestSources(): BrowserTestSource[] {
       fileName,
       source: stripJsComments(readFileSync(join(e2eDir, fileName), "utf8")),
     }));
+}
+
+/* Fresh contexts are redirected to the onboarding wizard; enter through it
+   deterministically and skip into the studio before asserting on the shell. */
+async function openApp(page: Page): Promise<void> {
+  await page.goto("/setup");
+  await page.getByRole("button", { name: /skip setup/i }).click();
+  await expect(page.locator('[data-slot="toolcraft-runtime-app"]')).toBeVisible();
 }
 
 function findNamedBrowserTestSource(
@@ -260,7 +268,7 @@ test("browser product-output rows use the shared product observable helper", () 
 test("browser renders the Toolcraft template shell instead of a reference iframe shell", async ({
   page,
 }) => {
-  await page.goto("/");
+  await openApp(page);
 
   await expect(page.locator('[data-slot="toolcraft-runtime-app"]')).toBeVisible();
 
@@ -286,7 +294,7 @@ test("browser preserves the Toolcraft canvas backing surface", async ({ page }) 
     return;
   }
 
-  await page.goto("/");
+  await openApp(page);
 
   const canvasViewport = page.getByRole("application", { name: "Canvas viewport" });
 
@@ -309,7 +317,7 @@ test("browser canvas contains product output without app UI controls or CTA copy
     return;
   }
 
-  await page.goto("/");
+  await openApp(page);
   await expect(page.getByRole("application", { name: "Canvas viewport" })).toBeVisible();
   await expectNoForbiddenCanvasUi(page);
 });
