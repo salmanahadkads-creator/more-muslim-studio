@@ -1,0 +1,475 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>More Muslim — Symbol Bloom · 1080×1920</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000000; overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; }
+  #stage {
+    position: relative; flex: none;
+    width: 1080px; height: 1920px;
+    background: #C15A3A;
+    overflow: hidden; cursor: pointer;
+  }
+  .cell { position: absolute; left: 0; top: 0; width: 216px; height: 216px; will-change: transform, opacity; }
+  .cell svg { display: block; width: 100%; height: 100%; }
+  #wordmark { position: absolute; overflow: hidden; opacity: 0; }
+  #wordmark svg { position: absolute; top: 0; display: block; }
+  #grain { position: absolute; inset: 0; mix-blend-mode: overlay; opacity: 0.09; pointer-events: none; }
+  #hint {
+    position: absolute; left: 50%; bottom: 120px; transform: translateX(-50%);
+    color: #F6E1C7; font: 400 26px/1 -apple-system, system-ui, sans-serif;
+    letter-spacing: 0.165em; text-transform: uppercase; opacity: 0.72;
+    pointer-events: none; transition: opacity 0.4s; white-space: nowrap;
+  }
+  /* Tweak panel — dev chrome, system font (not brand output) */
+  #panel {
+    position: fixed; top: 14px; left: 14px; z-index: 10;
+    width: 232px; box-sizing: border-box; padding: 14px 14px 12px;
+    background: rgba(25,33,54,0.92); color: #F6E1C7;
+    border: 1px solid rgba(246,225,199,0.18); border-radius: 12px;
+    font: 400 12px/1.3 -apple-system, system-ui, sans-serif;
+    backdrop-filter: blur(8px); user-select: none;
+  }
+  #panel.hidden { display: none; }
+  #panel h4 { margin: 0 0 10px; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.6; font-weight: 400; }
+  #panel .row { margin: 11px 0; }
+  #panel .lab { display: flex; justify-content: space-between; margin-bottom: 5px; }
+  #panel .lab b { font-weight: 400; opacity: 0.6; }
+  #panel .val { font-variant-numeric: tabular-nums; opacity: 0.95; }
+  #panel input[type=range] { width: 100%; margin: 0; accent-color: #C15A3A; height: 16px; }
+  #panel .seg { display: flex; gap: 4px; }
+  #panel .seg button {
+    flex: 1; padding: 5px 0; font: inherit; color: #F6E1C7;
+    background: rgba(246,225,199,0.08); border: 1px solid transparent;
+    border-radius: 6px; cursor: pointer;
+  }
+  #panel .seg button.on { background: #C15A3A; border-color: #C15A3A; }
+  #panel .btns { display: flex; gap: 6px; margin-top: 12px; }
+  #panel .btns button {
+    flex: 1; padding: 7px 0; font: inherit; color: #192136; background: #F6E1C7;
+    border: 0; border-radius: 6px; cursor: pointer; letter-spacing: 0.04em;
+  }
+  #panel .btns button.ghost { color: #F6E1C7; background: rgba(246,225,199,0.1); }
+  #panel .foot { margin-top: 11px; display: flex; gap: 6px; align-items: center; }
+  #panel .foot code { flex: 1; font-size: 10px; opacity: 0.55; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #panel .foot button { font: inherit; font-size: 10px; color: #F6E1C7; background: none; border: 1px solid rgba(246,225,199,0.25); border-radius: 5px; padding: 3px 7px; cursor: pointer; }
+  #show {
+    position: fixed; top: 14px; left: 14px; z-index: 10; display: none;
+    width: 34px; height: 34px; border-radius: 9px; cursor: pointer;
+    background: rgba(25,33,54,0.92); color: #F6E1C7; border: 1px solid rgba(246,225,199,0.18);
+    font: 16px/34px -apple-system, system-ui, sans-serif; text-align: center;
+  }
+</style>
+</head>
+<body>
+<div id="stage"><div id="hint">Tap for sound</div></div>
+<button id="show" title="Show controls">☰</button>
+<div id="panel"></div>
+<script>
+(async () => {
+  const q = new URLSearchParams(location.search);
+
+  // Pace comes from the track: MM18 — Growing Up ARP (70.5 BPM, 16th-note arpeggio).
+  let meta = { bpm: 70.5, onsets: [], duration: 113 };
+  try { meta = await (await fetch('mm18-arp.json')).json(); } catch (e) { console.warn('no arp json', e); }
+
+  const SEQ = q.get('seq') || 'reverse';   // 'reverse' = collapse → logo reveal; 'build' = build + rain
+  const W = 1080, H = 1920, CX = W / 2, CY = H / 2;
+  const BPM  = +q.get('bpm') || meta.bpm || 70.5;
+  const BEAT = 60 / BPM;
+  const FPS  = q.has('fps') ? +q.get('fps') : 0;   // 0 = smooth at native refresh; ?fps=12 = vox posterize
+  const R    = 216;
+  const HERO = 2.2;
+
+  // Straight orthogonal grid — symbols line up true horizontal/vertical, stars stay axis-aligned.
+  const K      = R / 1800;
+  const PERIOD = (q.has('p') ? +q.get('p') : 1191.175) * K;
+  const AX = PERIOD, BY = PERIOD;
+  const POINT_AMP = q.has('point') ? +q.get('point') : 0.34;  // collapse-star pointiness (0 = round)
+
+  // BUILD (plays once, in tempo): reveal → shrink on beat 2 → rectangular rings on eighth notes.
+  const REVEAL_D = 0.7;
+  const SHRINK_T = 2 * BEAT, SHRINK_D = 0.5;
+  const buildRingT = r => (2 + (r - 1) / 2) * BEAT;
+  const POP_D = 0.5;
+  const BUILD_DUR = 7 * BEAT;
+
+  // Live-tweakable config (URL params seed the defaults).
+  const cfg = {
+    div:   q.has('div')   ? +q.get('div')   : 8,      // 1=16th 2=8th 4=beat 8=half 16=bar
+    rs:    q.has('rs')    ? +q.get('rs')    : 0.2,    // beats per ring (wave speed)
+    width: q.has('width') ? +q.get('width') : 1.2,    // crest half-width in rings
+    rp:    q.has('rp')    ? +q.get('rp')    : 0.5,    // crest brightness
+    op:    q.has('op')    ? +q.get('op')    : 0.20,   // pattern base opacity
+  };
+
+  // Verbatim polygons from assets/logos/symbol-beige.svg — supplied artwork, not redrawn
+  const SYM = `<svg viewBox="0 0 1800 1800" xmlns="http://www.w3.org/2000/svg"><polygon points="789.134 1168.935 631.6 1168.935 631.6 1011.401 520.199 900 304.947 1115.252 392.494 1202.799 507.001 1088.279 507.007 1293.527 712.243 1293.533 597.736 1408.041 685.282 1495.587 900.534 1280.335 789.134 1168.935" fill="#F6E1C7"/><polygon points="1011.935 631.065 1169.469 631.065 1169.469 788.6 1280.87 900 1496.122 684.748 1408.575 597.201 1294.068 711.721 1294.062 506.473 1088.826 506.467 1203.333 391.959 1115.787 304.413 900.534 519.665 1011.935 631.065" fill="#F6E1C7"/><polygon points="631.6 788.6 631.6 631.065 789.134 631.065 900.534 519.665 685.282 304.413 597.736 391.959 712.255 506.467 507.007 506.473 507.001 711.708 392.494 597.201 304.947 684.748 520.199 900 631.6 788.6" fill="#F6E1C7"/><polygon points="1169.469 1011.401 1169.469 1168.935 1011.935 1168.935 900.534 1280.335 1115.787 1495.587 1203.333 1408.041 1088.814 1293.533 1294.062 1293.527 1294.068 1088.292 1408.575 1202.799 1496.122 1115.252 1280.87 900 1169.469 1011.401" fill="#F6E1C7"/></svg>`;
+
+  const stage = document.getElementById('stage');
+  const hint = document.getElementById('hint');
+
+  // Deterministic hash (GLSL-style) → stable per-tile randomness for the flicker, so preview and
+  // export land on the same frames.
+  const hash = a => { const x = Math.sin(a) * 43758.5453; return x - Math.floor(x); };
+
+  // ring index = Chebyshev distance → nested rectangles (ring 1 = the 3×3 of nine).
+  const cells = [];
+  const MARGIN = 120;
+  for (let j = -14; j <= 14; j++) for (let i = -14; i <= 14; i++) {
+    if (i === 0 && j === 0) continue;
+    const x0 = CX + i * AX, y0 = CY + j * BY;
+    if (x0 < -MARGIN || x0 > W + MARGIN || y0 < -MARGIN || y0 > H + MARGIN) continue;
+    const d = document.createElement('div');
+    d.className = 'cell'; d.innerHTML = SYM; d.style.opacity = 0;
+    stage.appendChild(d);
+    const ai = Math.abs(i), aj = Math.abs(j);
+    // ring: square (Chebyshev) shells for build/ripple. star: 8-pointed-star shells — radius pulled
+    // in at the point directions (0/45/90…, cos8θ peaks) so iso-contours are stars with points on
+    // axes AND diagonals, the motif at the heart of the mark. POINT_AMP sets how sharp. Shapes the collapse.
+    const star = Math.hypot(ai, aj) * (1 - POINT_AMP * Math.cos(8 * Math.atan2(aj, ai)));
+    cells.push({ el: d, i, j, ring: Math.max(ai, aj), star, seed: hash(i * 127.1 + j * 311.7) });
+  }
+  const maxRing = cells.reduce((m, c) => Math.max(m, c.ring), 1);
+  const maxStar = cells.reduce((m, c) => Math.max(m, c.star), 0.001);
+  const center = document.createElement('div');
+  center.className = 'cell'; center.innerHTML = SYM;
+  stage.appendChild(center);
+
+  const grain = document.createElement('div');
+  grain.id = 'grain';
+  const noise = `<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='300' height='300' filter='url(#n)'/></svg>`;
+  grain.style.background = `url("data:image/svg+xml,${encodeURIComponent(noise)}")`;
+  grain.style.backgroundSize = '300px 300px';
+  // NB: appended last (after the wordmark, below) — the grain must sit over every layer, so the
+  // symbol and the wordmark carry the same texture in the finished lockup.
+
+  // --- MORE MUSLIM logo lockup geometry (derived from logo-horizontal-beige.svg, viewBox 1884×365,
+  // symbol fills logo-x [0,364.02] centred (182.01,182.01), wordmark runs [493,1883]). ---
+  const LOGO_W = 760, LSCALE = LOGO_W / 1884, LOGO_H = 365 * LSCALE;
+  const LOGO_LEFT = (W - LOGO_W) / 2, LOGO_TOP = CY - LOGO_H / 2;
+  const SYM_CX = LOGO_LEFT + 182.0105 * LSCALE;   // where the symbol sits in the finished logo
+  const SYM_CY = LOGO_TOP + 182.0105 * LSCALE;
+  const SYM_DRAWN = 364.021 * LSCALE;             // symbol width in the logo, on screen
+  const MARK_AT_1 = 1191.175 * K;                 // our standalone mark width at scale 1
+  const LOGO_SYM_SCALE = SYM_DRAWN / MARK_AT_1;   // scale so our mark matches the logo's symbol
+  const SEAM = SYM_DRAWN;                          // symbol right edge, local to the lockup
+  const WM_LEFT = LOGO_LEFT + SEAM, WM_W = LOGO_W - SEAM;
+  const ROT = q.has('rot') ? +q.get('rot') : 90;  // degrees the symbol turns left into the lockup
+
+  // Wordmark glyphs inlined from logo-horizontal-beige.svg (symbol arms omitted — our animated
+  // symbol composes that half). Inline SVG renders identically in every engine, unlike the img
+  // (whose 100%/100% sizing left it blank + a stray box in stricter renderers).
+  const LOGO_SVG = `<svg viewBox="0 0 1884 365" width="${LOGO_W}" height="${LOGO_H}" xmlns="http://www.w3.org/2000/svg" style="left:${-SEAM}px"><g transform="matrix(1,0,0,1,-258.36,-263.122)" fill="#F6E1C7" fill-rule="nonzero"><path d="M1650.845,461.22L1650.845,379.326L1668.079,379.326L1668.079,461.976C1668.079,493.263 1650.845,512.374 1617.107,512.374C1583.369,512.374 1566.135,493.263 1566.135,461.976L1566.135,379.326L1583.369,379.326L1583.369,461.22C1583.369,482.391 1592.938,496.835 1617.107,496.835C1641.276,496.835 1650.845,482.391 1650.845,461.22Z"/><path d="M1397.147,379.352L1412.921,379.352L1461.648,440.196L1510.759,379.352L1526.327,379.352L1526.327,510.913L1509.274,510.913L1509.274,408.619L1461.827,467.619L1414.38,408.619L1414.38,510.913L1397.147,510.913L1397.147,379.352Z"/><path d="M1719.09,466.095C1722.271,485.78 1730.875,497.408 1754.497,497.434C1772.487,497.434 1785.967,487.865 1785.967,473.447C1785.967,460.88 1780.179,454.518 1761.25,451.311L1738.202,447.374C1716.823,443.802 1705.768,433.295 1705.768,414.575C1705.768,392.257 1725.27,377.839 1749.257,377.865C1776.425,377.865 1791.051,389.102 1798.195,407.275L1781.665,414.21C1776.242,400.157 1768.185,392.857 1748.683,392.857C1734.082,392.831 1723.21,400.705 1723.21,413.819C1723.21,424.3 1730.145,428.993 1743.26,431.262L1766.308,435.199C1790.477,439.318 1803.435,450.373 1803.435,471.935C1803.435,496.104 1782.603,512.4 1754.862,512.4C1720.759,512.374 1705.95,495.531 1702.013,471.153L1719.091,466.095L1719.09,466.095Z"/><path d="M1838.91,379.352L1856.17,379.352L1856.17,495.922L1930.372,495.922L1930.372,510.914L1838.91,510.914L1838.91,379.352Z"/><rect x="1955.393" y="379.352" width="17.26" height="131.561"/><path d="M2012.459,379.352L2028.233,379.352L2076.96,440.196L2126.071,379.352L2141.639,379.352L2141.639,510.913L2124.586,510.913L2124.586,408.619L2077.139,467.619L2029.692,408.619L2029.692,510.913L2012.459,510.913L2012.459,379.352Z"/><path d="M1066.571,379.325L1129.542,379.325C1153.169,379.325 1167.038,391.321 1167.038,412.137C1167.038,431.262 1154.652,442.868 1134.59,444.559L1173.205,510.912L1153.533,510.912L1116.037,445.131L1083.797,445.131L1083.797,510.912L1066.571,510.912L1066.571,379.324L1066.571,379.325ZM1083.797,394.34L1083.797,430.119L1127.668,430.119C1141.901,430.119 1149.395,423.562 1149.395,412.139C1149.395,400.716 1141.901,394.341 1127.668,394.341L1083.797,394.341L1083.797,394.34Z"/><path d="M913.128,445.106C913.128,411.003 933.934,377.839 973.668,377.839C1014.133,377.839 1034.182,411.003 1034.182,445.106C1034.182,479.209 1013.376,512.399 973.668,512.399C933.177,512.399 913.128,479.209 913.128,445.106ZM1016.584,445.106C1016.584,415.514 1000.471,393.013 973.669,393.013C946.867,393.013 930.754,415.514 930.754,445.106C930.754,474.698 946.867,497.199 973.669,497.199C1000.471,497.199 1016.584,474.724 1016.584,445.106Z"/><path d="M1290.548,510.914L1205.452,510.914L1205.452,379.352L1290.014,379.352L1290.014,394.344L1222.712,394.344L1222.712,430.324L1283.607,430.324L1283.607,445.316L1222.712,445.316L1222.712,495.923L1290.548,495.923L1290.548,510.915L1290.548,510.914Z"/><path d="M751.56,379.352L767.334,379.352L816.061,440.196L865.172,379.352L880.74,379.352L880.74,510.913L863.687,510.913L863.687,408.619L816.24,467.619L768.793,408.619L768.793,510.913L751.56,510.913L751.56,379.352Z"/></g></svg>`;
+  const wordmark = document.createElement('div');
+  wordmark.id = 'wordmark';
+  wordmark.style.left = WM_LEFT + 'px'; wordmark.style.top = LOGO_TOP + 'px';
+  wordmark.style.height = LOGO_H + 'px'; wordmark.style.width = '0px';
+  wordmark.innerHTML = LOGO_SVG;
+  stage.appendChild(wordmark);
+  stage.appendChild(grain);   // topmost: one grain pass over pattern, symbol and wordmark alike
+
+  // Drops = the arp onsets (every DIV-th) that land after the build. Recomputed when rate changes.
+  let drops = [];
+  const recomputeDrops = () => { drops = meta.onsets.filter((_, i) => i % cfg.div === 0).filter(t => t >= BUILD_DUR); };
+  recomputeDrops();
+
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const oc = p => 1 - Math.pow(1 - p, 3);              // easeOutCubic — entrances arrive fast, settle gently
+  const io = p => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+  const level = new Float32Array(maxRing + 1);
+
+  function frameBuild(tg) {
+    const building = tg < BUILD_DUR;
+    const STEP = cfg.rs * BEAT;
+    const LIFE = (maxRing + cfg.width) * STEP;
+
+    // Per-ring ripple level from every active drop (spatial raised-cosine crest at the wavefront,
+    // damped as it travels out). max() keeps overlaps from over-brightening.
+    level.fill(0);
+    if (!building) {
+      for (const D of drops) {
+        const age = tg - D;
+        if (age < 0 || age > LIFE) continue;
+        const wf = age / STEP;
+        const amp = clamp(1 - 0.55 * (wf / maxRing), 0.3, 1);
+        const lo = Math.max(0, Math.floor(wf - cfg.width));
+        const hi = Math.min(maxRing, Math.ceil(wf + cfg.width));
+        for (let r = lo; r <= hi; r++) {
+          const dr = (r - wf) / cfg.width;
+          if (dr > -1 && dr < 1) {
+            const v = amp * 0.5 * (1 + Math.cos(Math.PI * dr));
+            if (v > level[r]) level[r] = v;
+          }
+        }
+      }
+    }
+
+    // Center hero: reveal + settle once, hold full, soft ping when a drop lands at the centre.
+    let cs = 1, cr = 0, co = 1;
+    if (tg < SHRINK_T) {
+      const e = oc(clamp(tg / REVEAL_D, 0, 1));
+      cs = HERO * (0.55 + 0.45 * e);
+      cr = -28 * (1 - e);
+      co = clamp(tg / 0.12, 0, 1);
+    } else if (tg < SHRINK_T + SHRINK_D) {
+      cs = HERO + (1 - HERO) * io(clamp((tg - SHRINK_T) / SHRINK_D, 0, 1));
+    }
+    if (!building) cs *= 1 + 0.05 * level[0];
+    center.style.opacity = co;
+    center.style.transform = `translate(${CX - R / 2}px, ${CY - R / 2}px) rotate(${cr}deg) scale(${cs})`;
+
+    for (const c of cells) {
+      let op, sc = 1, f = 1;
+      if (building) {
+        const e = oc(clamp((tg - buildRingT(c.ring)) / POP_D, 0, 1));
+        op = cfg.op * e; sc = 0.62 + 0.38 * e; f = 0.88 + 0.12 * e;
+      } else {
+        op = cfg.op + (cfg.rp - cfg.op) * level[c.ring];
+      }
+      c.el.style.opacity = op;
+      c.el.style.transform = `translate(${CX + c.i * AX * f - R / 2}px, ${CY + c.j * BY * f - R / 2}px) scale(${sc})`;
+    }
+  }
+
+  // Reverse outro: full pattern → collapses inward to the lone symbol → symbol turns left and the
+  // wordmark emerges from its right edge, composing the exact MORE MUSLIM logo. Plays once, holds.
+  // SPEED scales the whole outro: 1.5 plays it 50% faster than the base beats below.
+  const SPEED      = q.has('speed') ? +q.get('speed') : 1.5;
+  const R_HOLD0    = (q.has('hold0')    ? +q.get('hold0')    : 0.8)  / SPEED;  // full pattern before collapse
+  const R_COLLAPSE = (q.has('collapse') ? +q.get('collapse') : 2.0)  / SPEED;  // implosion duration
+  const R_HOLD1    = (q.has('hold1')    ? +q.get('hold1')    : 0.5)  / SPEED;  // lone symbol beat
+  // Move and wipe stay locked to each other and to the fade's rhythm (both one duration, wipe
+  // entering at the move's halfway point), pitched ~40% slower so the logo has room to land.
+  const R_MOVE     = (q.has('move')     ? +q.get('move')     : 1.4)  / SPEED;  // symbol glide + turn
+  const R_WIPE_LAG = 0.7 / SPEED, R_WIPE = 1.4 / SPEED;                        // wordmark reveal, trails the turn
+  const REV_OP     = q.has('op') ? cfg.op : 0.35;                    // collapse ground: stronger so the star reads
+
+  // Flicker variant (?seq=flicker): pattern gutters like a failing neon, then all but the centre die.
+  const FLICK_DUR  = (q.has('flick')  ? +q.get('flick')  : 1.2) / SPEED;  // erratic flicker duration
+  const EXTING_DUR = (q.has('outdur') ? +q.get('outdur') : 0.7) / SPEED;  // tiles gutter out over this
+  const FLICK_RATE = q.has('flickrate') ? +q.get('flickrate') : 17;       // blink segments/sec (absolute)
+  const PULL       = q.has('pull') ? +q.get('pull') : 0;             // 0 = tiles reduce where they stand
+  const BACK       = q.has('back') ? +q.get('back') : 0;             // 0 = no swell, tiles just reduce (raise to wind up)
+  const ib = p => p * p * ((BACK + 1) * p - BACK);                   // BACK 0 → plain easeInCubic
+
+  // Closed-form underdamped spring for the logo reveal — overshoots, then rings down to exactly 1.
+  // Must stay a pure function of t (no physics sim) so preview and export match frame for frame.
+  const SP_W = q.has('freq') ? +q.get('freq') : 12;                  // stiffness / frequency
+  const SP_Z = q.has('damp') ? +q.get('damp') : 0.85;                // damping ratio — lower = bouncier
+  const spring = p => {
+    if (p >= 1) return 1;
+    const wd = SP_W * Math.sqrt(1 - SP_Z * SP_Z);
+    return 1 - Math.exp(-SP_Z * SP_W * p) * (Math.cos(wd * p) + (SP_Z * SP_W / wd) * Math.sin(wd * p));
+  };
+
+  function frameReverse(t) {
+    const collapseStart = R_HOLD0;
+    const collapseEnd = collapseStart + R_COLLAPSE;
+    const revealStart = collapseEnd + R_HOLD1;
+    const stepC = (R_COLLAPSE * 0.5) / maxStar;   // outermost star shell leaves first
+    const DC = R_COLLAPSE * 0.5;
+
+    for (const c of cells) {
+      let op = 0, sc = 1, f = 1;
+      if (t < collapseStart) op = REV_OP;
+      else if (t < collapseEnd) {
+        // Stagger by the 8-pointed-star distance → what remains is always a shrinking star.
+        // easeInBack: each tile swells a touch (anticipation) before it reduces away, which takes
+        // the rigidity out of the exit. Flat 2D — reduce only, no drag inward, no fold.
+        // The fade lags the shrink so you watch it go rather than have it blink out.
+        const raw = clamp((t - (collapseStart + (maxStar - c.star) * stepC)) / DC, 0, 1);
+        const e = ib(raw);                        // 0 → dips negative (swell) → 1
+        const ec = clamp(e, 0, 1);
+        op = REV_OP * (1 - Math.pow(ec, 1.6));
+        sc = 1 - e;                               // 1 → ~1.13 → 0
+        f  = 1 - PULL * ec;
+      }
+      c.el.style.opacity = op;
+      c.el.style.transform = `translate(${CX + c.i * AX * f - R / 2}px, ${CY + c.j * BY * f - R / 2}px) scale(${sc})`;
+    }
+
+    logoReveal(t, revealStart);
+  }
+
+  // Shared logo reveal (both outro variants): centre symbol glides left into the lockup, turning
+  // left and scaling to the logo's symbol size on a spring (flies past the slot, rings back, lands
+  // upright on a 4-fold-symmetry position). Then the wordmark window opens rightward from its seam.
+  function logoReveal(t, revealStart) {
+    let cx = CX, cy = CY, sc = 1, rot = 0;
+    if (t >= revealStart) {
+      const p = spring(clamp((t - revealStart) / R_MOVE, 0, 1));
+      cx = CX + (SYM_CX - CX) * p;
+      cy = CY + (SYM_CY - CY) * p;
+      sc = 1 + (LOGO_SYM_SCALE - 1) * p;
+      rot = -ROT * p;
+    }
+    center.style.opacity = 1;
+    center.style.transform = `translate(${cx - R / 2}px, ${cy - R / 2}px) rotate(${rot}deg) scale(${sc})`;
+
+    // easeOut, not the spring: a clip width that overshoots would just expose blank ground and snap back.
+    let ww = 0, wop = 0;
+    if (t >= revealStart + R_WIPE_LAG) {
+      ww = WM_W * oc(clamp((t - revealStart - R_WIPE_LAG) / R_WIPE, 0, 1));
+      wop = 1;
+    }
+    wordmark.style.width = ww + 'px';
+    wordmark.style.opacity = wop;
+  }
+
+  // Flicker outro: full pattern gutters erratically, all but the centre die out, then the reveal.
+  function frameFlicker(t) {
+    const flickStart = R_HOLD0;
+    const extinguishStart = flickStart + FLICK_DUR;
+    const flickEnd = extinguishStart + EXTING_DUR;
+    const revealStart = flickEnd + R_HOLD1;
+
+    for (const c of cells) {
+      let op = 0;
+      if (t < flickStart) op = REV_OP;                       // full pattern, lit
+      else if (t < flickEnd) {
+        const death = extinguishStart + c.seed * EXTING_DUR; // each tile guttered at its own moment
+        if (t < death) {
+          const seg = Math.floor(t * FLICK_RATE + c.seed * 997);
+          op = REV_OP * (hash(seg * 1.37 + c.seed * 7.13) > 0.4 ? 1 : 0.18);
+        }
+      }
+      c.el.style.opacity = op;
+      c.el.style.transform = `translate(${CX + c.i * AX - R / 2}px, ${CY + c.j * BY - R / 2}px)`;
+    }
+
+    if (t < revealStart) {
+      // Centre flickers with the field, then holds lit as the survivor while the rest gutter out.
+      let cop = 1;
+      if (t >= flickStart && t < extinguishStart) {
+        const seg = Math.floor(t * FLICK_RATE + 3.1);
+        cop = hash(seg * 1.37 + 41.7) > 0.34 ? 1 : 0.42;
+      }
+      center.style.opacity = cop;
+      center.style.transform = `translate(${CX - R / 2}px, ${CY - R / 2}px) rotate(0deg) scale(1)`;
+      wordmark.style.width = '0px'; wordmark.style.opacity = 0;
+    } else {
+      logoReveal(t, revealStart);
+    }
+  }
+
+  function fit() { stage.style.transform = `scale(${Math.min(innerWidth / W, innerHeight / H)})`; }
+  addEventListener('resize', fit); fit();
+
+  // ---------- clock / playback ----------
+  const frozen = q.get('t');
+  const audio = new Audio('mm18-arp-preview.wav'); audio.preload = 'auto';
+  let start = performance.now(), useAudio = false;
+
+  function play() {
+    hint.style.opacity = 0;
+    audio.currentTime = 0;
+    audio.play().then(() => useAudio = true).catch(() => useAudio = false);
+    start = performance.now();
+  }
+  function togglePause() {
+    if (useAudio) { audio.paused ? audio.play() : audio.pause(); }
+  }
+  const isFlicker = SEQ === 'flicker';
+  const isReverse = SEQ === 'reverse';
+  const isOutro = isReverse || isFlicker;             // no audio, play once, no tweak panel
+  const outroFrame = isFlicker ? frameFlicker : frameReverse;
+  stage.addEventListener('click', isOutro ? () => { start = performance.now(); } : play);
+
+  if (frozen !== null || isOutro) { hint.remove(); }
+  (function tick(now) {
+    let t;
+    if (frozen !== null) t = parseFloat(frozen);
+    else if (isOutro) { t = (now - start) / 1000; if (FPS > 0) t = Math.floor(t * FPS) / FPS; }
+    else { t = (useAudio && !audio.paused) ? audio.currentTime : (now - start) / 1000; if (FPS > 0) t = Math.floor(t * FPS) / FPS; }
+    (isOutro ? outroFrame : frameBuild)(t);
+    requestAnimationFrame(tick);
+  })(performance.now());
+
+  // ---------- tweak panel (build/rain mode only) ----------
+  const panel = document.getElementById('panel');
+  const showBtn = document.getElementById('show');
+  if (isOutro) { panel.remove(); showBtn.remove(); return; }
+  const RATES = [['16th', 1], ['8th', 2], ['Beat', 4], ['Half', 8], ['Bar', 16]];
+
+  function shareStr() {
+    return `?div=${cfg.div}&rs=${cfg.rs}&width=${cfg.width}&rp=${cfg.rp}&op=${cfg.op}`;
+  }
+  let urlCode;
+  function refreshShare() { if (urlCode) urlCode.textContent = shareStr(); }
+
+  function slider(label, key, min, max, step, fmt) {
+    const row = document.createElement('div'); row.className = 'row';
+    const lab = document.createElement('div'); lab.className = 'lab';
+    const name = document.createElement('b'); name.textContent = label;
+    const val = document.createElement('span'); val.className = 'val';
+    lab.append(name, val); row.append(lab);
+    const inp = document.createElement('input');
+    inp.type = 'range'; inp.min = min; inp.max = max; inp.step = step; inp.value = cfg[key];
+    val.textContent = fmt(cfg[key]);
+    inp.addEventListener('input', () => { cfg[key] = +inp.value; val.textContent = fmt(cfg[key]); refreshShare(); });
+    row.append(inp);
+    return row;
+  }
+
+  function buildPanel() {
+    panel.innerHTML = '';
+    const h = document.createElement('h4'); h.textContent = 'Ripple tweaks'; panel.append(h);
+
+    // Rate segmented control
+    const rrow = document.createElement('div'); rrow.className = 'row';
+    const rlab = document.createElement('div'); rlab.className = 'lab';
+    const rn = document.createElement('b'); rn.textContent = 'Rate'; rlab.append(rn); rrow.append(rlab);
+    const seg = document.createElement('div'); seg.className = 'seg';
+    RATES.forEach(([name, v]) => {
+      const b = document.createElement('button'); b.textContent = name;
+      if (cfg.div === v) b.classList.add('on');
+      b.addEventListener('click', () => {
+        cfg.div = v; recomputeDrops(); refreshShare();
+        [...seg.children].forEach(c => c.classList.remove('on')); b.classList.add('on');
+      });
+      seg.append(b);
+    });
+    rrow.append(seg); panel.append(rrow);
+
+    // wave speed shown as rings/beat (higher = faster); stored as rs = 1/that
+    const spRow = document.createElement('div'); spRow.className = 'row';
+    const spLab = document.createElement('div'); spLab.className = 'lab';
+    const spN = document.createElement('b'); spN.textContent = 'Wave speed';
+    const spV = document.createElement('span'); spV.className = 'val';
+    spLab.append(spN, spV); spRow.append(spLab);
+    const sp = document.createElement('input');
+    sp.type = 'range'; sp.min = 1.5; sp.max = 12; sp.step = 0.1; sp.value = (1 / cfg.rs).toFixed(1);
+    spV.textContent = (1 / cfg.rs).toFixed(1) + ' ring/beat';
+    sp.addEventListener('input', () => { cfg.rs = +(1 / +sp.value).toFixed(3); spV.textContent = (+sp.value).toFixed(1) + ' ring/beat'; refreshShare(); });
+    spRow.append(sp); panel.append(spRow);
+
+    panel.append(slider('Brightness', 'rp', 0.25, 1, 0.01, v => v.toFixed(2)));
+    panel.append(slider('Ring width', 'width', 0.6, 2.6, 0.1, v => v.toFixed(1)));
+    panel.append(slider('Pattern opacity', 'op', 0.05, 0.6, 0.01, v => v.toFixed(2)));
+
+    const btns = document.createElement('div'); btns.className = 'btns';
+    const bPlay = document.createElement('button'); bPlay.textContent = '▶ Play';
+    bPlay.addEventListener('click', play);
+    const bPause = document.createElement('button'); bPause.className = 'ghost'; bPause.textContent = '⏸';
+    bPause.addEventListener('click', togglePause);
+    const bHide = document.createElement('button'); bHide.className = 'ghost'; bHide.textContent = 'Hide';
+    bHide.addEventListener('click', () => { panel.classList.add('hidden'); showBtn.style.display = 'block'; });
+    btns.append(bPlay, bPause, bHide); panel.append(btns);
+
+    const foot = document.createElement('div'); foot.className = 'foot';
+    urlCode = document.createElement('code'); urlCode.textContent = shareStr();
+    const bCopy = document.createElement('button'); bCopy.textContent = 'Copy';
+    bCopy.addEventListener('click', () => { navigator.clipboard.writeText(shareStr()); bCopy.textContent = 'Copied'; setTimeout(() => bCopy.textContent = 'Copy', 1200); });
+    foot.append(urlCode, bCopy); panel.append(foot);
+  }
+  buildPanel();
+  showBtn.addEventListener('click', () => { panel.classList.remove('hidden'); showBtn.style.display = 'none'; });
+  if (q.get('ui') === '0') { panel.classList.add('hidden'); showBtn.style.display = 'block'; }
+})();
+</script>
+</body>
+</html>
