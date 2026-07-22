@@ -86,13 +86,17 @@ export const appSchema = defineToolcraft({
             },
             coverTitle: {
               defaultValue: "Side Entrances",
+              description:
+                "The episode title. Shown on the cover, and used as the audiogram's eyebrow when the Eyebrow field is blank.",
               label: "Title",
               orderRole: "primary",
               performanceReason: "Short text edits re-render one DOM text node.",
               performanceRole: "responsiveness",
               target: "content.cover.title",
               type: "text",
-              visibleWhen: whenTemplate("cover"),
+              // Also visible in audiogram mode: the title is the eyebrow's
+              // fallback there, so it must be editable without leaving the mode.
+              visibleWhen: { oneOf: ["cover", "audiogram"], target: "post.template" },
             },
             quoteDialogue: {
               defaultValue:
